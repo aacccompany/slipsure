@@ -35,7 +35,7 @@ export const Footer = () => {
           </div>
         </div>
         <div className="pt-12 border-t border-zinc-100 flex justify-between items-center text-[10px] font-bold text-zinc-300 uppercase tracking-widest">
-          <p>© 2024 SLIPSURE TECHNOLOGY. ALL RIGHTS RESERVED.</p>
+          <p>© 2026 SLIPSURE.AI ALL RIGHTS RESERVED.</p>
           <div className="flex gap-8">
             <Link href="#" className="hover:text-zinc-900 transition-colors">Privacy</Link>
             <Link href="#" className="hover:text-zinc-900 transition-colors">Terms</Link>
