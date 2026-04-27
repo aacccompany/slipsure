@@ -129,7 +129,7 @@ export const ResultCard: React.FC<ResultCardProps> = ({ result, error, onReset }
         <div className="bg-slate-50 border-t border-slate-100 p-6 flex items-center justify-center gap-4">
            <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
               <ShieldCheck className="w-4 h-4" />
-              Verified by Slipsure Secure Gateway
+              Verified by Slipsure.Ai Secure Gateway
            </div>
         </div>
       </div>

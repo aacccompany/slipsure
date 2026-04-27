@@ -7,7 +7,7 @@
 
 @layer base {
   body {
-    @apply bg-white text-[#111827] antialiased selection:bg-[#7C3AED] selection:text-white;
+    @apply bg-white text-[#0f172a] antialiased selection:bg-[#0f172a] selection:text-white;
     letter-spacing: -0.01em;
   }
 }
