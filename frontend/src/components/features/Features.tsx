@@ -7,7 +7,7 @@ const features = [
   {
     icon: <ShieldCheck className="w-6 h-6 text-emerald-600" />,
     title: "ยืนยันผลจริง 100%",
-    description: "ตรวจสอบข้อมูลผ่าน Gateway ของธนาคารกสิกรไทยโดยตรง ไม่ใช่แค่การอ่าน OCR ทั่วไป"
+    description: "ตรวจสอบข้อมูลผ่าน Gateway ของธนาคารโดยตรง ไม่ใช่แค่การอ่าน OCR ทั่วไป"
   },
   {
     icon: <Zap className="w-6 h-6 text-emerald-600" />,

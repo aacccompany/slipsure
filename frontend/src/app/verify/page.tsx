@@ -67,12 +67,12 @@ export default function VerifyPage() {
                     <span className="text-emerald-600">สลิปธนาคาร.</span>
                 </h1>
                 <p className="text-zinc-500 font-medium text-lg leading-relaxed">
-                    เพียงอัปโหลดรูปภาพสลิปที่ต้องการตรวจสอบ ระบบจะทำการยืนยันกับธนาคารกสิกรไทย (KBank) และแสดงข้อมูลจริงให้ทราบทันที
+                    เพียงอัปโหลดรูปภาพสลิปที่ต้องการตรวจสอบ ระบบจะทำการยืนยันกับ Gateway ธนาคารและแสดงข้อมูลจริงให้ทราบทันที
                 </p>
 
                 <div className="space-y-4 pt-6">
                     {[
-                        "ยืนยันข้อมูลโดยตรงจาก KBank",
+                        "ยืนยันข้อมูลโดยตรงจาก Bank Gateway",
                         "แม่นยำ 100% ตรวจสอบได้ทุกฟิลด์",
                         "ไม่มีค่าธรรมเนียมสำหรับผู้เริ่มต้น"
                     ].map((text, i) => (
@@ -142,7 +142,7 @@ export default function VerifyPage() {
             <div>
                 <h4 className="font-bold text-zinc-900 mb-3">รองรับธนาคารไหนบ้าง?</h4>
                 <p className="text-sm text-zinc-500 font-medium leading-relaxed">
-                    ปัจจุบันรองรับสลิปจากทุกธนาคารในไทย โดยใช้ช่องทางตรวจสอบผ่าน KBank Direct Gateway
+                    ปัจจุบันรองรับสลิปจากทุกธนาคารในไทย โดยใช้ช่องทางตรวจสอบผ่าน Direct Bank Gateway
                 </p>
             </div>
             <div>

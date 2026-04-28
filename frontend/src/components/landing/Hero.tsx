@@ -16,13 +16,6 @@ export const Hero = () => {
       <div className="max-w-7xl mx-auto relative z-10">
         <div className="flex flex-col items-center text-center max-w-4xl mx-auto space-y-10">
           
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-100 rounded-full animate-in fade-in slide-in-from-bottom-2 duration-700">
-            <Zap className="w-4 h-4 text-emerald-600 fill-emerald-600" />
-            <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">
-              เชื่อมต่อตรงกับ API ธนาคารกสิกรไทย (KBank)
-            </span>
-          </div>
-          
           <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tight text-zinc-900 leading-[1.05]">
             ตรวจสอบสลิปโอนเงิน <br/>
             <span className="text-emerald-600">แม่นยำ 100%</span>
@@ -51,7 +44,7 @@ export const Hero = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 pt-12 w-full">
             {[
-              { icon: <CheckCircle2 className="w-5 h-5 text-emerald-600" />, label: "ตรวจสอบผ่าน KBank API" },
+              { icon: <CheckCircle2 className="w-5 h-5 text-emerald-600" />, label: "ตรวจสอบผ่าน Direct API" },
               { icon: <ShieldCheck className="w-5 h-5 text-emerald-600" />, label: "ป้องกันสลิปปลอมได้จริง" },
               { icon: <Zap className="w-5 h-5 text-emerald-600" />, label: "ประมวลผลทันทีใน 1 วินาที" }
             ].map((item, i) => (

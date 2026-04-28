@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
 import { 
   CheckCircle2, 
   User, 
@@ -16,6 +15,7 @@ import {
   ArrowRight,
   ExternalLink
 } from 'lucide-react';
+import Link from 'next/link';
 import { SlipVerificationResult } from '@/types/slip';
 
 interface ResultCardProps {
@@ -57,7 +57,7 @@ export const ResultCard: React.FC<ResultCardProps> = ({ result, error, onReset }
               <span className="font-bold text-sm uppercase tracking-widest">ยืนยันสลิปสำเร็จ</span>
            </div>
            <div className="px-3 py-1 bg-white/20 rounded-full text-white text-[10px] font-bold uppercase tracking-widest backdrop-blur-sm border border-white/10">
-              KBank Direct API
+              Direct Bank API
            </div>
         </div>
 
@@ -133,7 +133,7 @@ export const ResultCard: React.FC<ResultCardProps> = ({ result, error, onReset }
               </div>
               <div className="text-left">
                 <p className="text-[10px] font-bold text-emerald-800 uppercase tracking-widest">ความถูกต้องระดับสูงสุด</p>
-                <p className="text-[10px] font-medium text-emerald-600/70">Verified by Slipsure.ai via Kasikornbank API</p>
+                <p className="text-[10px] font-medium text-emerald-600/70">Verified by Slipsure.ai via Secure Bank Gateway</p>
               </div>
            </div>
            

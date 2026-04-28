@@ -257,7 +257,7 @@ def handle_image_message(event):
             if result.get("success"):
                 d = result["data"]
                 reply_text = (
-                    f"✅ ยืนยันสลิปสำเร็จ (KBank API)\n"
+                    f"✅ ยืนยันสลิปสำเร็จ (Bank API)\n"
                     f"💰 ยอดเงิน: {d['amount']} บาท\n"
                     f"👤 จาก: {d['sender']['displayName']}\n"
                     f"🏢 ถึง: {d['receiver']['displayName']}\n"

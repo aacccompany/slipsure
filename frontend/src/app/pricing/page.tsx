@@ -9,7 +9,7 @@ const plans = [
     name: "Free",
     price: "0",
     description: "สำหรับทดสอบและใช้งานส่วนตัว",
-    features: ["10 รายการ / เดือน", "ตรวจสอบผ่าน KBank API", "REST API Access", "Email Support"],
+    features: ["10 รายการ / เดือน", "ตรวจสอบผ่าน Direct API", "REST API Access", "Email Support"],
     button: "เริ่มใช้งานฟรี",
     highlight: false
   },

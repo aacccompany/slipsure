@@ -85,7 +85,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onScanSuccess, onScanErr
             </div>
             <div>
                 <h4 className="font-bold text-zinc-900 text-sm mb-1">แม่นยำ 100%</h4>
-                <p className="text-xs text-zinc-500 leading-relaxed font-medium">ยืนยันผลลัพธ์ผ่านระบบ API ตรงจากธนาคารกสิกรไทย</p>
+                <p className="text-xs text-zinc-500 leading-relaxed font-medium">ยืนยันผลลัพธ์ผ่านระบบ API ตรงจากธนาคารโดยตรง</p>
             </div>
         </div>
       </div>
