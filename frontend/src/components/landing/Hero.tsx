@@ -2,75 +2,65 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, QrCode, Activity, FileCheck, Scan } from 'lucide-react';
+import { ArrowRight, CheckCircle2, ShieldCheck, Zap } from 'lucide-react';
 
 export const Hero = () => {
   return (
-    <section className="relative pt-48 pb-32 px-6 overflow-hidden bg-white">
-      <div className="absolute inset-0 pointer-events-none opacity-[0.03]" 
-           style={{ backgroundImage: `linear-gradient(#000 1px, transparent 1px), linear-gradient(90deg, #000 1px, transparent 1px)`, backgroundSize: '80px 80px' }}></div>
+    <section className="relative pt-32 pb-20 md:pt-48 md:pb-32 px-6 overflow-hidden bg-white hero-gradient">
+      {/* Background Decorative Element */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-full pointer-events-none">
+        <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-emerald-50 rounded-full blur-[120px] opacity-50" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-emerald-50 rounded-full blur-[120px] opacity-30" />
+      </div>
       
       <div className="max-w-7xl mx-auto relative z-10">
-        <div className="grid lg:grid-cols-12 gap-16 items-start">
+        <div className="flex flex-col items-center text-center max-w-4xl mx-auto space-y-10">
           
-          <div className="lg:col-span-8 space-y-10 animate-fade-in">
-            <div className="flex items-center gap-6">
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-zinc-100 border border-zinc-200 rounded-md">
-                <Activity className="w-3.5 h-3.5 text-zinc-900" />
-                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] text-zinc-900">Engine_V2_Stable</span>
-              </div>
-              <div className="text-[10px] font-mono font-bold text-zinc-300 uppercase tracking-widest hidden sm:block">
-                Protocol: JSON_REST_API
-              </div>
-            </div>
-            
-            <h1 className="text-6xl md:text-[8rem] leading-[0.8] font-black tracking-tighter text-zinc-900 uppercase">
-              SCAN <br/>
-              <span className="text-zinc-300 italic">VERIFY.</span> <br/>
-              SECURE.
-            </h1>
-            
-            <div className="max-w-xl pl-6 border-l-4 border-zinc-900">
-               <p className="text-xl md:text-2xl text-zinc-500 font-medium leading-relaxed">
-                 ระบบตรวจสอบความถูกต้องของสลิปโอนเงินที่แม่นยำที่สุด 
-                 ด้วยเทคโนโลยีวิเคราะห์พิกเซลและการยืนยันผ่าน Gateway ธนาคาร
-               </p>
-            </div>
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-100 rounded-full animate-in fade-in slide-in-from-bottom-2 duration-700">
+            <Zap className="w-4 h-4 text-emerald-600 fill-emerald-600" />
+            <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">
+              เชื่อมต่อตรงกับ API ธนาคารกสิกรไทย (KBank)
+            </span>
+          </div>
+          
+          <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tight text-zinc-900 leading-[1.05]">
+            ตรวจสอบสลิปโอนเงิน <br/>
+            <span className="text-emerald-600">แม่นยำ 100%</span>
+          </h1>
+          
+          <p className="text-lg md:text-xl text-zinc-500 font-medium leading-relaxed max-w-2xl">
+            ระบบตรวจสอบสลิปผ่าน Gateway ธนาคารโดยตรง ใช้งานง่าย รวดเร็ว 
+            ช่วยป้องกันสลิปปลอมและสลิปใช้ซ้ำได้อย่างมีประสิทธิภาพ
+          </p>
 
-            <div className="flex flex-wrap gap-8 pt-6">
-               <div className="flex items-center gap-3 text-zinc-400">
-                  <Scan className="w-5 h-5" />
-                  <span className="text-[11px] font-mono font-bold uppercase tracking-widest">QR_Payload_Extraction</span>
-               </div>
-               <div className="flex items-center gap-3 text-zinc-400">
-                  <FileCheck className="w-5 h-5" />
-                  <span className="text-[11px] font-mono font-bold uppercase tracking-widest">Image_Pixel_Forensics</span>
-               </div>
-            </div>
+          <div className="flex flex-col sm:flex-row gap-4 pt-4 w-full sm:w-auto">
+            <Link 
+              href="/verify" 
+              className="flex items-center justify-center gap-2 bg-emerald-600 text-white hover:bg-emerald-700 px-10 py-5 rounded-2xl font-bold text-lg transition-all shadow-xl shadow-emerald-600/20 active:scale-95 group"
+            >
+              เริ่มตรวจสอบสลิป
+              <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
+            </Link>
+            <Link 
+              href="/docs" 
+              className="flex items-center justify-center gap-2 bg-white text-zinc-900 border border-zinc-200 hover:bg-zinc-50 px-10 py-5 rounded-2xl font-bold text-lg transition-all active:scale-95"
+            >
+              ดูเอกสาร API
+            </Link>
           </div>
 
-          <div className="lg:col-span-4 lg:pt-32">
-             <div className="bg-zinc-900 p-10 rounded-2xl text-white shadow-2xl relative overflow-hidden group">
-                <div className="relative z-10">
-                   <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center mb-8 border border-white/10">
-                      <QrCode className="w-6 h-6 text-white" />
-                   </div>
-                   <h3 className="text-2xl font-bold mb-4 uppercase tracking-tighter italic">Bank Connector</h3>
-                   <p className="text-zinc-400 text-sm font-medium mb-12 leading-relaxed">
-                     เชื่อมต่อ Gateway ธนาคารชั้นนำโดยตรง พร้อมรับข้อมูลยืนยันจากต้นทางในรูปแบบที่โปรแกรมเมอร์นำไปใช้งานต่อได้ทันที
-                   </p>
-                   <Link href="/verify" className="flex items-center justify-between w-full bg-white text-zinc-900 hover:bg-zinc-200 p-5 rounded-lg transition-all duration-300">
-                      <span className="font-black text-sm uppercase tracking-widest">Start Scanning</span>
-                      <ArrowRight className="w-5 h-5" />
-                   </Link>
-                </div>
-                {/* Visual Decoration Only */}
-                <div className="absolute -bottom-10 -right-10 opacity-[0.05] group-hover:opacity-[0.1] transition-opacity">
-                   <Scan className="w-64 h-64 text-white -rotate-12" />
-                </div>
-             </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 pt-12 w-full">
+            {[
+              { icon: <CheckCircle2 className="w-5 h-5 text-emerald-600" />, label: "ตรวจสอบผ่าน KBank API" },
+              { icon: <ShieldCheck className="w-5 h-5 text-emerald-600" />, label: "ป้องกันสลิปปลอมได้จริง" },
+              { icon: <Zap className="w-5 h-5 text-emerald-600" />, label: "ประมวลผลทันทีใน 1 วินาที" }
+            ].map((item, i) => (
+              <div key={i} className="flex items-center justify-center gap-3 bg-white/50 backdrop-blur-sm p-4 rounded-2xl border border-zinc-100 shadow-sm">
+                {item.icon}
+                <span className="text-sm font-bold text-zinc-700">{item.label}</span>
+              </div>
+            ))}
           </div>
-
         </div>
       </div>
     </section>

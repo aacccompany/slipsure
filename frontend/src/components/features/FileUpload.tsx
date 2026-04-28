@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Upload, FileText, Loader2, AlertCircle, Image as ImageIcon } from 'lucide-react';
-import { scanQRCode } from '@/lib/qr-scanner';
+import { Upload, FileText, Loader2, AlertCircle, Image as ImageIcon, CheckCircle2 } from 'lucide-react';
 
 interface FileUploadProps {
   onScanSuccess: (file: File) => void;
@@ -11,7 +10,6 @@ interface FileUploadProps {
 
 export const FileUpload: React.FC<FileUploadProps> = ({ onScanSuccess, onScanError }) => {
   const [isDragging, setIsDragging] = useState(false);
-  const [isScanning, setIsScanning] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = async (file: File) => {
@@ -19,8 +17,6 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onScanSuccess, onScanErr
       onScanError('กรุณาอัปโหลดไฟล์รูปภาพเท่านั้น (PNG, JPG)');
       return;
     }
-
-    // ส่งไฟล์ไปให้ VerifyPage เพื่อเรียกใช้ verifySlip(file)
     onScanSuccess(file); 
   };
 
@@ -38,13 +34,12 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onScanSuccess, onScanErr
         onDrop={(e) => { e.preventDefault(); setIsDragging(false); if (e.dataTransfer.files?.[0]) handleFile(e.dataTransfer.files[0]); }}
         onClick={() => fileInputRef.current?.click()}
         className={`
-          relative border-2 border-dashed rounded-xl p-12 md:p-20
+          relative border-2 border-dashed rounded-[2rem] p-12 md:p-20
           flex flex-col items-center justify-center text-center 
-          transition-all cursor-pointer
+          transition-all cursor-pointer overflow-hidden
           ${isDragging 
-            ? 'border-blue-500 bg-blue-50/50' 
-            : 'border-slate-200 bg-slate-50/30 hover:bg-slate-50 hover:border-slate-300'}
-          ${isScanning ? 'pointer-events-none opacity-50' : ''}
+            ? 'border-emerald-500 bg-emerald-50/50 scale-[0.99]' 
+            : 'border-zinc-200 bg-zinc-50/30 hover:bg-white hover:border-emerald-300 hover:shadow-2xl hover:shadow-emerald-600/5'}
         `}
       >
         <input
@@ -55,26 +50,44 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onScanSuccess, onScanErr
           className="hidden"
         />
 
-        <div className="w-16 h-16 bg-white border border-slate-200 rounded-2xl flex items-center justify-center mb-6 shadow-sm">
-          <Upload className="w-8 h-8 text-slate-400" />
+        <div className="w-20 h-20 bg-emerald-50 rounded-3xl flex items-center justify-center mb-8 border border-emerald-100 group-hover:scale-110 transition-transform">
+          <Upload className="w-10 h-10 text-emerald-600" />
         </div>
         
-        <h3 className="text-xl font-bold text-slate-900 mb-2">อัปโหลดสลิปโอนเงิน</h3>
-        <p className="text-slate-500 font-medium mb-8 max-w-xs">
-          วางไฟล์รูปภาพตรงนี้ หรือคลิกเพื่อเลือกไฟล์จากเครื่องของคุณ
+        <h3 className="text-2xl font-bold text-zinc-900 mb-3">วางรูปสลิปของคุณที่นี่</h3>
+        <p className="text-zinc-500 font-medium mb-10 max-w-xs text-sm">
+          รองรับไฟล์ PNG, JPG และ JPEG <br/> หรือคลิกเพื่อเลือกไฟล์จากโฟลเดอร์
         </p>
         
-        <div className="bg-slate-900 text-white px-6 py-2.5 rounded-lg font-bold text-sm hover:bg-slate-800 transition-all shadow-sm">
-          Browse Files
+        <div className="bg-emerald-600 text-white px-10 py-4 rounded-2xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-600/20 active:scale-95">
+          เลือกไฟล์รูปภาพ
+        </div>
+
+        {/* Decorative corner element */}
+        <div className="absolute bottom-0 right-0 p-6 opacity-10">
+            <CheckCircle2 className="w-24 h-24 text-emerald-900" />
         </div>
       </div>
 
-      <div className="mt-8 flex items-start gap-3 p-4 bg-amber-50 border border-amber-100 rounded-xl">
-        <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-        <p className="text-xs text-amber-800 font-medium leading-relaxed">
-          ความปลอดภัย: ระบบจะประมวลผล QR Code เบื้องต้นภายในเบราว์เซอร์ของท่าน 
-          ข้อมูลรูปภาพจะไม่ถูกส่งไปยังฐานข้อมูลโดยไม่จำเป็น
-        </p>
+      <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="flex items-start gap-4 p-5 bg-white border border-zinc-100 rounded-2xl shadow-sm">
+            <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            </div>
+            <div>
+                <h4 className="font-bold text-zinc-900 text-sm mb-1">ความปลอดภัยสูง</h4>
+                <p className="text-xs text-zinc-500 leading-relaxed font-medium">ภาพสลิปจะถูกประมวลผลทันทีและไม่มีการจัดเก็บข้อมูลส่วนตัว</p>
+            </div>
+        </div>
+        <div className="flex items-start gap-4 p-5 bg-white border border-zinc-100 rounded-2xl shadow-sm">
+            <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            </div>
+            <div>
+                <h4 className="font-bold text-zinc-900 text-sm mb-1">แม่นยำ 100%</h4>
+                <p className="text-xs text-zinc-500 leading-relaxed font-medium">ยืนยันผลลัพธ์ผ่านระบบ API ตรงจากธนาคารกสิกรไทย</p>
+            </div>
+        </div>
       </div>
     </div>
   );

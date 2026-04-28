@@ -36,7 +36,7 @@ export const Features = () => {
                 {f.label}
               </div>
               
-              <div className="w-12 h-12 rounded-xl bg-zinc-900 text-white flex items-center justify-center mb-10 group-hover:bg-[#4F46E5] transition-colors duration-500 shadow-xl shadow-zinc-900/10">
+              <div className="w-12 h-12 rounded-xl bg-zinc-900 text-white flex items-center justify-center mb-10 group-hover:bg-emerald-500 transition-colors duration-500 shadow-xl shadow-zinc-900/10">
                 {f.icon}
               </div>
               
