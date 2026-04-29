@@ -15,7 +15,10 @@ export const Navbar = () => {
     { name: 'บริการ', href: '/services' },
     { name: 'ราคา', href: '/pricing' },
     { name: 'API Docs', href: '/docs' },
+    { name: 'Login', href: '/login' },
   ];
+
+  if (pathname?.startsWith('/dashboard')) return null;
 
   return (
     <nav className="fixed top-0 z-[100] w-full border-b border-zinc-100 bg-white/80 backdrop-blur-xl">
