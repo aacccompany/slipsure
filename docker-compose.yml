@@ -8,17 +8,4 @@ services:
       - "3000:3000"
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:8000
-    depends_on:
-      - backend
-    restart: always
-
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: slipsure-backend
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./backend:/app
     restart: always

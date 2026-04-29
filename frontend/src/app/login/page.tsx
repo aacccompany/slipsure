@@ -17,30 +17,15 @@ export default function LoginPage() {
     setIsLoading(true);
     setError('');
 
-    try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          username: username,
-          password: password,
-        }),
-      });
+    // Simulate network delay for realistic UI feel
+    await new Promise(resolve => setTimeout(resolve, 800));
 
-      if (response.ok) {
-        const data = await response.json();
-        localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('authToken', data.access_token);
-        router.push('/dashboard');
-      } else {
-        const errorData = await response.json();
-        setError(errorData.detail || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
-      }
-    } catch (err) {
-      setError('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
-    } finally {
+    if (username === 'admin' && password === 'admin') {
+      localStorage.setItem('isLoggedIn', 'true');
+      localStorage.setItem('authToken', 'mock_token_for_demo_purposes');
+      router.push('/dashboard');
+    } else {
+      setError('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง (admin/admin)');
       setIsLoading(false);
     }
   };
