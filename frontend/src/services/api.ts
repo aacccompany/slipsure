@@ -12,13 +12,22 @@ export const verifySlip = async (file: File, apiKey?: string): Promise<SlipVerif
     success: true,
     data: {
       amount: 1250.00,
+      paidLocalAmount: 1250.00,
+      paidLocalCurrency: 'THB',
+      countryCode: 'TH',
       transRef: 'KB' + Math.floor(Date.now() / 1000),
       transDate: new Date().toISOString().split('T')[0],
       transTime: new Date().toLocaleTimeString('th-TH', { hour12: false }),
       sendingBank: 'KBANK',
       receivingBank: 'SCB',
-      sender: { displayName: 'สมชาย ใจดี' },
-      receiver: { displayName: 'บจก. สลิปชัวร์' }
+      sender: { 
+        displayName: 'สมชาย ใจดี',
+        name: 'MR. SOMCHAI JAIDEE'
+      },
+      receiver: { 
+        displayName: 'บจก. สลิปชัวร์',
+        name: 'SLIPSURE CO., LTD.'
+      }
     }
   };
 };
