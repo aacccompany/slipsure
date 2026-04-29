@@ -17,12 +17,14 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { SlipVerificationResult } from '@/types/slip';
+import { formatCurrency } from '@/lib/utils';
 
 interface ResultCardProps {
   result: SlipVerificationResult | null;
   error: string | null;
   onReset: () => void;
 }
+
 
 export const ResultCard: React.FC<ResultCardProps> = ({ result, error, onReset }) => {
   if (error) {
@@ -68,7 +70,7 @@ export const ResultCard: React.FC<ResultCardProps> = ({ result, error, onReset }
             <div className="inline-block bg-white px-8">
                 <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-4">จำนวนเงินที่โอนสำเร็จ</p>
                 <h2 className="text-6xl md:text-8xl font-black text-zinc-900 tracking-tighter">
-                  ฿{data.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  {formatCurrency(data.amount)}
                 </h2>
             </div>
           </div>
@@ -82,6 +84,7 @@ export const ResultCard: React.FC<ResultCardProps> = ({ result, error, onReset }
                     </div>
                     <p className="text-[10px] text-zinc-400 uppercase font-bold tracking-[0.2em] mb-2">ผู้โอนเงิน (Sender)</p>
                     <h4 className="text-xl font-bold text-zinc-900 mb-1">{data.sender.displayName}</h4>
+                    <p className="text-[10px] font-bold text-zinc-400 mb-2">{data.sender.name}</p>
                     <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest">{data.sendingBank}</p>
                 </div>
 
@@ -91,6 +94,7 @@ export const ResultCard: React.FC<ResultCardProps> = ({ result, error, onReset }
                     </div>
                     <p className="text-[10px] text-zinc-400 uppercase font-bold tracking-[0.2em] mb-2">ผู้รับเงิน (Receiver)</p>
                     <h4 className="text-xl font-bold text-zinc-900 mb-1">{data.receiver.displayName}</h4>
+                    <p className="text-[10px] font-bold text-zinc-400 mb-2">{data.receiver.name}</p>
                     <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest">{data.receivingBank}</p>
                 </div>
             </div>
