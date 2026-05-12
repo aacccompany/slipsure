@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import { 
@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { dashboardService } from '@/services/dashboard';
+import { UserProfile } from '@/types/dashboard';
 import { toast } from 'sonner';
 
 export default function SettingsPage() {
@@ -39,10 +40,13 @@ export default function SettingsPage() {
   }, [profile]);
 
   const updateMutation = useMutation({
-    mutationFn: (data: any) => dashboardService.updateProfile(data),
+    mutationFn: (data: Partial<UserProfile>) => dashboardService.updateProfile(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profile'] });
       toast.success('Profile updated successfully!');
+    },
+    onError: () => {
+      toast.error('Failed to update profile. Please try again.');
     }
   });
 
@@ -53,7 +57,7 @@ export default function SettingsPage() {
   if (isLoading) {
     return (
       <div className="flex h-[80vh] items-center justify-center">
-        <Loader2 className="w-10 h-10 text-emerald-600 animate-spin" />
+        <Loader2 className="w-10 h-10 text-blue-800 animate-spin" />
       </div>
     );
   }
@@ -69,10 +73,10 @@ export default function SettingsPage() {
 
       <div className="space-y-8">
         {/* Profile Section */}
-        <section className="bg-white border border-zinc-100 rounded-[2.5rem] p-8 shadow-sm">
+        <section className="bg-white border border-zinc-200 rounded-2xl p-8">
            <div className="flex items-center gap-6 mb-10">
               <div className="relative group">
-                 <div className="w-24 h-24 rounded-3xl bg-emerald-100 flex items-center justify-center text-emerald-700 text-2xl font-black border-4 border-white shadow-lg uppercase">
+                 <div className="w-24 h-24 rounded-3xl bg-blue-50 flex items-center justify-center text-blue-900 text-2xl font-black border-4 border-white shadow-lg uppercase">
                     {initials}
                  </div>
                  <button className="absolute -bottom-2 -right-2 p-2 bg-zinc-900 text-white rounded-xl shadow-lg hover:scale-110 transition-transform">
@@ -94,7 +98,7 @@ export default function SettingsPage() {
                         type="text" 
                         value={formData.full_name}
                         onChange={(e) => setFormData({...formData, full_name: e.target.value})}
-                        className="w-full pl-12 pr-4 py-3.5 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm font-bold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                        className="w-full pl-12 pr-4 py-3.5 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm font-bold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-700/20 transition-all"
                     />
                  </div>
               </div>
@@ -106,7 +110,7 @@ export default function SettingsPage() {
                         type="email" 
                         value={formData.email}
                         onChange={(e) => setFormData({...formData, email: e.target.value})}
-                        className="w-full pl-12 pr-4 py-3.5 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm font-bold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                        className="w-full pl-12 pr-4 py-3.5 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm font-bold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-700/20 transition-all"
                     />
                  </div>
               </div>
@@ -114,9 +118,9 @@ export default function SettingsPage() {
         </section>
 
         {/* Business Section */}
-        <section className="bg-white border border-zinc-100 rounded-[2.5rem] p-8 shadow-sm">
+        <section className="bg-white border border-zinc-200 rounded-2xl p-8">
            <h3 className="text-sm font-bold text-zinc-900 mb-8 uppercase tracking-widest flex items-center gap-2">
-              <Building2 className="w-4 h-4 text-emerald-500" />
+              <Building2 className="w-4 h-4 text-blue-700" />
               Business Information
            </h3>
            <div className="space-y-6">
@@ -126,7 +130,7 @@ export default function SettingsPage() {
                     type="text" 
                     value={formData.company_name}
                     onChange={(e) => setFormData({...formData, company_name: e.target.value})}
-                    className="w-full px-4 py-3.5 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm font-bold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                    className="w-full px-4 py-3.5 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm font-bold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-700/20 transition-all"
                  />
               </div>
               <div className="space-y-2">
@@ -135,7 +139,7 @@ export default function SettingsPage() {
                     type="text" 
                     value={formData.tax_id}
                     onChange={(e) => setFormData({...formData, tax_id: e.target.value})}
-                    className="w-full px-4 py-3.5 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm font-bold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                    className="w-full px-4 py-3.5 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm font-bold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-700/20 transition-all"
                  />
               </div>
            </div>

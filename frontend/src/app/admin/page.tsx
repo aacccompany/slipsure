@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import { 
@@ -29,10 +29,10 @@ export default function AdminDashboard() {
         {/* Admin Sidebar */}
         <aside className="w-64 bg-white border-r border-zinc-200 h-screen sticky top-0 p-6 flex flex-col gap-8">
           <div className="flex items-center gap-2 font-bold px-2">
-            <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-blue-900 rounded-lg flex items-center justify-center">
               <Zap className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl">Admin<span className="text-emerald-600">.Ops</span></span>
+            <span className="text-xl">Admin<span className="text-blue-800">.Ops</span></span>
           </div>
           <nav className="flex-1 space-y-1">
             {[
@@ -46,7 +46,7 @@ export default function AdminDashboard() {
                 key={item.label}
                 className={cn(
                   "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all cursor-pointer font-medium text-sm",
-                  item.active ? "bg-emerald-50 text-emerald-700" : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900"
+                  item.active ? "bg-blue-50 text-blue-900" : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900"
                 )}
               >
                 <item.icon className="w-4 h-4" />
@@ -63,7 +63,7 @@ export default function AdminDashboard() {
               <p className="text-zinc-500 text-sm mt-1 font-medium">System status and merchant management.</p>
             </div>
             <div className="flex items-center gap-3 px-4 py-2 bg-white border border-zinc-200 rounded-full shadow-sm">
-               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+               <div className="w-2 h-2 rounded-full bg-blue-800 animate-pulse" />
                <span className="text-xs font-bold text-zinc-600 uppercase tracking-widest">Global Status: Healthy</span>
             </div>
           </header>
@@ -81,7 +81,7 @@ export default function AdminDashboard() {
                     <div className="w-10 h-10 rounded-xl bg-zinc-50 flex items-center justify-center border border-zinc-100">
                         <stat.icon className="w-5 h-5 text-zinc-600" />
                     </div>
-                    <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">{stat.trend}</span>
+                    <span className="text-[10px] font-bold text-blue-800 uppercase tracking-widest">{stat.trend}</span>
                 </div>
                 <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-1">{stat.label}</p>
                 <h3 className="text-2xl font-black text-zinc-900">{stat.value}</h3>
@@ -99,7 +99,7 @@ export default function AdminDashboard() {
                   <input 
                     type="text" 
                     placeholder="Search shops..." 
-                    className="pl-10 pr-4 py-2 bg-zinc-50 border border-zinc-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/10 transition-all"
+                    className="pl-10 pr-4 py-2 bg-zinc-50 border border-zinc-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-700/20 transition-all"
                   />
                 </div>
               </div>
@@ -118,7 +118,7 @@ export default function AdminDashboard() {
                   <tr key={merchant.id} className="hover:bg-zinc-50/50 transition-colors group">
                     <td className="px-8 py-5">
                       <div className="flex flex-col">
-                        <span className="text-sm font-bold text-zinc-900 group-hover:text-emerald-600 transition-colors">{merchant.name}</span>
+                        <span className="text-sm font-bold text-zinc-900 group-hover:text-blue-800 transition-colors">{merchant.name}</span>
                         <span className="text-[10px] text-zinc-400 font-bold uppercase">{merchant.id}</span>
                       </div>
                     </td>
@@ -126,7 +126,7 @@ export default function AdminDashboard() {
                       <span className={cn(
                         "px-2 py-0.5 rounded text-[10px] font-bold uppercase border",
                         merchant.plan === 'Enterprise' ? "border-zinc-900 bg-zinc-900 text-white" :
-                        merchant.plan === 'Pro' ? "border-emerald-100 bg-emerald-50 text-emerald-600" :
+                        merchant.plan === 'Pro' ? "border-blue-50 bg-blue-50 text-blue-800" :
                         "border-zinc-100 bg-zinc-50 text-zinc-500"
                       )}>
                         {merchant.plan}
@@ -136,7 +136,7 @@ export default function AdminDashboard() {
                       <div className="flex items-center gap-2">
                         <div className={cn(
                           "w-1.5 h-1.5 rounded-full",
-                          merchant.status === 'active' ? "bg-emerald-500" : "bg-rose-500"
+                          merchant.status === 'active' ? "bg-blue-800" : "bg-rose-500"
                         )} />
                         <span className="text-xs font-bold uppercase text-zinc-600">{merchant.status}</span>
                       </div>
@@ -147,7 +147,7 @@ export default function AdminDashboard() {
                           Suspend
                         </button>
                       ) : (
-                        <button className="px-3 py-1 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-lg text-[10px] font-bold uppercase hover:bg-emerald-600 hover:text-white transition-all">
+                        <button className="px-3 py-1 bg-blue-50 text-blue-800 border border-blue-50 rounded-lg text-[10px] font-bold uppercase hover:bg-blue-800 hover:text-white transition-all">
                           Activate
                         </button>
                       )}
@@ -165,15 +165,15 @@ export default function AdminDashboard() {
           <div className="bg-white border border-zinc-200 rounded-3xl p-8 shadow-sm">
              <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-3">
-                   <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center border border-amber-100">
-                      <DollarSign className="w-5 h-5 text-amber-600" />
+                   <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center border border-blue-100">
+                      <DollarSign className="w-5 h-5 text-blue-900" />
                    </div>
                    <div>
                       <h2 className="text-lg font-bold text-zinc-900">Payment Approvals</h2>
                       <p className="text-xs text-zinc-500 font-medium">Verify manual slip payments for Pro/Enterprise plans.</p>
                    </div>
                 </div>
-                <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-bold">3 Pending</span>
+                <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold">3 Pending</span>
              </div>
              
              <div className="space-y-4">
@@ -181,10 +181,10 @@ export default function AdminDashboard() {
                   { shop: 'Local Bakery', amount: '฿990.00', date: '10m ago', ref: 'SLIP-9021' },
                   { shop: 'Premium Coffee', amount: '฿4,900.00', date: '2h ago', ref: 'SLIP-8812' },
                 ].map((pay, i) => (
-                  <div key={i} className="flex items-center justify-between p-4 bg-zinc-50 border border-zinc-100 rounded-2xl group hover:border-emerald-200 transition-all">
+                  <div key={i} className="flex items-center justify-between p-4 bg-zinc-50 border border-zinc-100 rounded-2xl group hover:border-blue-100 transition-all">
                      <div className="flex items-center gap-4">
                         <div className="w-10 h-10 bg-white border border-zinc-200 rounded-lg flex items-center justify-center">
-                           <ImageIcon className="w-5 h-5 text-zinc-400 group-hover:text-emerald-500 transition-colors" />
+                           <ImageIcon className="w-5 h-5 text-zinc-400 group-hover:text-blue-700 transition-colors" />
                         </div>
                         <div>
                            <p className="text-sm font-bold text-zinc-900">{pay.shop}</p>
@@ -194,7 +194,7 @@ export default function AdminDashboard() {
                      <div className="flex items-center gap-6">
                         <span className="text-sm font-black text-zinc-900">{pay.amount}</span>
                         <div className="flex items-center gap-2">
-                           <button className="px-4 py-2 bg-emerald-600 text-white text-[10px] font-bold uppercase rounded-lg hover:bg-emerald-700 transition-all">Approve</button>
+                           <button className="px-4 py-2 bg-blue-800 text-white text-[10px] font-bold uppercase rounded-lg hover:bg-blue-900 transition-all">Approve</button>
                            <button className="px-4 py-2 bg-white border border-zinc-200 text-zinc-500 text-[10px] font-bold uppercase rounded-lg hover:bg-rose-50 hover:text-rose-600 transition-all">Reject</button>
                         </div>
                      </div>

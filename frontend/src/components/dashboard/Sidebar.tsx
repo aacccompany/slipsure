@@ -3,16 +3,14 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { 
-  LayoutDashboard, 
-  Key, 
-  Webhook, 
-  History, 
-  Settings, 
-  QrCode,
+import {
+  LayoutDashboard,
+  Key,
+  Webhook,
+  History,
+  Settings,
   LogOut,
-  ChevronRight,
-  CreditCard
+  CreditCard,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -20,7 +18,7 @@ const menuItems = [
   { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
   { name: 'API Keys', href: '/dashboard/keys', icon: Key },
   { name: 'Webhooks', href: '/dashboard/webhooks', icon: Webhook },
-  { name: 'Verification Logs', href: '/dashboard/logs', icon: History },
+  { name: 'Logs', href: '/dashboard/logs', icon: History },
   { name: 'Subscription', href: '/dashboard/subscription', icon: CreditCard },
   { name: 'Settings', href: '/dashboard/settings', icon: Settings },
 ];
@@ -36,21 +34,14 @@ export const DashboardSidebar = () => {
   };
 
   return (
-    <aside className="w-64 border-r border-zinc-100 bg-white flex flex-col h-screen sticky top-0">
-      {/* Logo Section */}
-      <div className="p-8">
-        <Link href="/" className="flex items-center gap-2 group">
-          <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center transition-all group-hover:bg-emerald-500 shadow-lg shadow-emerald-600/20">
-            <QrCode className="w-5 h-5 text-white" />
-          </div>
-          <span className="text-xl font-bold tracking-tight text-zinc-900">
-            FlowSlip<span className="text-emerald-600">.ai</span>
-          </span>
+    <aside className="w-56 border-r border-zinc-200 bg-white flex flex-col h-screen sticky top-0 rounded-r-2xl">
+      <div className="px-6 py-4 border-b border-zinc-200">
+        <Link href="/" className="flex items-center gap-2">
+          <span className="font-mono text-sm font-bold text-zinc-900 tracking-tight">FLOWSLIP</span>
         </Link>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 px-4 py-4 space-y-1">
+      <nav className="flex-1 px-3 py-4 space-y-0.5">
         {menuItems.map((item) => {
           const isActive = pathname === item.href;
           return (
@@ -58,30 +49,26 @@ export const DashboardSidebar = () => {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center justify-between px-4 py-3 rounded-xl transition-all group",
-                isActive 
-                  ? "bg-emerald-50 text-emerald-700" 
-                  : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900"
+                'flex items-center gap-3 px-3 py-2.5 text-sm transition-colors border-l-2 rounded-r-lg',
+                isActive
+                  ? 'border-zinc-900 text-zinc-900 font-medium bg-zinc-50'
+                  : 'border-transparent text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50'
               )}
             >
-              <div className="flex items-center gap-3">
-                <item.icon className={cn("w-5 h-5", isActive ? "text-emerald-600" : "text-zinc-400 group-hover:text-zinc-600")} />
-                <span className="text-sm font-bold tracking-tight">{item.name}</span>
-              </div>
-              {isActive && <ChevronRight className="w-4 h-4 text-emerald-400" />}
+              <item.icon className="w-4 h-4 shrink-0" />
+              <span>{item.name}</span>
             </Link>
           );
         })}
       </nav>
 
-      {/* User / Bottom Section */}
-      <div className="p-4 border-t border-zinc-50">
-        <button 
+      <div className="px-3 py-4 border-t border-zinc-200">
+        <button
           onClick={handleLogout}
-          className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-zinc-500 hover:bg-rose-50 hover:text-rose-600 transition-all group"
+          className="flex items-center gap-3 px-3 py-2.5 w-full text-sm text-zinc-400 hover:text-rose-600 transition-colors border-l-2 border-transparent hover:border-rose-500"
         >
-          <LogOut className="w-5 h-5 text-zinc-400 group-hover:text-rose-500" />
-          <span className="text-sm font-bold tracking-tight">Log Out</span>
+          <LogOut className="w-4 h-4 shrink-0" />
+          <span>Log Out</span>
         </button>
       </div>
     </aside>

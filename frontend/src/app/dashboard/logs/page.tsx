@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import { 
@@ -45,14 +45,14 @@ export default function LogsPage() {
               <input 
                 type="text" 
                 placeholder="Search by Transaction Ref, Sender..." 
-                className="w-full pl-10 pr-4 py-3 bg-white border border-zinc-100 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                className="w-full pl-10 pr-4 py-3 bg-white border border-zinc-100 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-700/20 transition-all"
               />
            </div>
            <div className="flex items-center gap-3">
-              <button className="p-3 bg-white border border-zinc-100 rounded-xl text-zinc-500 hover:text-emerald-600 hover:border-emerald-100 transition-all">
+              <button className="p-3 bg-white border border-zinc-100 rounded-xl text-zinc-500 hover:text-blue-800 hover:border-blue-50 transition-all">
                  <Filter className="w-4 h-4" />
               </button>
-              <select className="bg-white border border-zinc-100 rounded-xl px-4 py-3 text-sm font-bold text-zinc-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+              <select className="bg-white border border-zinc-100 rounded-xl px-4 py-3 text-sm font-bold text-zinc-600 focus:outline-none focus:ring-2 focus:ring-blue-700/20">
                  <option>All Status</option>
                  <option>Success</option>
                  <option>Failed</option>
@@ -63,7 +63,7 @@ export default function LogsPage() {
         <div className="overflow-x-auto">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-20">
-              <Loader2 className="w-10 h-10 text-emerald-600 animate-spin mb-4" />
+              <Loader2 className="w-10 h-10 text-blue-800 animate-spin mb-4" />
               <p className="text-sm font-bold text-zinc-500 uppercase tracking-widest">Loading logs...</p>
             </div>
           ) : (
@@ -90,7 +90,7 @@ export default function LogsPage() {
                     <td className="px-8 py-6">
                       <div className="flex flex-col">
                           <span className="text-sm font-bold text-zinc-900">{item.sender_name}</span>
-                          <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">{item.bank_name}</span>
+                          <span className="text-[10px] font-bold text-blue-800 uppercase tracking-widest">{item.bank_name}</span>
                       </div>
                     </td>
                     <td className="px-8 py-6">
@@ -101,14 +101,14 @@ export default function LogsPage() {
                     </td>
                     <td className="px-8 py-6">
                       <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full w-fit ${
-                          item.status === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
+                          item.status === 'success' ? 'bg-blue-50 text-blue-900' : 'bg-rose-50 text-rose-700'
                       }`}>
                           {item.status === 'success' ? <CheckCircle2 className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
                           <span className="text-[10px] font-bold uppercase tracking-widest">{item.status}</span>
                       </div>
                     </td>
                     <td className="px-8 py-6 text-right">
-                      <button className="px-3 py-1.5 bg-white border border-zinc-200 rounded-lg text-[10px] font-bold uppercase tracking-widest text-zinc-500 hover:text-emerald-600 hover:border-emerald-100 transition-all opacity-0 group-hover:opacity-100">
+                      <button className="px-3 py-1.5 bg-white border border-zinc-200 rounded-lg text-[10px] font-bold uppercase tracking-widest text-zinc-500 hover:text-blue-800 hover:border-blue-50 transition-all opacity-0 group-hover:opacity-100">
                         Manual Recheck
                       </button>
                     </td>
@@ -124,7 +124,7 @@ export default function LogsPage() {
               Showing 1-{logs.length} of {logsResponse?.total || 0} logs
             </p>
             <div className="flex items-center gap-2">
-                <button className="p-2 border border-zinc-100 rounded-lg text-zinc-400 hover:text-emerald-600 hover:border-emerald-100 transition-all disabled:opacity-50" disabled>
+                <button className="p-2 border border-zinc-100 rounded-lg text-zinc-400 hover:text-blue-800 hover:border-blue-50 transition-all disabled:opacity-50" disabled>
                     <ChevronLeft className="w-4 h-4" />
                 </button>
                 {[1, 2, 3, '...', 12].map((page, i) => (
@@ -134,7 +134,7 @@ export default function LogsPage() {
                         {page}
                     </button>
                 ))}
-                <button className="p-2 border border-zinc-100 rounded-lg text-zinc-400 hover:text-emerald-600 hover:border-emerald-100 transition-all">
+                <button className="p-2 border border-zinc-100 rounded-lg text-zinc-400 hover:text-blue-800 hover:border-blue-50 transition-all">
                     <ChevronRight className="w-4 h-4" />
                 </button>
             </div>

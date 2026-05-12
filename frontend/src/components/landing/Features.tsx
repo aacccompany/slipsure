@@ -1,55 +1,49 @@
 'use client';
 
 import React from 'react';
-import { QrCode, ShieldCheck, Database, FileSearch, Zap, Lock } from 'lucide-react';
+import { QrCode, ShieldCheck, Database } from 'lucide-react';
 
 const features = [
   {
-    icon: <QrCode className="w-6 h-6" />,
-    title: "QR Payload Extraction",
-    desc: "ดึงข้อมูลจาก QR Code ในภาพสลิปได้อย่างรวดเร็วและแม่นยำ แม้ภาพจะมีความชัดเจนต่ำ"
+    icon: <QrCode className="w-5 h-5" />,
+    title: 'QR Payload Extraction',
+    desc: 'ดึงข้อมูลจาก QR Code ในภาพสลิปได้อย่างรวดเร็วและแม่นยำ แม้ภาพจะมีความชัดเจนต่ำ',
   },
   {
-    icon: <ShieldCheck className="w-6 h-6" />,
-    title: "Official Bank Verify",
-    desc: "ยืนยันความถูกต้องของข้อมูลผ่าน Gateway ธนาคารโดยตรง มั่นใจได้ในความถูกต้อง 100%"
+    icon: <ShieldCheck className="w-5 h-5" />,
+    title: 'Official Bank Verify',
+    desc: 'ยืนยันความถูกต้องของข้อมูลผ่าน Gateway ธนาคารโดยตรง ไม่ใช่การ OCR หรือเดาจากภาพ',
   },
   {
-    icon: <Database className="w-6 h-6" />,
-    title: "Transaction Integrity",
-    desc: "ตรวจสอบความซ้ำซ้อนของรายการ (Double Spend) เพื่อป้องกันการนำสลิปเก่ามาใช้งานใหม่"
-  }
+    icon: <Database className="w-5 h-5" />,
+    title: 'Transaction Integrity',
+    desc: 'ตรวจสอบความซ้ำซ้อนของรายการ (Double Spend) เพื่อป้องกันการนำสลิปเก่ามาใช้งานใหม่',
+  },
 ];
 
 export const Features = () => {
   return (
-    <section className="py-32 px-6 bg-white border-y border-zinc-100">
+    <section className="border-b border-zinc-200 bg-white">
       <div className="max-w-7xl mx-auto">
-        
-        <div className="grid md:grid-cols-3 gap-0 border border-zinc-100 rounded-3xl overflow-hidden shadow-sm">
-          {features.map((f, i) => (
-            <div key={i} className="p-12 border-zinc-100 md:border-r last:border-r-0 hover:bg-[#fafafa] transition-all duration-500 group relative">
-              <div className="w-12 h-12 rounded-xl bg-zinc-900 text-white flex items-center justify-center mb-10 group-hover:bg-emerald-500 transition-colors duration-500 shadow-xl shadow-zinc-900/10">
-                {f.icon}
-              </div>
-              
-              <h3 className="text-xl font-bold mb-4 tracking-tight text-zinc-900 uppercase">
-                {f.title}
-              </h3>
-              
-              <p className="text-zinc-500 text-sm font-medium leading-relaxed">
-                {f.desc}
-              </p>
-            </div>
-          ))}
+
+        <div className="border-b border-zinc-200 px-8 py-3 flex items-center justify-between">
+          <span className="font-mono text-[11px] text-zinc-400 uppercase tracking-widest">/ HOW IT WORKS</span>
+          <span className="font-mono text-[11px] text-zinc-300 uppercase tracking-widest">3 STEPS</span>
         </div>
 
-        <div className="mt-12 flex flex-col md:flex-row justify-between items-center px-4 gap-6">
-           <div className="flex items-center gap-4 text-zinc-300">
-              <Zap className="w-4 h-4" />
-              <Lock className="w-4 h-4" />
-              <Database className="w-4 h-4" />
-           </div>
+        <div className="grid md:grid-cols-3 divide-x divide-zinc-200">
+          {features.map((f, i) => (
+            <div key={f.title} className="p-10 group hover:bg-zinc-50 transition-colors">
+              <div className="font-mono text-[11px] text-zinc-300 mb-6">0{i + 1}</div>
+              <div className="mb-5 text-zinc-400 group-hover:text-zinc-900 transition-colors">
+                {f.icon}
+              </div>
+              <h3 className="text-sm font-bold text-zinc-900 mb-3 tracking-tight uppercase">
+                {f.title}
+              </h3>
+              <p className="text-sm text-zinc-500 leading-relaxed">{f.desc}</p>
+            </div>
+          ))}
         </div>
 
       </div>

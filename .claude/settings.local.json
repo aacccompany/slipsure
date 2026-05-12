@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh pr *)",
+      "PowerShell(Get-ChildItem D:\\\\Work\\\\slipsure\\\\frontend\\\\src -Recurse -Name | Where-Object { $_ -notmatch 'node_modules' })",
+      "WebFetch(domain:easyslip.com)"
+    ]
+  }
+}

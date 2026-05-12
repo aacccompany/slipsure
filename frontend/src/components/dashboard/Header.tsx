@@ -1,46 +1,46 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
-import { Bell, Search } from 'lucide-react';
+import { Search, Bell } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { dashboardService } from '@/services/dashboard';
 
 export const DashboardHeader = () => {
   const { data: profile } = useQuery({
     queryKey: ['profile'],
-    queryFn: dashboardService.getProfile
+    queryFn: dashboardService.getProfile,
   });
 
-  const initials = profile?.full_name?.split(' ').map(n => n[0]).join('') || 'U';
+  const initials = profile?.full_name?.split(' ').map((n) => n[0]).join('') || 'U';
 
   return (
-    <header className="h-20 border-b border-zinc-100 bg-white/80 backdrop-blur-xl px-8 flex items-center justify-between sticky top-0 z-50">
-      <div className="flex items-center gap-4 w-96">
+    <header className="h-14 border-b border-zinc-200 bg-white px-6 flex items-center justify-between sticky top-0 z-50">
+      <div className="flex items-center gap-3 w-80">
         <div className="relative w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-          <input 
-            type="text" 
-            placeholder="Search logs, keys..." 
-            className="w-full pl-10 pr-4 py-2 bg-zinc-50 border border-zinc-100 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
+          <input
+            type="text"
+            placeholder="Search logs, keys..."
+            className="w-full pl-9 pr-4 py-1.5 bg-zinc-50 border border-zinc-200 rounded-full text-sm text-zinc-700 focus:outline-none focus:border-zinc-400 transition-colors placeholder:text-zinc-400"
           />
         </div>
       </div>
 
       <div className="flex items-center gap-4">
-        <button className="p-2.5 rounded-xl bg-zinc-50 border border-zinc-100 text-zinc-500 hover:text-emerald-600 hover:bg-emerald-50 transition-all relative">
-          <Bell className="w-5 h-5" />
-          <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-emerald-500 rounded-full border-2 border-white" />
+        <button className="relative text-zinc-400 hover:text-zinc-900 transition-colors">
+          <Bell className="w-4 h-4" />
+          <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-blue-800 rounded-full" />
         </button>
-        
-        <div className="h-10 w-px bg-zinc-100 mx-2" />
 
-        <div className="flex items-center gap-3 pl-2">
-          <div className="text-right">
-            <p className="text-sm font-bold text-zinc-900 leading-none mb-1">{profile?.full_name || 'Loading...'}</p>
-            <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">{profile?.plan || 'Loading...'}</p>
-          </div>
-          <div className="w-10 h-10 rounded-xl bg-emerald-100 border border-emerald-200 flex items-center justify-center text-emerald-700 font-bold uppercase">
+        <div className="h-4 w-px bg-zinc-200" />
+
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 bg-zinc-900 flex items-center justify-center text-white text-[11px] font-bold uppercase font-mono">
             {initials}
+          </div>
+          <div>
+            <p className="text-sm font-medium text-zinc-900 leading-none">{profile?.full_name || '—'}</p>
+            <p className="font-mono text-[10px] text-zinc-400 uppercase tracking-widest mt-0.5">{profile?.plan || 'free'}</p>
           </div>
         </div>
       </div>

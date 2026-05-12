@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import { Check, Zap, Shield, Crown, ArrowRight } from 'lucide-react';
@@ -37,7 +37,7 @@ export default function PricingPage() {
       <div className="max-w-7xl mx-auto">
         <div className="text-center max-w-3xl mx-auto mb-20">
           <h1 className="text-5xl md:text-6xl font-black text-zinc-900 tracking-tight mb-6">
-            เลือกแผนที่ <span className="text-emerald-600">ใช่สำหรับคุณ</span>
+            เลือกแผนที่ <span className="text-blue-800">ใช่สำหรับคุณ</span>
           </h1>
           <p className="text-zinc-500 font-medium text-lg leading-relaxed">
             ไม่มีค่าใช้จ่ายแอบแฝง เลือกปรับเปลี่ยนแผนได้ตามการเติบโตของธุรกิจคุณ
@@ -51,12 +51,12 @@ export default function PricingPage() {
               className={`
                 relative p-10 rounded-[3rem] border transition-all duration-500
                 ${plan.highlight 
-                  ? 'bg-zinc-900 border-zinc-800 shadow-2xl shadow-emerald-600/20 scale-105 z-10' 
-                  : 'bg-[#fafafa] border-zinc-100 hover:border-emerald-100 hover:bg-white'}
+                  ? 'bg-zinc-900 border-zinc-800 shadow-2xl shadow-blue-500/20 scale-105 z-10' 
+                  : 'bg-[#fafafa] border-zinc-100 hover:border-blue-50 hover:bg-white'}
               `}
             >
               {plan.highlight && (
-                <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-emerald-600 text-white px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+                <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-blue-800 text-white px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
                   แนะนำสำหรับคุณ
                 </div>
               )}
@@ -81,7 +81,7 @@ export default function PricingPage() {
               <div className="space-y-4 mb-10">
                 {plan.features.map((f, j) => (
                   <div key={j} className="flex items-center gap-3">
-                    <Check className={`w-4 h-4 ${plan.highlight ? 'text-emerald-500' : 'text-emerald-600'}`} />
+                    <Check className={`w-4 h-4 ${plan.highlight ? 'text-blue-700' : 'text-blue-800'}`} />
                     <span className={`text-sm font-medium ${plan.highlight ? 'text-zinc-300' : 'text-zinc-600'}`}>{f}</span>
                   </div>
                 ))}
@@ -92,7 +92,7 @@ export default function PricingPage() {
                 className={`
                   w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-bold text-sm transition-all active:scale-95
                   ${plan.highlight 
-                    ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg shadow-emerald-600/20' 
+                    ? 'bg-blue-800 text-white hover:bg-blue-900 shadow-lg shadow-blue-500/20' 
                     : 'bg-white text-zinc-900 border border-zinc-200 hover:bg-zinc-50'}
                 `}
               >

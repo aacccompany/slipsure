@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -30,7 +30,7 @@ export default function DashboardLayout({
   if (!isAuthorized) {
     return (
       <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
-        <Loader2 className="w-10 h-10 text-emerald-600 animate-spin" />
+        <Loader2 className="w-10 h-10 text-blue-800 animate-spin" />
       </div>
     );
   }

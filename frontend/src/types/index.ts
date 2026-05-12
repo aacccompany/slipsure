@@ -8,18 +8,6 @@ export interface MerchantProfile {
   status: 'active' | 'suspended';
 }
 
-export interface SlipVerificationResult {
-  id: string;
-  timestamp: string;
-  amount: number;
-  senderName: string;
-  receiverName: string;
-  bankName: string;
-  status: 'success' | 'failed' | 'pending';
-  errorReason?: string;
-  imageUrl: string;
-}
-
 export interface DashboardStats {
   totalScans: number;
   successRate: number;

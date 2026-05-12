@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import { 
@@ -22,7 +22,7 @@ export default function WebhooksPage() {
   if (isLoading) {
     return (
       <div className="flex h-[80vh] items-center justify-center">
-        <Loader2 className="w-10 h-10 text-emerald-600 animate-spin" />
+        <Loader2 className="w-10 h-10 text-blue-800 animate-spin" />
       </div>
     );
   }
@@ -34,7 +34,7 @@ export default function WebhooksPage() {
           <h1 className="text-3xl font-black text-zinc-900 tracking-tight mb-2">Webhooks</h1>
           <p className="text-sm font-medium text-zinc-500">Configure real-time notifications for automated slip verification events.</p>
         </div>
-        <button className="bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 flex items-center gap-2">
+        <button className="bg-blue-800 text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-blue-900 transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2">
           <Plus className="w-4 h-4" />
           Add Webhook Endpoint
         </button>
@@ -45,14 +45,14 @@ export default function WebhooksPage() {
           <div key={item.id} className="bg-white border border-zinc-100 rounded-[2.5rem] p-8 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-8">
             <div className="space-y-4 flex-1">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-emerald-50 rounded-2xl flex items-center justify-center border border-emerald-100">
-                  <Webhook className="w-5 h-5 text-emerald-600" />
+                <div className="w-10 h-10 bg-blue-50 rounded-2xl flex items-center justify-center border border-blue-50">
+                  <Webhook className="w-5 h-5 text-blue-800" />
                 </div>
                 <div>
                    <h3 className="text-lg font-bold text-zinc-900 tracking-tight">{item.url}</h3>
                    <div className="flex items-center gap-4 mt-1">
-                      <div className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 uppercase tracking-widest">
-                         <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      <div className="flex items-center gap-1 text-[10px] font-bold text-blue-800 uppercase tracking-widest">
+                         <div className="w-1.5 h-1.5 rounded-full bg-blue-800" />
                          {item.status}
                       </div>
                       <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
@@ -92,7 +92,7 @@ export default function WebhooksPage() {
             <p className="text-zinc-500 text-sm font-medium mb-8 max-w-sm mx-auto">
               Upgrade to our Business Plan to add up to 20 webhook endpoints for complex workflows.
             </p>
-            <button className="text-emerald-600 font-bold text-sm uppercase tracking-widest hover:underline decoration-2 underline-offset-4">
+            <button className="text-blue-800 font-bold text-sm uppercase tracking-widest hover:underline decoration-2 underline-offset-4">
                View Pricing Plans
             </button>
         </div>

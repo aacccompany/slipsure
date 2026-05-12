@@ -29,9 +29,9 @@ export const dashboardService = {
 
   createKey: async (name: string): Promise<ApiKey> => {
     const newKey: ApiKey = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: Math.random().toString(36).slice(2, 11),
       name,
-      key: `sk_live_${Math.random().toString(36).substr(2, 20)}`,
+      key: `sk_live_${Math.random().toString(36).slice(2, 22)}`,
       created_at: new Date().toISOString().split('T')[0],
       status: 'active'
     };
@@ -49,7 +49,7 @@ export const dashboardService = {
 
   addWebhook: async (url: string, events: string[]): Promise<WebhookEndpoint> => {
     return {
-      id: Math.random().toString(36).substr(2, 9),
+      id: Math.random().toString(36).slice(2, 11),
       url,
       events,
       status: 'healthy',

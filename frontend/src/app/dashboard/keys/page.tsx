@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import { 
@@ -49,7 +49,7 @@ export default function ApiKeysPage() {
   if (isLoading) {
     return (
       <div className="flex h-[80vh] items-center justify-center">
-        <Loader2 className="w-10 h-10 text-emerald-600 animate-spin" />
+        <Loader2 className="w-10 h-10 text-blue-800 animate-spin" />
       </div>
     );
   }
@@ -63,7 +63,7 @@ export default function ApiKeysPage() {
         </div>
         <button 
           onClick={handleCreate}
-          className="bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 flex items-center gap-2"
+          className="bg-blue-800 text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-blue-900 transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2"
         >
           <Plus className="w-4 h-4" />
           Create New Key
@@ -101,7 +101,7 @@ export default function ApiKeysPage() {
                       </button>
                       <button 
                         onClick={() => handleCopy(item.key)}
-                        className="p-1.5 text-zinc-400 hover:text-emerald-600 transition-colors"
+                        className="p-1.5 text-zinc-400 hover:text-blue-800 transition-colors"
                       >
                         <Copy className="w-4 h-4" />
                       </button>
@@ -112,7 +112,7 @@ export default function ApiKeysPage() {
                   </td>
                   <td className="px-8 py-6">
                     <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full w-fit ${
-                      item.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
+                      item.status === 'active' ? 'bg-blue-50 text-blue-900' : 'bg-rose-50 text-rose-700'
                     }`}>
                         <CheckCircle2 className="w-3 h-3" />
                         <span className="text-[10px] font-bold uppercase tracking-widest">{item.status}</span>
@@ -130,13 +130,13 @@ export default function ApiKeysPage() {
         </div>
       </div>
 
-      <div className="bg-emerald-50 border border-emerald-100 rounded-3xl p-8 flex items-start gap-6">
-         <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shrink-0 shadow-sm border border-emerald-50">
-            <AlertCircle className="w-6 h-6 text-emerald-600" />
+      <div className="bg-blue-50 border border-blue-50 rounded-3xl p-8 flex items-start gap-6">
+         <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shrink-0 shadow-sm border border-blue-50">
+            <AlertCircle className="w-6 h-6 text-blue-800" />
          </div>
          <div>
             <h4 className="text-emerald-900 font-bold mb-2">Security Recommendation</h4>
-            <p className="text-emerald-700/80 text-sm font-medium leading-relaxed max-w-3xl">
+            <p className="text-blue-900/80 text-sm font-medium leading-relaxed max-w-3xl">
               Never share your secret API keys in client-side code or public repositories. 
               Always use environment variables and handle verification on your server. 
               If a key is compromised, revoke it immediately and generate a new one.

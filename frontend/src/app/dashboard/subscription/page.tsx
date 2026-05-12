@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import { Check, Crown, Zap, Shield, ArrowRight, CreditCard, Clock, History } from 'lucide-react';
@@ -47,9 +47,9 @@ export default function SubscriptionPage() {
           <h1 className="text-3xl font-black text-zinc-900 tracking-tight mb-2">Subscription</h1>
           <p className="text-sm font-medium text-zinc-500">Manage your plan, billing, and credit usage.</p>
         </div>
-        <div className="px-4 py-2 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center gap-2">
-            <Zap className="w-4 h-4 text-emerald-600 fill-emerald-600" />
-            <span className="text-xs font-bold text-emerald-700 uppercase tracking-widest">Free Plan Active</span>
+        <div className="px-4 py-2 bg-blue-50 border border-blue-50 rounded-xl flex items-center gap-2">
+            <Zap className="w-4 h-4 text-blue-800 fill-blue-500" />
+            <span className="text-xs font-bold text-blue-900 uppercase tracking-widest">Free Plan Active</span>
         </div>
       </div>
 
@@ -66,7 +66,7 @@ export default function SubscriptionPage() {
                 </div>
             </div>
             <div className="w-full h-2 bg-zinc-100 rounded-full overflow-hidden">
-                <div className="w-[24%] h-full bg-emerald-500 rounded-full" />
+                <div className="w-[24%] h-full bg-blue-800 rounded-full" />
             </div>
         </div>
         
@@ -93,7 +93,7 @@ export default function SubscriptionPage() {
                     <h3 className="text-lg font-bold text-zinc-900">None Linked</h3>
                 </div>
             </div>
-            <button className="text-xs font-bold text-emerald-600 hover:underline">Add Method</button>
+            <button className="text-xs font-bold text-blue-800 hover:underline">Add Method</button>
         </div>
       </div>
 
@@ -105,8 +105,8 @@ export default function SubscriptionPage() {
             className={`
                 relative p-10 rounded-[2.5rem] border transition-all duration-300 flex flex-col
                 ${plan.highlight 
-                  ? 'bg-zinc-900 border-zinc-800 shadow-2xl shadow-emerald-600/10 scale-105 z-10' 
-                  : 'bg-white border-zinc-100 hover:border-emerald-100'}
+                  ? 'bg-zinc-900 border-zinc-800 shadow-2xl shadow-blue-500/10 scale-105 z-10' 
+                  : 'bg-white border-zinc-100 hover:border-blue-50'}
             `}
           >
             {plan.isCurrent && (
@@ -130,7 +130,7 @@ export default function SubscriptionPage() {
             <div className="space-y-4 mb-12 flex-1">
                 {plan.features.map((feature, i) => (
                     <div key={i} className="flex items-center gap-3">
-                        <Check className={`w-4 h-4 ${plan.highlight ? 'text-emerald-400' : 'text-emerald-600'}`} />
+                        <Check className={`w-4 h-4 ${plan.highlight ? 'text-blue-500' : 'text-blue-800'}`} />
                         <span className={`text-sm font-medium ${plan.highlight ? 'text-zinc-300' : 'text-zinc-600'}`}>{feature}</span>
                     </div>
                 ))}
@@ -144,7 +144,7 @@ export default function SubscriptionPage() {
                     ${plan.isCurrent 
                       ? 'bg-zinc-50 text-zinc-400 cursor-not-allowed' 
                       : plan.highlight 
-                        ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg shadow-emerald-600/20' 
+                        ? 'bg-blue-800 text-white hover:bg-blue-900 shadow-lg shadow-blue-500/20' 
                         : 'bg-zinc-900 text-white hover:bg-black'}
                 `}
             >
@@ -158,7 +158,7 @@ export default function SubscriptionPage() {
       {/* Billing History Placeholder */}
       <div className="bg-white border border-zinc-100 rounded-[2.5rem] p-10 shadow-sm">
          <h3 className="text-xl font-bold text-zinc-900 mb-8 flex items-center gap-3">
-            <History className="w-5 h-5 text-emerald-500" />
+            <History className="w-5 h-5 text-blue-700" />
             Billing History
          </h3>
          <div className="text-center py-12 border-2 border-dashed border-zinc-100 rounded-3xl">
