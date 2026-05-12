@@ -2,27 +2,49 @@
 
 import React, { useState } from 'react';
 import { 
-  Key, 
   Plus, 
   Copy, 
   Trash2, 
   Eye, 
   EyeOff,
-  MoreVertical,
   CheckCircle2,
   AlertCircle,
   Loader2
 } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { dashboardService } from '@/services/dashboard';
+import { toast } from 'sonner';
 
 export default function ApiKeysPage() {
   const [showKey, setShowKey] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data: keys, isLoading } = useQuery({
     queryKey: ['api-keys'],
     queryFn: dashboardService.getKeys
   });
+
+  const createMutation = useMutation({
+    mutationFn: (name: string) => dashboardService.createKey(name),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['api-keys'] });
+      toast.success('New API key created successfully!');
+      setIsCreating(false);
+    }
+  });
+
+  const handleCopy = (key: string) => {
+    navigator.clipboard.writeText(key);
+    toast.success('API Key copied to clipboard');
+  };
+
+  const handleCreate = () => {
+    const name = prompt('Enter a name for your new API key:');
+    if (name) {
+      createMutation.mutate(name);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -37,9 +59,12 @@ export default function ApiKeysPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-black text-zinc-900 tracking-tight mb-2">API Keys</h1>
-          <p className="text-sm font-medium text-zinc-500">Manage your authentication tokens to access Slipsure API.</p>
+          <p className="text-sm font-medium text-zinc-500">Manage your authentication tokens to access FlowSlip API.</p>
         </div>
-        <button className="bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 flex items-center gap-2">
+        <button 
+          onClick={handleCreate}
+          className="bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 flex items-center gap-2"
+        >
           <Plus className="w-4 h-4" />
           Create New Key
         </button>
@@ -74,7 +99,10 @@ export default function ApiKeysPage() {
                       >
                         {showKey === item.id ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
-                      <button className="p-1.5 text-zinc-400 hover:text-emerald-600 transition-colors">
+                      <button 
+                        onClick={() => handleCopy(item.key)}
+                        className="p-1.5 text-zinc-400 hover:text-emerald-600 transition-colors"
+                      >
                         <Copy className="w-4 h-4" />
                       </button>
                     </div>

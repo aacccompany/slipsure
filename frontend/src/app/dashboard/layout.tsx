@@ -16,10 +16,14 @@ export default function DashboardLayout({
 
   useEffect(() => {
     const isLoggedIn = localStorage.getItem('isLoggedIn');
+    const hasCompletedOnboarding = localStorage.getItem('hasCompletedOnboarding');
+
     if (isLoggedIn !== 'true') {
       router.push('/login');
+    } else if (hasCompletedOnboarding !== 'true') {
+      router.push('/onboarding');
     } else {
-      setIsAuthorized(true);
+      setTimeout(() => setIsAuthorized(true), 0);
     }
   }, [router]);
 

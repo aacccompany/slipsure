@@ -37,7 +37,7 @@ export const mockDashboardData = {
   webhooks: (): WebhookEndpoint[] => [
     { 
       id: '1', 
-      url: 'https://api.yourcommerce.com/webhooks/slipsure', 
+      url: 'https://api.yourcommerce.com/webhooks/flowslip', 
       events: ['slip.verified', 'slip.failed'], 
       status: 'healthy',
       last_sent: '2 mins ago'
@@ -54,8 +54,8 @@ export const mockDashboardData = {
 
   profile: (): UserProfile => ({
     full_name: 'Keerati B.',
-    email: 'keerati@slipsure.ai',
-    company_name: 'Slipsure Co., Ltd.',
+    email: 'keerati@flowslip.ai',
+    company_name: 'FlowSlip Co., Ltd.',
     tax_id: '0123456789012',
     plan: 'Developer Plan'
   })

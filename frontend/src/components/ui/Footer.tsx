@@ -20,7 +20,7 @@ export const Footer = () => {
                 <QrCode className="w-5 h-5 text-white" />
               </div>
               <span className="text-xl font-bold tracking-tight text-zinc-900">
-                Slipsure<span className="text-emerald-600">.ai</span>
+                FlowSlip<span className="text-emerald-600">.ai</span>
               </span>
             </Link>
             <p className="text-sm text-zinc-500 font-medium leading-relaxed">
@@ -57,7 +57,7 @@ export const Footer = () => {
           <div>
             <h4 className="font-bold text-zinc-900 mb-6 text-sm uppercase tracking-widest">ติดต่อเรา</h4>
             <ul className="space-y-4 text-sm font-medium text-zinc-500">
-              <li>hello@slipsure.ai</li>
+              <li>hello@flowslip.ai</li>
               <li>ชั้น 24 อาคารสาทรธานี กรุงเทพฯ</li>
               <li>+66 2 123 4567</li>
             </ul>
@@ -66,7 +66,7 @@ export const Footer = () => {
         
         <div className="pt-8 border-t border-zinc-50 flex flex-col md:row items-center justify-between gap-4">
           <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
-            © 2026 Slipsure.Ai - All rights reserved.
+            © 2026 FlowSlip.Ai - All rights reserved.
           </p>
           <div className="flex gap-6 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
             <a href="#" className="hover:text-zinc-900">Privacy Policy</a>

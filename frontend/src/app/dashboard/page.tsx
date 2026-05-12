@@ -41,7 +41,7 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-black text-zinc-900 tracking-tight mb-2">Dashboard Overview</h1>
-          <p className="text-sm font-medium text-zinc-500">Welcome back, here's what's happening with your API usage.</p>
+          <p className="text-sm font-medium text-zinc-500">Welcome back, here&apos;s what&apos;s happening with your API usage.</p>
         </div>
         <button className="bg-zinc-900 text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-black transition-all shadow-lg flex items-center gap-2">
           Download Reports
@@ -104,7 +104,6 @@ export default function DashboardPage() {
           
           <div className="h-64 flex items-end gap-3 px-4">
             {dailyUsage?.map((data, i) => {
-              const total = data.successful + data.failed;
               const successHeight = (data.successful / 1000) * 100; // Mock scale
               const failHeight = (data.failed / 1000) * 100;
               return (

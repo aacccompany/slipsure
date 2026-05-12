@@ -9,20 +9,20 @@ import {
   AlertTriangle,
   ChevronLeft,
   ChevronRight,
-  User,
-  Building2,
-  Clock
+  Clock,
+  Loader2
 } from 'lucide-react';
-
-const logs = [
-  { id: 1, date: '2024-04-28 14:30', amount: 1250.00, sender: 'Somchai J.', bank: 'KBank', ref: 'KB1714282210', status: 'Success' },
-  { id: 2, date: '2024-04-28 14:15', amount: 500.00, sender: 'Jane Doe', bank: 'SCB', ref: 'SCB1714281305', status: 'Success' },
-  { id: 3, date: '2024-04-28 13:50', amount: 2500.00, sender: 'Unknown', bank: 'N/A', ref: 'N/A', status: 'Failed' },
-  { id: 4, date: '2024-04-28 13:20', amount: 150.00, sender: 'Wichai S.', bank: 'TTB', ref: 'TTB1714278010', status: 'Success' },
-  { id: 5, date: '2024-04-28 12:45', amount: 3000.00, sender: 'Malee K.', bank: 'BBL', ref: 'BBL1714275902', status: 'Success' },
-];
+import { useQuery } from '@tanstack/react-query';
+import { dashboardService } from '@/services/dashboard';
 
 export default function LogsPage() {
+  const { data: logsResponse, isLoading } = useQuery({
+    queryKey: ['dashboard-logs'],
+    queryFn: () => dashboardService.getLogs(1)
+  });
+
+  const logs = logsResponse?.data || [];
+
   return (
     <div className="p-8 space-y-8">
       <div className="flex items-center justify-between">
@@ -61,53 +61,68 @@ export default function LogsPage() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-white border-b border-zinc-50">
-                <th className="px-8 py-5 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Date & Time</th>
-                <th className="px-8 py-5 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Sender</th>
-                <th className="px-8 py-5 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Amount</th>
-                <th className="px-8 py-5 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Trans. Ref</th>
-                <th className="px-8 py-5 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-50">
-              {logs.map((item) => (
-                <tr key={item.id} className="hover:bg-zinc-50/50 transition-colors cursor-pointer">
-                  <td className="px-8 py-6">
-                    <div className="flex items-center gap-2 text-sm font-bold text-zinc-900">
-                        <Clock className="w-3.5 h-3.5 text-zinc-400" />
-                        {item.date}
-                    </div>
-                  </td>
-                  <td className="px-8 py-6">
-                    <div className="flex flex-col">
-                        <span className="text-sm font-bold text-zinc-900">{item.sender}</span>
-                        <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">{item.bank}</span>
-                    </div>
-                  </td>
-                  <td className="px-8 py-6">
-                    <span className="text-sm font-black text-zinc-900">฿{item.amount.toLocaleString()}</span>
-                  </td>
-                  <td className="px-8 py-6">
-                    <code className="text-xs font-mono text-zinc-500 tracking-wider bg-zinc-100 px-2 py-1 rounded">{item.ref}</code>
-                  </td>
-                  <td className="px-8 py-6">
-                    <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full w-fit ${
-                        item.status === 'Success' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
-                    }`}>
-                        {item.status === 'Success' ? <CheckCircle2 className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
-                        <span className="text-[10px] font-bold uppercase tracking-widest">{item.status}</span>
-                    </div>
-                  </td>
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-20">
+              <Loader2 className="w-10 h-10 text-emerald-600 animate-spin mb-4" />
+              <p className="text-sm font-bold text-zinc-500 uppercase tracking-widest">Loading logs...</p>
+            </div>
+          ) : (
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-white border-b border-zinc-50">
+                  <th className="px-8 py-5 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Date & Time</th>
+                  <th className="px-8 py-5 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Sender</th>
+                  <th className="px-8 py-5 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Amount</th>
+                  <th className="px-8 py-5 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Trans. Ref</th>
+                  <th className="px-8 py-5 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Status</th>
+                  <th className="px-8 py-5 text-[10px] font-bold text-zinc-400 uppercase tracking-widest text-right">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-zinc-50">
+                {logs.map((item) => (
+                  <tr key={item.id} className="hover:bg-zinc-50/50 transition-colors group">
+                    <td className="px-8 py-6">
+                      <div className="flex items-center gap-2 text-sm font-bold text-zinc-900">
+                          <Clock className="w-3.5 h-3.5 text-zinc-400" />
+                          {item.timestamp}
+                      </div>
+                    </td>
+                    <td className="px-8 py-6">
+                      <div className="flex flex-col">
+                          <span className="text-sm font-bold text-zinc-900">{item.sender_name}</span>
+                          <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">{item.bank_name}</span>
+                      </div>
+                    </td>
+                    <td className="px-8 py-6">
+                      <span className="text-sm font-black text-zinc-900">฿{item.amount.toLocaleString()}</span>
+                    </td>
+                    <td className="px-8 py-6">
+                      <code className="text-xs font-mono text-zinc-500 tracking-wider bg-zinc-100 px-2 py-1 rounded">{item.trans_ref}</code>
+                    </td>
+                    <td className="px-8 py-6">
+                      <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full w-fit ${
+                          item.status === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
+                      }`}>
+                          {item.status === 'success' ? <CheckCircle2 className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
+                          <span className="text-[10px] font-bold uppercase tracking-widest">{item.status}</span>
+                      </div>
+                    </td>
+                    <td className="px-8 py-6 text-right">
+                      <button className="px-3 py-1.5 bg-white border border-zinc-200 rounded-lg text-[10px] font-bold uppercase tracking-widest text-zinc-500 hover:text-emerald-600 hover:border-emerald-100 transition-all opacity-0 group-hover:opacity-100">
+                        Manual Recheck
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
 
         <div className="p-8 border-t border-zinc-50 flex items-center justify-between">
-            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Showing 1-5 of 1,248 logs</p>
+            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+              Showing 1-{logs.length} of {logsResponse?.total || 0} logs
+            </p>
             <div className="flex items-center gap-2">
                 <button className="p-2 border border-zinc-100 rounded-lg text-zinc-400 hover:text-emerald-600 hover:border-emerald-100 transition-all disabled:opacity-50" disabled>
                     <ChevronLeft className="w-4 h-4" />

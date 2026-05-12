@@ -137,7 +137,7 @@ export const ResultCard: React.FC<ResultCardProps> = ({ result, error, onReset }
               </div>
               <div className="text-left">
                 <p className="text-[10px] font-bold text-emerald-800 uppercase tracking-widest">ความถูกต้องระดับสูงสุด</p>
-                <p className="text-[10px] font-medium text-emerald-600/70">Verified by Slipsure.ai via Secure Bank Gateway</p>
+                <p className="text-[10px] font-medium text-emerald-600/70">Verified by FlowSlip.ai via Secure Bank Gateway</p>
               </div>
            </div>
            

@@ -23,13 +23,13 @@ export const Navbar = () => {
   return (
     <nav className="fixed top-0 z-[100] w-full border-b border-zinc-100 bg-white/80 backdrop-blur-xl">
       <div className="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center">
-        {/* Logo แบบ EasySlip: สะอาดตา */}
+        {/* Logo Section */}
         <Link href="/" className="flex items-center gap-2 group" onClick={() => setIsOpen(false)}>
           <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center transition-all group-hover:bg-emerald-500 shadow-lg shadow-emerald-600/20">
             <QrCode className="w-5 h-5 text-white" />
           </div>
           <span className="text-xl font-bold tracking-tight text-zinc-900">
-            Slipsure<span className="text-emerald-600">.ai</span>
+            FlowSlip<span className="text-emerald-600">.ai</span>
           </span>
         </Link>
         

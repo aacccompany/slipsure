@@ -11,7 +11,8 @@ import {
   Settings, 
   QrCode,
   LogOut,
-  ChevronRight
+  ChevronRight,
+  CreditCard
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -20,6 +21,7 @@ const menuItems = [
   { name: 'API Keys', href: '/dashboard/keys', icon: Key },
   { name: 'Webhooks', href: '/dashboard/webhooks', icon: Webhook },
   { name: 'Verification Logs', href: '/dashboard/logs', icon: History },
+  { name: 'Subscription', href: '/dashboard/subscription', icon: CreditCard },
   { name: 'Settings', href: '/dashboard/settings', icon: Settings },
 ];
 
@@ -29,6 +31,7 @@ export const DashboardSidebar = () => {
 
   const handleLogout = () => {
     localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('accessToken');
     router.push('/login');
   };
 
@@ -41,7 +44,7 @@ export const DashboardSidebar = () => {
             <QrCode className="w-5 h-5 text-white" />
           </div>
           <span className="text-xl font-bold tracking-tight text-zinc-900">
-            Slipsure<span className="text-emerald-600">.ai</span>
+            FlowSlip<span className="text-emerald-600">.ai</span>
           </span>
         </Link>
       </div>

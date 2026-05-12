@@ -78,7 +78,7 @@ export default function DocsPage() {
                         </div>
                     </div>
                     <pre className="font-mono text-sm text-emerald-400 overflow-x-auto">
-{`curl -X POST https://api.slipsure.ai/v1/verify \\
+{`curl -X POST https://api.flowslip.ai/v1/verify \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -F "file=@slip.jpg"`}
                     </pre>
@@ -104,7 +104,7 @@ export default function DocsPage() {
                     </div>
                     <h3 className="text-xl font-bold text-zinc-900 mb-3">Community & Showcases</h3>
                     <p className="text-sm text-zinc-500 font-medium leading-relaxed mb-6">
-                        ดูตัวอย่างโปรเจกต์ที่ใช้งาน Slipsure และร่วมพูดคุยกับเหล่านักพัฒนา
+                        ดูตัวอย่างโปรเจกต์ที่ใช้งาน FlowSlip และร่วมพูดคุยกับเหล่านักพัฒนา
                     </p>
                     <Link href="#" className="inline-flex items-center gap-2 text-emerald-600 font-bold text-sm hover:gap-3 transition-all">
                         เข้าสู่ Community <ArrowRight className="w-4 h-4" />

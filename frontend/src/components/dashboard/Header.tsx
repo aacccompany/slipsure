@@ -1,9 +1,18 @@
 'use client';
 
 import React from 'react';
-import { Bell, Search, User } from 'lucide-react';
+import { Bell, Search } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { dashboardService } from '@/services/dashboard';
 
 export const DashboardHeader = () => {
+  const { data: profile } = useQuery({
+    queryKey: ['profile'],
+    queryFn: dashboardService.getProfile
+  });
+
+  const initials = profile?.full_name?.split(' ').map(n => n[0]).join('') || 'U';
+
   return (
     <header className="h-20 border-b border-zinc-100 bg-white/80 backdrop-blur-xl px-8 flex items-center justify-between sticky top-0 z-50">
       <div className="flex items-center gap-4 w-96">
@@ -27,11 +36,11 @@ export const DashboardHeader = () => {
 
         <div className="flex items-center gap-3 pl-2">
           <div className="text-right">
-            <p className="text-sm font-bold text-zinc-900 leading-none mb-1">Keerati B.</p>
-            <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Developer Plan</p>
+            <p className="text-sm font-bold text-zinc-900 leading-none mb-1">{profile?.full_name || 'Loading...'}</p>
+            <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">{profile?.plan || 'Loading...'}</p>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-emerald-100 border border-emerald-200 flex items-center justify-center text-emerald-700 font-bold">
-            KB
+          <div className="w-10 h-10 rounded-xl bg-emerald-100 border border-emerald-200 flex items-center justify-center text-emerald-700 font-bold uppercase">
+            {initials}
           </div>
         </div>
       </div>

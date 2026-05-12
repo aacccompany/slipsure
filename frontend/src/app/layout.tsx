@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SLIPSURE.Ai - ระบบตรวจสอบสลิปโอนเงินอัตโนมัติด้วย AI",
-  description: "SLIPSURE.Ai บริการเช็กสลิปโอนเงินอัตโนมัติผ่านการทำงานของ AI พร้อมมอบความอุ่นใจให้ธุรกิจของคุณ ป้องกันสลิปปลอม แม่นยำ รวดเร็ว",
+  title: "FLOWSLIP.Ai - ระบบตรวจสอบสลิปโอนเงินอัตโนมัติด้วย AI",
+  description: "FLOWSLIP.Ai บริการเช็กสลิปโอนเงินอัตโนมัติผ่านการทำงานของ AI พร้อมมอบความอุ่นใจให้ธุรกิจของคุณ ป้องกันสลิปปลอม แม่นยำ รวดเร็ว",
 };
 
 export default function RootLayout({

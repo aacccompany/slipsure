@@ -4,25 +4,29 @@ import React from 'react';
 import { 
   Webhook, 
   Plus, 
-  ExternalLink, 
   Trash2, 
   Settings2,
-  CheckCircle2,
   Activity,
-  Zap
+  Zap,
+  Loader2
 } from 'lucide-react';
-
-const webhooks = [
-  { 
-    id: 1, 
-    url: 'https://api.yourcommerce.com/webhooks/slipsure', 
-    events: ['slip.verified', 'slip.failed'], 
-    status: 'Healthy',
-    lastSent: '2 mins ago'
-  },
-];
+import { useQuery } from '@tanstack/react-query';
+import { dashboardService } from '@/services/dashboard';
 
 export default function WebhooksPage() {
+  const { data: webhooks, isLoading } = useQuery({
+    queryKey: ['webhooks'],
+    queryFn: dashboardService.getWebhooks
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex h-[80vh] items-center justify-center">
+        <Loader2 className="w-10 h-10 text-emerald-600 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="p-8 space-y-8">
       <div className="flex items-center justify-between">
@@ -37,7 +41,7 @@ export default function WebhooksPage() {
       </div>
 
       <div className="grid gap-6">
-        {webhooks.map((item) => (
+        {webhooks?.map((item) => (
           <div key={item.id} className="bg-white border border-zinc-100 rounded-[2.5rem] p-8 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-8">
             <div className="space-y-4 flex-1">
               <div className="flex items-center gap-3">
@@ -53,7 +57,7 @@ export default function WebhooksPage() {
                       </div>
                       <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
                          <Activity className="w-3 h-3" />
-                         Last sent: {item.lastSent}
+                         Last sent: {item.last_sent}
                       </div>
                    </div>
                 </div>
