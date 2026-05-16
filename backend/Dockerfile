@@ -1,22 +1,45 @@
-FROM python:3.11-slim
+# ============================================
+# Multi-stage Go Dockerfile for Slip Verification API
+# ============================================
+
+# Stage 1: Build
+FROM golang:1.21-alpine AS builder
+
+# Install build dependencies
+RUN apk add --no-cache git ca-certificates tzdata
 
 WORKDIR /app
 
-# ติดตั้ง System Libraries สำหรับ OpenCV และ PyZbar
-# เปลี่ยนจาก libgl1-mesa-glx เป็น libgl1
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    libzbar0 \
-    libgl1 \
-    libglib2.0-0 \
-    && rm -rf /var/lib/apt/lists/*
+# Copy go mod files and download dependencies
+COPY go.mod ./
+RUN go mod download
+RUN go mod tidy
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
+# Copy source code
 COPY . .
 
-EXPOSE 8000
+# Download dependencies again for caching
+RUN go mod download
 
-# รัน Backend
-CMD ["python", "main.py"]
+# Build the application
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
+
+# Stage 2: Runtime
+FROM alpine:latest
+
+# Install runtime dependencies for QR code processing
+RUN apk --no-cache add ca-certificates tzdata zbar
+
+WORKDIR /root/
+
+# Copy the binary from builder
+COPY --from=builder /app/main .
+
+# Create runtime directories
+RUN mkdir -p uploads configs logs
+
+# Expose port
+EXPOSE 8080
+
+# Run the application
+CMD ["./main"]

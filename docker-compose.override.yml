@@ -1,0 +1,22 @@
+# Development override for docker-compose
+# Run with: docker-compose -f docker-compose.yml -f docker-compose.override.yml up
+services:
+  # For Go backend, don't mount source - use local development or rebuild
+  # To develop locally: cd backend && go run main.go
+  # To rebuild: docker-compose build backend && docker-compose up backend
+
+  frontend:
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    command: npm run dev
+
+  postgres:
+    ports:
+      - "5432:5432"
+
+  redis:
+    ports:
+      - "6379:6379"

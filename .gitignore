@@ -1,0 +1,4 @@
+.env.example
+/backend/.agents
+.env
+.env.example

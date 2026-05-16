@@ -1,4 +1,7 @@
 services:
+  # ============================================
+  # Frontend Service (Next.js)
+  # ============================================
   frontend:
     build:
       context: ./frontend
@@ -7,18 +10,120 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_API_URL=http://localhost:8080/v1
+      - NEXT_PUBLIC_API_TIMEOUT=30000
+      - NEXT_PUBLIC_LINE_LOGIN_CHANNEL_ID=${LINE_LOGIN_CHANNEL_ID}
+      - NEXT_PUBLIC_LINE_LOGIN_CALLBACK_URL=${LINE_LOGIN_CALLBACK_URL}
+      - NEXT_PUBLIC_APP_NAME=SlipSure
+      - NEXT_PUBLIC_APP_URL=http://localhost:3000
+      - NEXT_PUBLIC_ENABLE_ANALYTICS=true
+      - NEXT_PUBLIC_ENABLE_LINE_LOGIN=true
     depends_on:
       - backend
+    networks:
+      - slipsure-network
     restart: always
 
+  # ============================================
+  # Backend Service (Go)
+  # ============================================
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: slipsure-backend
     ports:
-      - "8000:8000"
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - ENV=development
+      - DB_URL=postgresql://slipverify:slipverify1234@postgres:5432/slipsure?sslmode=disable
+      - REDIS_URL=redis://redis:6379
+      - LINE_MESSAGING_CHANNEL_ID=${LINE_MESSAGING_CHANNEL_ID}
+      - LINE_MESSAGING_CHANNEL_SECRET=${LINE_MESSAGING_CHANNEL_SECRET}
+      - LINE_MESSAGING_ACCESS_TOKEN=${LINE_MESSAGING_ACCESS_TOKEN}
+      - LINE_LOGIN_CHANNEL_ID=${LINE_LOGIN_CHANNEL_ID}
+      - LINE_LOGIN_CHANNEL_SECRET=${LINE_LOGIN_CHANNEL_SECRET}
+      - LINE_LOGIN_CALLBACK_URL=${LINE_LOGIN_CALLBACK_URL}
+      - SPACES_ENDPOINT=${SPACES_ENDPOINT}
+      - SPACES_REGION=${SPACES_REGION}
+      - SPACES_BUCKET=${SPACES_BUCKET}
+      - SPACES_ACCESS_KEY=${SPACES_ACCESS_KEY}
+      - SPACES_SECRET_KEY=${SPACES_SECRET_KEY}
+      - K_API_KEY=${K_API_KEY}
+      - KBANK_API_URL=${KBANK_API_URL}
+      - KBANK_MOCK_MODE=${KBANK_MOCK_MODE}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
     volumes:
-      - ./backend:/app
+      - backend_uploads:/root/uploads
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - slipsure-network
     restart: always
+
+  # ============================================
+  # PostgreSQL Database
+  # ============================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: slipsure-postgres
+    environment:
+      - POSTGRES_USER=slipverify
+      - POSTGRES_PASSWORD=slipverify1234
+      - POSTGRES_DB=slipverify
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - slipsure-network
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U slipverify"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # Redis Cache & Job Queue
+  # ============================================
+  redis:
+    image: redis:7-alpine
+    container_name: slipsure-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - slipsure-network
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# ============================================
+# Networks
+# ============================================
+networks:
+  slipsure-network:
+    driver: bridge
+
+# ============================================
+# Volumes
+# ============================================
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  backend_uploads:
+    driver: local
