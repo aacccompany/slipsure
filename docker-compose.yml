@@ -6,7 +6,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: slipsure-frontend
+    container_name: flowslip-frontend
     ports:
       - "3000:3000"
     environment:
