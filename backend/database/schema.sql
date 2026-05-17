@@ -7,7 +7,24 @@
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
-CREATE TYPE user_role AS ENUM ('merchant_owner', 'merchant_staff', 'admin', 'superadmin');
+-- Drop existing types if they exist (for clean migration)
+DO $$
+BEGIN
+    DROP TYPE IF EXISTS user_role CASCADE;
+    DROP TYPE IF EXISTS subscription_status CASCADE;
+    DROP TYPE IF EXISTS billing_cycle CASCADE;
+    DROP TYPE IF EXISTS transaction_status CASCADE;
+    DROP TYPE IF EXISTS slip_status CASCADE;
+    DROP TYPE IF EXISTS fail_reason CASCADE;
+    DROP TYPE IF EXISTS payment_status CASCADE;
+    DROP TYPE IF EXISTS payment_gateway CASCADE;
+    DROP TYPE IF EXISTS log_level CASCADE;
+EXCEPTION
+    WHEN others THEN NULL;
+END $$;
+
+-- Create ENUM types
+CREATE TYPE user_role AS ENUM ('merchant', 'admin');
 CREATE TYPE subscription_status AS ENUM ('trial', 'active', 'suspended', 'cancelled', 'expired');
 CREATE TYPE billing_cycle AS ENUM ('monthly', 'yearly');
 CREATE TYPE transaction_status AS ENUM ('pending', 'success', 'failed', 'processing');
@@ -21,34 +38,27 @@ CREATE TYPE log_level AS ENUM ('info', 'warning', 'error', 'critical');
 -- Users Table
 -- ============================================
 
+DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS merchants CASCADE;
+DROP TABLE IF EXISTS subscription_plans CASCADE;
+DROP TABLE IF EXISTS subscriptions CASCADE;
+DROP TABLE IF EXISTS payment_logs CASCADE;
+DROP TABLE IF EXISTS slips CASCADE;
+DROP TABLE IF EXISTS transactions CASCADE;
+DROP TABLE IF EXISTS notifications CASCADE;
+DROP TABLE IF EXISTS usage_counters CASCADE;
+DROP TABLE IF EXISTS system_logs CASCADE;
+
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     phone VARCHAR(20),
     password_hash VARCHAR(255) NOT NULL,
-    role user_role NOT NULL DEFAULT 'merchant_owner',
+    role user_role NOT NULL DEFAULT 'merchant',
     line_user_id VARCHAR(255),
     line_linked BOOLEAN DEFAULT FALSE,
     email_verified BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- ============================================
--- Subscription Plans Table
--- ============================================
-
-CREATE TABLE subscription_plans (
-    id VARCHAR(50) PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    description TEXT,
-    price_monthly DECIMAL(10, 2) DEFAULT 0,
-    price_yearly DECIMAL(10, 2) DEFAULT 0,
-    quota_per_month INTEGER DEFAULT 50,
-    features JSONB DEFAULT '[]'::jsonb,
-    is_popular BOOLEAN DEFAULT FALSE,
-    is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -69,6 +79,27 @@ CREATE TABLE merchants (
     line_channel_secret VARCHAR(255),
     line_access_token TEXT,
     line_webhook_verified BOOLEAN DEFAULT FALSE,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Add merchant_id to users table after merchants exists
+ALTER TABLE users ADD COLUMN IF NOT EXISTS merchant_id UUID REFERENCES merchants(id) ON DELETE SET NULL;
+
+-- ============================================
+-- Subscription Plans Table
+-- ============================================
+
+CREATE TABLE subscription_plans (
+    id VARCHAR(50) PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    price_monthly DECIMAL(10, 2) DEFAULT 0,
+    price_yearly DECIMAL(10, 2) DEFAULT 0,
+    quota_per_month INTEGER DEFAULT 50,
+    features JSONB DEFAULT '[]'::jsonb,
+    is_popular BOOLEAN DEFAULT FALSE,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -258,4 +289,12 @@ CREATE INDEX idx_system_logs_created_at ON system_logs(created_at);
 INSERT INTO subscription_plans (id, name, description, price_monthly, price_yearly, quota_per_month, features, is_popular) VALUES
 ('plan-free', 'Free', 'Perfect for trying out SlipSure', 0, 0, 50, '["slip_verify", "line_notify", "csv_export", "analytics"]'::jsonb, FALSE),
 ('plan-starter', 'Starter', 'For small businesses', 299, 2990, 200, '["slip_verify", "line_notify", "csv_export", "analytics"]'::jsonb, FALSE),
-('plan-pro', 'Pro', 'For growing businesses', 799, 7990, 1000, '["slip_verify", "line_notify", "csv_export", "analytics", "priority_support"]'::jsonb, TRUE);
+('plan-pro', 'Pro', 'For growing businesses', 799, 7990, 1000, '["slip_verify", "line_notify", "csv_export", "analytics", "priority_support"]'::jsonb, TRUE)
+ON CONFLICT (id) DO UPDATE SET
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  price_monthly = EXCLUDED.price_monthly,
+  price_yearly = EXCLUDED.price_yearly,
+  quota_per_month = EXCLUDED.quota_per_month,
+  features = EXCLUDED.features,
+  is_popular = EXCLUDED.is_popular;

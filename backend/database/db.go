@@ -13,17 +13,24 @@ var DB *sql.DB
 
 // Connect establishes connection to PostgreSQL database
 func Connect() error {
-	host := getEnv("DB_HOST", "postgres")
-	port := getEnv("DB_PORT", "5432")
-	user := getEnv("DB_USER", "slipverify")
-	password := getEnv("DB_PASSWORD", "slipverify1234")
-	dbname := getEnv("DB_NAME", "slipsure")
-
-	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		host, port, user, password, dbname)
+	// Use DB_URL if available (from docker-compose), otherwise build from components
+	dbURL := getEnv("DB_URL", "")
+	if dbURL == "" {
+		// Fallback to DATABASE_URL or build from components
+		dbURL = getEnv("DATABASE_URL", "")
+		if dbURL == "" {
+			host := getEnv("DB_HOST", "postgres")
+			port := getEnv("DB_PORT", "5432")
+			user := getEnv("DB_USER", "slipverify")
+			password := getEnv("DB_PASSWORD", "slipverify1234")
+			dbname := getEnv("DB_NAME", "slipsure")
+			dbURL = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+				host, port, user, password, dbname)
+		}
+	}
 
 	var err error
-	DB, err = sql.Open("postgres", connStr)
+	DB, err = sql.Open("postgres", dbURL)
 	if err != nil {
 		return fmt.Errorf("error opening database: %w", err)
 	}
@@ -37,7 +44,7 @@ func Connect() error {
 	DB.SetMaxOpenConns(25)
 	DB.SetMaxIdleConns(5)
 
-	log.Println("✅ Database connected successfully")
+	log.Println(" Database connected successfully")
 	return nil
 }
 
@@ -45,7 +52,7 @@ func Connect() error {
 func Close() {
 	if DB != nil {
 		DB.Close()
-		log.Println("🔌 Database connection closed")
+		log.Println(" Database connection closed")
 	}
 }
 
@@ -53,6 +60,12 @@ func Close() {
 func CreateDatabase() error {
 	// Connect to default postgres database first
 	host := getEnv("DB_HOST", "postgres")
+
+	// Use localhost if not in Docker environment
+	if getEnv("DOCKER_ENV", "") != "true" {
+		host = "localhost"
+	}
+
 	port := getEnv("DB_PORT", "5432")
 	user := getEnv("DB_USER", "slipverify")
 	password := getEnv("DB_PASSWORD", "slipverify1234")

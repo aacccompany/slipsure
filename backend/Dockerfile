@@ -13,12 +13,12 @@ WORKDIR /app
 # Copy go mod files and download dependencies
 COPY go.mod ./
 RUN go mod download
-RUN go mod tidy
 
 # Copy source code
 COPY . .
 
-# Download dependencies again for caching
+# Download dependencies again for caching and update go.sum
+RUN go mod tidy
 RUN go mod download
 
 # Build the application

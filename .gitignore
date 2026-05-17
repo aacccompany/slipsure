@@ -1,4 +1,6 @@
-.env.example
+
 /backend/.agents
 .env
 .env.example
+/backend/.agents
+docker-compose.yml

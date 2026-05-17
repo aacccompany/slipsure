@@ -91,7 +91,7 @@ Standard email/password login.
       "id": "uuid-xxx",
       "name": "สมชาย ใจดี",
       "email": "somchai@shop.com",
-      "role": "merchant_owner",
+      "role": "merchant",
       "merchant_id": "uuid-merchant"
     }
   }
@@ -630,7 +630,7 @@ Retry failed notification delivery.
 
 ## 6. Admin Backoffice
 
-> Requires role: `admin` or `superadmin`
+> Requires role: `admin`
 
 ### GET `/admin/merchants`
 List all merchants.
