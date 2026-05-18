@@ -129,3 +129,12 @@ type UserProfileResponse struct {
 type LogoutResponse struct {
 	Message string `json:"message"`
 }
+
+// LineLoginResponse represents LINE login response
+type LineLoginResponse struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	ExpiresIn    int    `json:"expires_in"`
+	IsNewUser    bool   `json:"is_new_user"`
+	User         User   `json:"user"`
+}

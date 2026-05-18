@@ -79,8 +79,18 @@ func main() {
 	}
 	defer otpService.Close()
 
-	// Initialize services
-	authService := services.NewAuthServiceWithOTP(userRepo, otpService)
+	// Initialize LINE OAuth service (optional - can fail gracefully)
+	log.Println("🔧 Attempting to initialize LINE OAuth service...")
+	var lineOAuth *services.LineOAuthService
+	if lineOAuth, err = services.NewLineOAuthService(); err != nil {
+		log.Printf("⚠️  Warning: Failed to initialize LINE OAuth service: %v", err)
+		log.Println("📱 LINE login functionality will be unavailable")
+	} else {
+		log.Println("✅ LINE OAuth service initialized successfully")
+	}
+
+	// Initialize services with dependency injection
+	authService := services.NewAuthServiceWithOTP(userRepo, otpService, lineOAuth)
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(authService)
@@ -106,6 +116,7 @@ func main() {
 			auth.POST("/verify-otp", authHandler.VerifyOTP)
 			auth.POST("/resend-otp", authHandler.ResendOTP)
 			auth.POST("/login", authHandler.Login)
+			auth.POST("/line-login", authHandler.LineLogin)
 			auth.POST("/forgot-password", authHandler.ForgotPassword)
 			auth.POST("/reset-password", authHandler.ResetPassword)
 		}

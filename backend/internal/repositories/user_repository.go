@@ -34,8 +34,8 @@ func NewUserRepository(db *sql.DB) UserRepository {
 // Create inserts a new user into the database
 func (r *userRepository) Create(user *models.User) error {
 	query := `
-		INSERT INTO users (name, email, phone, password_hash, role)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO users (name, email, phone, password_hash, role, line_user_id, line_linked, email_verified)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id, created_at, updated_at
 	`
 
@@ -44,7 +44,12 @@ func (r *userRepository) Create(user *models.User) error {
 		phone = *user.Phone
 	}
 
-	err := r.db.QueryRow(query, user.Name, user.Email, phone, user.PasswordHash, user.Role).Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
+	var lineUserID interface{} = nil
+	if user.LineUserID != nil {
+		lineUserID = *user.LineUserID
+	}
+
+	err := r.db.QueryRow(query, user.Name, user.Email, phone, user.PasswordHash, user.Role, lineUserID, user.LineLinked, user.EmailVerified).Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		return err
 	}
@@ -140,6 +145,7 @@ func (r *userRepository) FindByLineUserID(lineUserID string) (*models.User, erro
 	}
 
 	user.Phone = phone
+	user.LineUserID = userID
 
 	return &user, nil
 }

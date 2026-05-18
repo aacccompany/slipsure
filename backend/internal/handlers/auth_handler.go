@@ -181,6 +181,51 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	})
 }
 
+// LineLogin handles POST /auth/line-login
+func (h *AuthHandler) LineLogin(c *gin.Context) {
+	var req models.LineLoginRequest
+
+	// Bind and validate request
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "VALIDATION_ERROR",
+			"message": "Invalid request data",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Call auth service
+	response, err := h.authService.LineLogin(&req)
+	if err != nil {
+		log.Printf("LINE login error: %v", err)
+
+		errorCode := "LINE_LOGIN_FAILED"
+		statusCode := http.StatusUnauthorized
+
+		errorMsg := err.Error()
+		if strings.Contains(strings.ToLower(errorMsg), "not configured") {
+			errorCode = "SERVICE_UNAVAILABLE"
+			statusCode = http.StatusServiceUnavailable
+		} else if strings.Contains(strings.ToLower(errorMsg), "failed to authenticate") {
+			errorCode = "INVALID_LINE_CODE"
+		}
+
+		c.JSON(statusCode, gin.H{
+			"success": false,
+			"error":   errorCode,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    response,
+	})
+}
+
 // ForgotPassword handles POST /auth/forgot-password
 func (h *AuthHandler) ForgotPassword(c *gin.Context) {
 	var req models.ForgotPasswordRequest

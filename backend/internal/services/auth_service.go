@@ -5,16 +5,18 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/google/uuid"
 	"slipsure-backend/internal/models"
 	"slipsure-backend/internal/repositories"
 	"slipsure-backend/internal/utils"
+
+	"github.com/google/uuid"
 )
 
 // AuthService defines the interface for authentication business logic
 type AuthService interface {
 	Register(req *models.RegisterRequest) (*models.RegisterResponse, error)
 	Login(req *models.LoginRequest) (*models.AuthResponse, error)
+	LineLogin(req *models.LineLoginRequest) (*models.LineLoginResponse, error)
 	VerifyOTP(req *models.VerifyOTPRequest) (*models.VerifyOTPResponse, error)
 	ResendOTP(email string) error
 	ForgotPassword(email string) error
@@ -26,8 +28,9 @@ type AuthService interface {
 
 // authService implements AuthService interface
 type authService struct {
-	userRepo repositories.UserRepository
+	userRepo   repositories.UserRepository
 	otpService OTPService
+	lineOAuth  *LineOAuthService
 }
 
 // NewAuthService creates a new auth service instance with Redis OTP
@@ -36,11 +39,12 @@ func NewAuthService(userRepo repositories.UserRepository) AuthService {
 	panic("Use NewAuthServiceWithOTP with Redis OTP service")
 }
 
-// NewAuthServiceWithOTP creates a new auth service instance with custom OTP service
-func NewAuthServiceWithOTP(userRepo repositories.UserRepository, otpService OTPService) AuthService {
+// NewAuthServiceWithOTP creates a new auth service instance with custom OTP and LINE OAuth services
+func NewAuthServiceWithOTP(userRepo repositories.UserRepository, otpService OTPService, lineOAuth *LineOAuthService) AuthService {
 	return &authService{
 		userRepo:   userRepo,
 		otpService: otpService,
+		lineOAuth:  lineOAuth,
 	}
 }
 
@@ -66,10 +70,10 @@ func (s *authService) Register(req *models.RegisterRequest) (*models.RegisterRes
 
 	// Create user model
 	user := &models.User{
-		Name:         req.Name,
-		Email:        req.Email,
-		PasswordHash: hashedPassword,
-		Role:         models.RoleMerchant,
+		Name:          req.Name,
+		Email:         req.Email,
+		PasswordHash:  hashedPassword,
+		Role:          models.RoleMerchant,
 		EmailVerified: false,
 	}
 
@@ -153,6 +157,81 @@ func (s *authService) Login(req *models.LoginRequest) (*models.AuthResponse, err
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		ExpiresIn:    3600, // 1 hour
+		User:         *user,
+	}, nil
+}
+
+// LineLogin handles LINE OAuth login logic
+func (s *authService) LineLogin(req *models.LineLoginRequest) (*models.LineLoginResponse, error) {
+	if s.lineOAuth == nil {
+		return nil, errors.New("LINE OAuth service is not configured")
+	}
+
+	// Exchange authorization code for access token
+	tokenResp, err := s.lineOAuth.ExchangeCodeForToken(req.Code, req.RedirectURI)
+	if err != nil {
+		log.Printf("Error exchanging code for token: %v", err)
+		return nil, errors.New("failed to authenticate with LINE")
+	}
+
+	// Get user profile from LINE
+	profile, err := s.lineOAuth.GetUserProfile(tokenResp.AccessToken)
+	if err != nil {
+		log.Printf("Error getting LINE user profile: %v", err)
+		return nil, errors.New("failed to retrieve user profile from LINE")
+	}
+
+	// Check if user exists by LINE user ID
+	user, err := s.userRepo.FindByLineUserID(profile.UserID)
+	isNewUser := false
+
+	if err != nil {
+		// User not found, create new user
+		isNewUser = true
+
+		// Create new user from LINE profile
+		user = &models.User{
+			Name:          profile.DisplayName,
+			Email:         "", // LINE doesn't provide email by default
+			Role:          models.RoleMerchant,
+			LineUserID:    &profile.UserID,
+			LineLinked:    true,
+			EmailVerified: false, // Will need to add email later
+			PasswordHash:  "",    // No password for LINE users
+		}
+
+		// Save user to database
+		if err := s.userRepo.Create(user); err != nil {
+			log.Printf("Error creating LINE user: %v", err)
+			return nil, errors.New("failed to create user account")
+		}
+
+		log.Printf("New user created via LINE login: %s (LINE ID: %s)", user.ID, profile.UserID)
+	} else {
+		// Existing user found, update LINE link status
+		if !user.LineLinked {
+			user.LineLinked = true
+			user.LineUserID = &profile.UserID
+			if err := s.userRepo.Update(user); err != nil {
+				log.Printf("Error updating user LINE link: %v", err)
+				// Continue anyway
+			}
+		}
+		log.Printf("Existing user logged in via LINE: %s (LINE ID: %s)", user.ID, profile.UserID)
+	}
+
+	// Generate JWT token
+	accessToken, err := utils.GenerateToken(user.ID, user.MerchantID, string(user.Role), user.Email)
+	if err != nil {
+		log.Printf("Error generating token: %v", err)
+		return nil, errors.New("failed to generate authentication token")
+	}
+
+	return &models.LineLoginResponse{
+		AccessToken:  accessToken,
+		RefreshToken: accessToken, // TODO: Implement proper refresh token
+		ExpiresIn:    3600,
+		IsNewUser:    isNewUser,
 		User:         *user,
 	}, nil
 }
