@@ -5,8 +5,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gin-gonic/gin"
 	"slipsure-backend/internal/utils"
+
+	"github.com/gin-gonic/gin"
 )
 
 // AuthMiddleware validates JWT tokens
@@ -39,7 +40,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		// Validate token
 		claims, err := utils.ValidateToken(tokenString)
 		if err != nil {
-			log.Printf("❌ Auth: Token validation failed: %v", err)
+			log.Printf(" Auth: Token validation failed: %v", err)
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"success": false,
 				"error":   "UNAUTHORIZED",
@@ -62,7 +63,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		}
 
 		// Debug: log the user ID being set
-		log.Printf("🔐 Auth: Setting user_id='%s' for email=%s", claims.UserID, claims.Email)
+		log.Printf("Auth: Setting user_id='%s' for email=%s", claims.UserID, claims.Email)
 
 		c.Next()
 	}

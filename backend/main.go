@@ -75,18 +75,18 @@ func main() {
 	// Initialize Redis OTP service (no fallback - Redis only!)
 	otpService, err := services.NewRedisOTPService(redisAddr, emailService)
 	if err != nil {
-		log.Fatalf("❌ Failed to initialize Redis OTP service: %v", err)
+		log.Fatalf("Failed to initialize Redis OTP service: %v", err)
 	}
 	defer otpService.Close()
 
 	// Initialize LINE OAuth service (optional - can fail gracefully)
-	log.Println("🔧 Attempting to initialize LINE OAuth service...")
+	log.Println(" Attempting to initialize LINE OAuth service...")
 	var lineOAuth *services.LineOAuthService
 	if lineOAuth, err = services.NewLineOAuthService(); err != nil {
-		log.Printf("⚠️  Warning: Failed to initialize LINE OAuth service: %v", err)
-		log.Println("📱 LINE login functionality will be unavailable")
+		log.Printf(" Warning: Failed to initialize LINE OAuth service: %v", err)
+		log.Println(" LINE login functionality will be unavailable")
 	} else {
-		log.Println("✅ LINE OAuth service initialized successfully")
+		log.Println(" LINE OAuth service initialized successfully")
 	}
 
 	// Initialize services with dependency injection
@@ -130,22 +130,11 @@ func main() {
 			protected.POST("/logout", authHandler.Logout)
 		}
 
-		// Alternative protected routes
+		// Alternative protected routes (removed duplicate /me endpoint)
 		altProtected := v1.Group("")
 		altProtected.Use(middleware.AuthMiddleware())
 		{
-			altProtected.GET("/me", func(c *gin.Context) {
-				userID := c.GetString("user_id")
-				userEmail := c.GetString("user_email")
-				userRole := c.GetString("user_role")
-
-				c.JSON(200, gin.H{
-					"message": "Access granted to protected route",
-					"user_id": userID,
-					"email":   userEmail,
-					"role":    userRole,
-				})
-			})
+			// Additional protected endpoints can be added here
 		}
 
 		// API info

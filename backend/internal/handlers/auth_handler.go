@@ -1,14 +1,16 @@
 package handlers
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
 
-	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"slipsure-backend/internal/models"
 	"slipsure-backend/internal/services"
+
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // AuthHandler handles authentication-related HTTP requests
@@ -305,6 +307,7 @@ func (h *AuthHandler) GetProfile(c *gin.Context) {
 
 	// Call auth service
 	profile, err := h.authService.GetProfile(userUUID)
+	fmt.Println("profile :", profile)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"success": false,

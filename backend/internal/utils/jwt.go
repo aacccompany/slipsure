@@ -12,10 +12,10 @@ import (
 
 // JWTClaims represents JWT claims structure
 type JWTClaims struct {
-	UserID    string `json:"sub"`
+	UserID     string  `json:"sub"`
 	MerchantID *string `json:"merchant_id,omitempty"`
-	Role      string `json:"role"`
-	Email     string `json:"email"`
+	Role       string  `json:"role"`
+	Email      string  `json:"email"`
 	jwt.RegisteredClaims
 }
 
@@ -44,10 +44,10 @@ func GenerateToken(userID uuid.UUID, merchantID *uuid.UUID, role, email string) 
 	}
 
 	claims := JWTClaims{
-		UserID:    userID.String(),
+		UserID:     userID.String(),
 		MerchantID: merchantIDStr,
-		Role:      role,
-		Email:     email,
+		Role:       role,
+		Email:      email,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(expirationTime)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -79,7 +79,7 @@ func ValidateToken(tokenString string) (*JWTClaims, error) {
 
 	if claims, ok := token.Claims.(*JWTClaims); ok && token.Valid {
 		// Debug: log the extracted claims
-		log.Printf("🔑 JWT: Extracted claims - UserID='%s', Email='%s', Role='%s'", claims.UserID, claims.Email, claims.Role)
+		log.Printf(" Extracted claims - UserID='%s', Email='%s', Role='%s'", claims.UserID, claims.Email, claims.Role)
 		return claims, nil
 	}
 
