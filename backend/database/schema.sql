@@ -115,6 +115,8 @@ CREATE TABLE subscriptions (
     plan_id VARCHAR(50) NOT NULL REFERENCES subscription_plans(id),
     status subscription_status DEFAULT 'trial',
     billing_cycle billing_cycle DEFAULT 'monthly',
+    stripe_subscription_id VARCHAR(255),
+    stripe_customer_id VARCHAR(255),
     started_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     expires_at TIMESTAMP WITH TIME ZONE,
     auto_renew BOOLEAN DEFAULT TRUE,

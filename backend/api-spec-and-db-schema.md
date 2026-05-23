@@ -9,18 +9,64 @@
 ---
 
 ## Table of Contents
-1. [Module 1 — Authenticate](#1-authenticate)
-2. [Module 2 — Merchant Management & Subscription](#2-merchant-management--subscription)
-3. [Module 3 — Slip Verification Engine](#3-slip-verification-engine)
-4. [Module 4 — Transaction & History](#4-transaction--history)
-5. [Module 5 — LINE Bot & Notification](#5-line-bot--notification)
-   - [5.1 Webhook Management](#51-webhook-management)
+1. [Architecture Overview](#architecture-overview)
+2. [Module 1 — Authenticate](#1-authenticate)
+3. [Module 2 — Merchant Management & Subscription](#2-merchant-management--subscription)
+4. [Module 3 — Slip Verification Engine](#3-slip-verification-engine)
+5. [Module 4 — Transaction & History](#4-transaction--history)
+6. [Module 5 — LINE Bot & Notification](#5-line-bot--notification)
+   - [5.1 Webhook Management (Future)](#51-webhook-management-future)
    - [5.2 Bank Validation](#52-bank-validation)
-   - [5.3 Custom Branding](#53-custom-branding)
-6. [Module 6 — Admin Backoffice](#6-admin-backoffice)
-7. [Module 7 — Merchant Analytics](#7-merchant-analytics)
-8. [Module 8 — Admin Analytics](#8-admin-analytics)
-9. [Database Schema](#9-database-schema)
+   - [5.3 Custom Branding (Future)](#53-custom-branding-future)
+7. [Module 6 — Admin Backoffice](#6-admin-backoffice)
+8. [Module 7 — Merchant Analytics](#7-merchant-analytics)
+9. [Module 8 — Admin Analytics](#8-admin-analytics)
+10. [Database Schema](#10-database-schema)
+
+---
+
+## Architecture Overview
+
+**Service Model:** Single LINE Bot serving multiple merchants
+
+```
+┌─────────────────┐    ┌──────────────┐    ┌─────────────┐
+│ Customer        │───▶│ Your LINE Bot│───▶│ Your API    │
+│ (sends slip)    │    │ (single bot) │    │             │
+└─────────────────┘    └──────────────┘    └─────────────┘
+                                              │
+                                              ▼
+                                      ┌─────────────┐
+                                      │ KBank API   │
+                                      │ (validation)│
+                                      └─────────────┘
+```
+
+**Key Points:**
+- **One LINE Bot** (yours) serves all merchants
+- **No per-merchant LINE Bot setup** needed
+- **Bank validation** is the core feature (verifies genuine transactions)
+- **Simple merchant profiles** (shop name, contact info)
+- **Customer flow**: Send slip → Select merchant → Get verification
+
+**MVP Features:**
+- ✅ Slip verification with bank validation
+- ✅ Merchant shop settings (profile, logo, preferences)
+- ✅ Transaction history & search
+- ✅ Duplicate detection
+- ✅ Basic analytics & reporting
+
+**Merchant Shop Settings:**
+- 🏪 **Shop Profile**: Name, address, contact information
+- 🖼️ **Shop Logo**: Basic logo for identification
+- ⚙️ **Business Settings**: Hours, timezone, currency
+- 🔔 **Notification Preferences**: How/when to receive alerts
+- ✅ **Verification Limits**: Auto-approve thresholds, manual confirm rules
+
+**Future Features:**
+- 🔧 Custom webhooks
+- 🔧 White-label branding
+- 🔧 Per-merchant LINE Bots
 
 ---
 
@@ -35,12 +81,24 @@ STRIPE_SECRET_KEY=sk_test_xxx        # Secret key for backend API calls
 STRIPE_PUBLISHABLE_KEY=pk_test_xxx   # Public key for frontend (via API)
 STRIPE_WEBHOOK_SECRET=whsec_xxx      # Webhook signing secret for verification
 
-# Stripe Price IDs (Product mapping)
-STRIPE_PRICE_ID_FREE=price_free_monthly
-STRIPE_PRICE_ID_STARTER_MONTHLY=price_starter_monthly
-STRIPE_PRICE_ID_STARTER_YEARLY=price_starter_yearly
-STRIPE_PRICE_ID_PRO_MONTHLY=price_pro_monthly
-STRIPE_PRICE_ID_PRO_YEARLY=price_pro_yearly
+# Plan Pricing (THB) - For reference, actual prices set in Stripe Dashboard
+PRICE_STARTER_MONTHLY=299
+PRICE_STARTER_YEARLY=2990           # 17% discount (10 months price)
+PRICE_PRO_MONTHLY=799
+PRICE_PRO_YEARLY=7990               # 17% discount (10 months price)
+
+# Plan Quotas (scans per month) - Same quota regardless of billing cycle
+QUOTA_FREE=50
+QUOTA_STARTER=200
+QUOTA_PRO=1000
+
+# Stripe Price IDs (Product mapping) - Configured in Stripe Dashboard
+# Note: Yearly prices are discounted (10 months price for 12 months = 2 months free)
+STRIPE_PRICE_ID_FREE=price_free
+STRIPE_PRICE_ID_STARTER_MONTHLY=price_starter_monthly    # 299 THB/month
+STRIPE_PRICE_ID_STARTER_YEARLY=price_starter_yearly      # 2990 THB/year (10× monthly, 2 months free)
+STRIPE_PRICE_ID_PRO_MONTHLY=price_pro_monthly            # 799 THB/month
+STRIPE_PRICE_ID_PRO_YEARLY=price_pro_yearly              # 7990 THB/year (10× monthly, 2 months free)
 
 # Stripe Configuration
 STRIPE_SUCCESS_URL=https://app.yourdomain.com/success?session_id={CHECKOUT_SESSION_ID}
@@ -49,28 +107,34 @@ STRIPE_CANCEL_URL=https://app.yourdomain.com/billing
 
 ### Stripe Product Setup
 
+**Pricing Strategy - Yearly Discount Model:**
+- **Monthly Plans**: Standard monthly billing
+- **Yearly Plans**: 17% discount (pay for 10 months, get 2 months free)
+- **Quota**: Same monthly quota regardless of billing cycle (quota_per_month)
+  - Example: Starter plan = 200 scans/month whether billed monthly or yearly
+
 **Create Products in Stripe Dashboard:**
-1. **Free Plan** - No price needed
-2. **Starter Plan** - 299 THB/month, 2990 THB/year
-3. **Pro Plan** - 799 THB/month, 7990 THB/year
+1. **Free Plan** - No price needed (50 scans/month quota)
+2. **Starter Plan** - 299 THB/month, 2990 THB/year (10 months price = 2 months free)
+3. **Pro Plan** - 799 THB/month, 7990 THB/year (10 months price = 2 months free)
 
 **Price Configuration:**
 ```javascript
 // Stripe Dashboard → Products → Create pricing
-// Starter Monthly
+// Starter Monthly: 299 THB/month, 200 scans/month quota
 Recurring: Monthly, THB 299
 Price ID: price_starter_monthly
 
-// Starter Yearly (10 months + 2 months free)
-Recurring: Yearly, THB 2990
+// Starter Yearly: 2990 THB/year (17% discount), 200 scans/month quota
+Recurring: Yearly, THB 2990 (10 months price, 2 months free)
 Price ID: price_starter_yearly
 
-// Pro Monthly
+// Pro Monthly: 799 THB/month, 1000 scans/month quota
 Recurring: Monthly, THB 799
 Price ID: price_pro_monthly
 
-// Pro Yearly (10 months + 2 months free)
-Recurring: Yearly, THB 7990
+// Pro Yearly: 7990 THB/year (17% discount), 1000 scans/month quota
+Recurring: Yearly, THB 7990 (10 months price, 2 months free)
 Price ID: price_pro_yearly
 ```
 
@@ -373,6 +437,12 @@ Create Stripe Checkout session for subscription.
 - Sets `success_url` and `cancel_url` for frontend redirect
 - Stores `stripe_session_id` in database for tracking
 
+**Billing & Quota Model:**
+- `billing_cycle: "monthly"` → Billed monthly, quota resets monthly (200 scans/month)
+- `billing_cycle: "yearly"` → Billed yearly (17% discount), quota still resets monthly (200 scans/month)
+- Yearly plans get discounted pricing but same monthly quota structure
+- Unused monthly quota does not roll over between months
+
 **Stripe Integration:**
 ```go
 // Price ID mapping (from env)
@@ -564,6 +634,36 @@ stripe.Subscription.Cancel(subscriptionID, nil)
 
 ---
 
+### GET `/merchants/me/profile`
+Get current merchant shop profile.
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": {
+    "shop_name": "ร้านดอกไม้ขอนแก่น",
+    "address": "123 ถ.มิตรภาพ ขอนแก่น",
+    "contact_email": "shop@flower.com",
+    "contact_phone": "0812345678",
+    "logo_url": "https://cdn.yourdomain.com/shop-logos/merchant-uuid.png",
+    "business_hours": {
+      "open": "09:00",
+      "close": "18:00",
+      "days": ["mon", "tue", "wed", "thu", "fri", "sat"]
+    },
+    "verification_settings": {
+      "auto_verify_limit": 1000,
+      "require_confirmation_above": 5000
+    },
+    "created_at": "2025-01-01T00:00:00Z",
+    "updated_at": "2025-05-22T10:30:00Z"
+  }
+}
+```
+
+---
+
 ### PUT `/merchants/me/profile`
 Update shop profile.
 
@@ -572,7 +672,17 @@ Update shop profile.
 {
   "shop_name": "ร้านดอกไม้ขอนแก่น",
   "address": "123 ถ.มิตรภาพ ขอนแก่น",
-  "contact_email": "shop@flower.com"
+  "contact_email": "shop@flower.com",
+  "contact_phone": "0812345678",
+  "business_hours": {
+    "open": "09:00",
+    "close": "18:00",
+    "days": ["mon", "tue", "wed", "thu", "fri", "sat"]
+  },
+  "verification_settings": {
+    "auto_verify_limit": 1000,
+    "require_confirmation_above": 5000
+  }
 }
 ```
 **Response 200:**
@@ -580,32 +690,113 @@ Update shop profile.
 { "success": true, "message": "Shop profile updated." }
 ```
 
+**Implementation Notes:**
+- Merchants use YOUR main LINE Bot service (no need for their own LINE Bot)
+- Shop name appears in customer-facing messages and dashboard
+- Business hours determine when verification is active
+- Auto-verify limit: amounts under this are automatically verified
+- Manual confirmation required for amounts above threshold
+
 ---
 
 ### POST `/merchants/me/logo`
-Upload shop logo. *(multipart/form-data)*
+Upload shop logo for identification. *(multipart/form-data)*
+
+**Request:** `file`: image file (PNG/JPG, max 2MB)
 
 **Response 200:**
 ```json
-{ "success": true, "data": { "logo_url": "https://cdn.yourdomain.com/logos/uuid.png" } }
+{
+  "success": true,
+  "data": {
+    "logo_url": "https://cdn.yourdomain.com/shop-logos/merchant-uuid.png",
+    "size_kb": 145,
+    "dimensions": "200x200",
+    "uploaded_at": "2025-05-22T10:35:00Z"
+  }
+}
 ```
+
+**Implementation Notes:**
+- Logo used for merchant identification in dashboard
+- Simple upload to DigitalOcean Spaces
+- No custom branding (white-label) in MVP
+- Logo helps customers identify the merchant
 
 ---
 
-### POST `/merchants/me/line-token`
-Save LINE channel credentials.
+### PUT `/merchants/me/settings`
+Update merchant shop settings and preferences.
 
 **Request:**
 ```json
 {
-  "line_channel_id": "1234567890",
-  "line_channel_secret": "abcdef...",
-  "line_access_token": "eyJhbGci..."
+  "notification_preferences": {
+    "send_line_notifications": true,
+    "send_email_summary": true,
+    "notify_on_failed_verification": true,
+    "daily_summary_time": "18:00"
+  },
+  "verification_preferences": {
+    "auto_verify_limit": 1000,
+    "require_confirmation_above": 5000,
+    "strict_mode": false,
+    "allow_duplicates": false
+  },
+  "business_preferences": {
+    "currency": "THB",
+    "timezone": "Asia/Bangkok",
+    "language": "th"
+  }
 }
 ```
 **Response 200:**
 ```json
-{ "success": true, "message": "LINE integration saved." }
+{
+  "success": true,
+  "message": "Shop settings updated.",
+  "data": {
+    "updated_settings": ["notification_preferences", "verification_preferences"],
+    "updated_at": "2025-05-22T10:40:00Z"
+  }
+}
+```
+
+**Implementation Notes:**
+- **Notification preferences**: How merchant receives alerts
+- **Verification preferences**: Auto-approve limits, confirmation rules
+- **Business preferences**: Currency, timezone, language settings
+
+---
+
+### GET `/merchants/me/settings`
+Get current merchant shop settings.
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": {
+    "notification_preferences": {
+      "send_line_notifications": true,
+      "send_email_summary": true,
+      "notify_on_failed_verification": true,
+      "daily_summary_time": "18:00"
+    },
+    "verification_preferences": {
+      "auto_verify_limit": 1000,
+      "require_confirmation_above": 5000,
+      "strict_mode": false,
+      "allow_duplicates": false
+    },
+    "business_preferences": {
+      "currency": "THB",
+      "timezone": "Asia/Bangkok",
+      "language": "th"
+    },
+    "updated_at": "2025-05-22T10:40:00Z"
+  }
+}
 ```
 
 ---
@@ -634,7 +825,7 @@ Get current quota status.
 ### POST `/slips/upload`
 Upload slip image for verification. *(multipart/form-data)*
 
-**Request:** `file`: image file (jpg/png), `amount`: expected amount (optional)
+**Request:** `file`: image file (jpg/png)
 
 **Response 202:**
 ```json
@@ -656,7 +847,7 @@ Submit raw QR data from scanner.
 
 **Request:**
 ```json
-{ "qr_raw_data": "00020101021...", "expected_amount": 500.00 }
+{ "qr_raw_data": "00020101021..." }
 ```
 **Response 202:**
 ```json
@@ -687,10 +878,10 @@ Get verification result for a slip.
       "is_duplicate": false
     },
     "validation": {
-      "amount_match": true,
       "time_window_ok": true,
       "bank_format_ok": true,
-      "duplicate": false
+      "duplicate": false,
+      "receiver_account_match": true
     },
     "fail_reason": null
   }
@@ -797,6 +988,34 @@ Retry verification on a failed transaction.
 
 ---
 
+### PUT `/transactions/:id/confirm`
+Admin manual confirmation for duplicate prevention and workflow management.
+
+**Request:**
+```json
+{
+  "confirmed": true,
+  "admin_id": "admin-uuid",
+  "note": "Goods sent, customer confirmed in chat"
+}
+```
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "message": "Transaction confirmed and marked as processed.",
+  "data": {
+    "transaction_id": "txn-uuid",
+    "confirmed_at": "2025-05-18T10:45:00Z",
+    "confirmed_by": "admin-uuid",
+    "status": "completed"
+  }
+}
+```
+
+---
+
 ### POST `/transactions/:id/manual-recheck`
 Admin manually recheck and override status.
 
@@ -823,9 +1042,13 @@ Export transactions as CSV/Excel.
 ## 5. LINE Bot & Notification
 
 ### POST `/line/webhook`
-
-### POST `/line/webhook`
 Receive LINE messaging API events. *(LINE Platform → Server)*
+
+**Architecture:**
+- **Single LINE Bot** serves all merchants
+- Customers send slips to **your main LINE Bot**
+- Your API identifies the target merchant from customer selection
+- Processed results are returned to the customer
 
 **Request (from LINE):**
 ```json
@@ -846,23 +1069,11 @@ Receive LINE messaging API events. *(LINE Platform → Server)*
 { "status": "ok" }
 ```
 
----
-
-### GET `/merchants/me/line-status`
-Check LINE integration connection status.
-
-**Response 200:**
-```json
-{
-  "success": true,
-  "data": {
-    "connected": true,
-    "channel_name": "ร้านดอกไม้ Bot",
-    "webhook_verified": true,
-    "last_message_at": "2025-05-08T09:00:00Z"
-  }
-}
-```
+**Implementation Notes:**
+- Use your existing LINE Messaging API configuration
+- Customer flow: Send slip → Select merchant → Get verification result
+- Merchant flow: See verified transactions in dashboard
+- No per-merchant LINE Bot setup needed
 
 ---
 
@@ -876,83 +1087,17 @@ Retry failed notification delivery.
 
 ---
 
-## 5.1 Webhook Management
+## 5.1 Webhook Management (Future Feature)
 
-### POST `/webhooks/register`
-Register webhook URL for slip verification notifications.
+**NOT IMPLEMENTED IN MVP**
 
-**Request:**
-```json
-{
-  "url": "https://yourdomain.com/webhooks/slips",
-  "events": ["slip.verified", "slip.failed", "slip.duplicate"],
-  "secret": "your_webhook_secret_for_signature_verification"
-}
-```
+Webhook management will be available in future versions, allowing merchants to:
+- Register custom webhook URLs for real-time notifications
+- Configure event types (slip.verified, slip.failed, slip.duplicate)
+- Test webhook delivery
+- Monitor webhook success rates
 
-**Response 201:**
-```json
-{
-  "success": true,
-  "data": {
-    "webhook_id": "web_xxx",
-    "url": "https://yourdomain.com/webhooks/slips",
-    "events": ["slip.verified", "slip.failed", "slip.duplicate"],
-    "status": "active",
-    "created_at": "2025-05-18T10:00:00Z"
-  }
-}
-```
-
----
-
-### GET `/webhooks`
-List all registered webhooks.
-
-**Response 200:**
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "webhook_id": "web_xxx",
-      "url": "https://yourdomain.com/webhooks/slips",
-      "events": ["slip.verified", "slip.failed"],
-      "status": "active",
-      "last_triggered": "2025-05-18T09:45:00Z",
-      "success_rate": 98.5
-    }
-  ]
-}
-```
-
----
-
-### POST `/webhooks/:webhook_id/test`
-Test webhook delivery with sample event.
-
-**Response 200:**
-```json
-{
-  "success": true,
-  "data": {
-    "test_event_id": "evt_test_xxx",
-    "delivered": true,
-    "response_code": 200,
-    "response_time_ms": 245
-  }
-}
-```
-
----
-
-### DELETE `/webhooks/:webhook_id`
-Delete webhook subscription.
-
-**Response 200:**
-```json
-{ "success": true, "message": "Webhook deleted successfully." }
-```
+**For MVP:** All notifications go through LINE Bot responses and merchant dashboard.
 
 ---
 
@@ -977,21 +1122,37 @@ Validate payment slip directly with bank API (real-time verification).
   "data": {
     "validation_source": "bank_api",
     "is_valid": true,
+    "bank_status_code": "0000",
+    "bank_message": "Success",
     "transaction": {
+      "transaction_id": "txn_bank_xxx",
       "reference_no": "REF20250518001",
       "amount": 500.00,
       "sender_bank": "KBANK",
       "sender_account": "xxx-x-xx123-x",
       "receiver_bank": "SCB",
       "receiver_account": "xxx-x-xx456-x",
-      "transfer_time": "2025-05-18T10:30:00Z",
-      "transaction_id": "txn_bank_xxx"
+      "transfer_time": "2025-05-18T10:30:00Z"
     },
     "bank_response_time_ms": 450,
     "validated_at": "2025-05-18T10:30:05Z"
   }
 }
 ```
+
+**Authentication Flow:**
+
+**Bank API Security Requirements:**
+- OAuth2 Client Credentials flow for K API access
+- mTLS for production environments
+- Access token caching with automatic refresh
+- Retry logic with exponential backoff
+
+**Implementation Notes:**
+1. Obtain access token on service startup
+2. Refresh token 5 minutes before expiration
+3. Use circuit breaker pattern for bank API calls
+4. Log all bank API interactions for audit trails
 
 ---
 
@@ -1044,110 +1205,20 @@ Force sync with bank APIs for pending transactions.
 
 ---
 
-## 5.3 Custom Branding
+## 5.3 Custom Branding (Future Feature)
 
-### PUT `/merchants/me/branding`
-Update merchant branding settings.
+**NOT IMPLEMENTED IN MVP**
 
-**Request:**
-```json
-{
-  "primary_color": "#FF5733",
-  "secondary_color": "#3498DB",
-  "logo_url": "https://cdn.yourdomain.com/logos/custom-logo.png",
-  "company_name": "My Custom Shop Name",
-  "custom_css": ".header { background: #FF5733; }",
-  "email_template": "custom_template_id"
-}
-```
+Custom branding will be available in future versions, allowing merchants to:
+- Upload custom logos
+- Set brand colors and themes
+- Configure white-label options
 
-**Response 200:**
-```json
-{
-  "success": true,
-  "message": "Branding settings updated",
-  "data": {
-    "branding_id": "brand_xxx",
-    "preview_url": "https://app.yourdomain.com/preview/brand_xxx",
-    "applied_at": "2025-05-18T10:35:00Z"
-  }
-}
-```
+**For MVP:** All merchants use the default SlipSure branding with your main LINE Bot.
 
 ---
 
-### GET `/merchants/me/branding`
-Get current branding settings.
-
-**Response 200:**
-```json
-{
-  "success": true,
-  "data": {
-    "primary_color": "#FF5733",
-    "secondary_color": "#3498DB",
-    "logo_url": "https://cdn.yourdomain.com/logos/custom-logo.png",
-    "company_name": "My Custom Shop Name",
-    "has_custom_css": true,
-    "white_label_enabled": true,
-    "custom_domain": "verify.myshop.com"
-  }
-}
-```
-
----
-
-### POST `/merchants/me/logo`
-Upload custom logo for branding.
-
-**Request:** `file`: image file (PNG/JPG, max 2MB)
-
-**Response 200:**
-```json
-{
-  "success": true,
-  "data": {
-    "logo_url": "https://cdn.yourdomain.com/logos/merchant-xxx.png",
-    "size_kb": 145,
-    "dimensions": "200x200",
-    "uploaded_at": "2025-05-18T10:40:00Z"
-  }
-}
-```
-
----
-
-### DELETE `/merchants/me/logo`
-Remove custom logo and revert to default.
-
-**Response 200:**
-```json
-{ "success": true, "message": "Logo removed, using default branding." }
-```
-
----
-
-### POST `/merchants-me/branding/preview`
-Generate preview of custom branding.
-
-**Request:**
-```json
-{
-  "primary_color": "#FF5733",
-  "logo_url": "https://cdn.yourdomain.com/logos/test.png"
-}
-```
-
-**Response 200:**
-```json
-{
-  "success": true,
-  "data": {
-    "preview_url": "https://app.yourdomain.com/preview/temp_xxx",
-    "expires_at": "2025-05-18T11:40:00Z"
-  }
-}
-```
+## 6. Admin Backoffice
 
 ---
 
@@ -1347,7 +1418,10 @@ Merchant dashboard summary.
     "success_rate": 97.4,
     "remaining_quota": 1658,
     "today_scans": 28,
-    "this_month_scans": 342
+    "this_month_scans": 342,
+    "daily_revenue": 45000.00,
+    "pending_confirmations": 5,
+    "completed_today": 23
   }
 }
 ```

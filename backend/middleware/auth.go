@@ -6,8 +6,10 @@ import (
 	"strings"
 
 	"slipsure-backend/internal/utils"
+	"slipsure-backend/internal/repositories"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // AuthMiddleware validates JWT tokens
@@ -64,6 +66,60 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		// Debug: log the user ID being set
 		log.Printf("Auth: Setting user_id='%s' for email=%s", claims.UserID, claims.Email)
+
+		c.Next()
+	}
+}
+
+// EmailVerificationMiddleware checks if user's email is verified
+func EmailVerificationMiddleware(userRepo repositories.UserRepository) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Get user ID from context (set by AuthMiddleware)
+		userIDStr, exists := c.Get("user_id")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"success": false,
+				"error":   "UNAUTHORIZED",
+				"message": "User not authenticated",
+			})
+			c.Abort()
+			return
+		}
+
+		// Parse user ID
+		userID, err := uuid.Parse(userIDStr.(string))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "INVALID_USER_ID",
+				"message": "Invalid user ID format",
+			})
+			c.Abort()
+			return
+		}
+
+		// Get user from database
+		user, err := userRepo.FindByID(userID)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{
+				"success": false,
+				"error":   "USER_NOT_FOUND",
+				"message": "User not found",
+			})
+			c.Abort()
+			return
+		}
+
+		// Check if email is verified
+		if !user.EmailVerified {
+			c.JSON(http.StatusForbidden, gin.H{
+				"success": false,
+				"error":   "EMAIL_NOT_VERIFIED",
+				"message": "Please verify your email before accessing this feature. Check your inbox for the OTP code.",
+			})
+			c.Abort()
+			return
+		}
 
 		c.Next()
 	}

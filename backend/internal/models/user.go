@@ -16,13 +16,13 @@ const (
 
 // User represents the domain model for a user
 type User struct {
-	ID             uuid.UUID  `json:"id"`
+	ID             uuid.UUID  `json:"id,omitempty"` // Hide ID in responses unless explicitly requested
 	Name           string     `json:"name"`
-	Email          string     `json:"email"`
+	Email          string     `json:"email"` // Email is the primary identifier
 	Phone          *string    `json:"phone,omitempty"`
 	PasswordHash   string     `json:"-"`
 	Role           UserRole   `json:"role"`
-	MerchantID     *uuid.UUID `json:"merchant_id,omitempty"`
+	MerchantID     *uuid.UUID `json:"-"` // Hide internal merchant ID
 	LineUserID     *string    `json:"line_user_id,omitempty"`
 	LineLinked     bool       `json:"line_linked"`
 	EmailVerified  bool       `json:"email_verified"`
@@ -68,10 +68,9 @@ type AuthResponse struct {
 
 // RegisterResponse represents registration response
 type RegisterResponse struct {
-	UserID  uuid.UUID `json:"user_id"`
-	Email   string    `json:"email"`
-	OTPSent bool      `json:"otp_sent_to"`
-	Message string    `json:"message"`
+	Email   string `json:"email"`
+	OTPSent bool   `json:"otp_sent_to"`
+	Message string `json:"message"`
 }
 
 // VerifyOTPRequest represents OTP verification request

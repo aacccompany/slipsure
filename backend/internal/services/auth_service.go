@@ -28,9 +28,10 @@ type AuthService interface {
 
 // authService implements AuthService interface
 type authService struct {
-	userRepo   repositories.UserRepository
-	otpService OTPService
-	lineOAuth  *LineOAuthService
+	userRepo     repositories.UserRepository
+	merchantRepo repositories.MerchantRepository
+	otpService   OTPService
+	lineOAuth    *LineOAuthService
 }
 
 // NewAuthService creates a new auth service instance with Redis OTP
@@ -40,11 +41,12 @@ func NewAuthService(userRepo repositories.UserRepository) AuthService {
 }
 
 // NewAuthServiceWithOTP creates a new auth service instance with custom OTP and LINE OAuth services
-func NewAuthServiceWithOTP(userRepo repositories.UserRepository, otpService OTPService, lineOAuth *LineOAuthService) AuthService {
+func NewAuthServiceWithOTP(userRepo repositories.UserRepository, merchantRepo repositories.MerchantRepository, otpService OTPService, lineOAuth *LineOAuthService) AuthService {
 	return &authService{
-		userRepo:   userRepo,
-		otpService: otpService,
-		lineOAuth:  lineOAuth,
+		userRepo:     userRepo,
+		merchantRepo: merchantRepo,
+		otpService:   otpService,
+		lineOAuth:    lineOAuth,
 	}
 }
 
@@ -94,6 +96,16 @@ func (s *authService) Register(req *models.RegisterRequest) (*models.RegisterRes
 
 	// Generate and store OTP
 	log.Printf("Generating OTP for user %s", user.ID)
+
+		// Check if OTP service is available
+		if s.otpService == nil {
+			log.Printf("OTP service not available, user created but verification email not sent")
+			return &models.RegisterResponse{
+								Email:    user.Email,
+				OTPSent:  false,
+				Message:  "Account created successfully. OTP service is currently unavailable.",
+			}, nil
+		}
 	otp := s.otpService.GenerateOTP()
 	log.Printf("OTP generated: %s", otp)
 
@@ -107,7 +119,6 @@ func (s *authService) Register(req *models.RegisterRequest) (*models.RegisterRes
 	if err := s.otpService.SendOTP(user.Email, otp); err != nil {
 		log.Printf("Error sending OTP email: %v", err)
 		return &models.RegisterResponse{
-			UserID:  user.ID,
 			Email:   user.Email,
 			OTPSent: false,
 			Message: "Registration successful but failed to send verification email.",
@@ -115,7 +126,6 @@ func (s *authService) Register(req *models.RegisterRequest) (*models.RegisterRes
 	}
 
 	return &models.RegisterResponse{
-		UserID:  user.ID,
 		Email:   user.Email,
 		OTPSent: true,
 		Message: "Registration successful. Please verify your email.",
@@ -138,13 +148,18 @@ func (s *authService) Login(req *models.LoginRequest) (*models.AuthResponse, err
 
 	// Check if email is verified
 	if !user.EmailVerified {
-		// For now, allow login even if email not verified
-		// TODO: You might want to enforce email verification
-		log.Printf("Warning: User %s logging in without email verification", req.Email)
+		return nil, errors.New("please verify your email before logging in. Check your inbox for the OTP code")
 	}
 
-	// Generate JWT token
-	accessToken, err := utils.GenerateToken(user.ID, nil, string(user.Role), user.Email)
+	// Check if user has a merchant profile
+	var merchantID *uuid.UUID
+	merchant, err := s.merchantRepo.FindByOwnerID(user.ID)
+	if err == nil && merchant != nil {
+		merchantID = &merchant.ID
+	}
+
+	// Generate JWT token with merchant ID if exists
+	accessToken, err := utils.GenerateToken(user.ID, merchantID, string(user.Role), user.Email)
 	if err != nil {
 		log.Printf("Error generating token: %v", err)
 		return nil, errors.New("failed to generate authentication token")
@@ -246,6 +261,10 @@ func (s *authService) VerifyOTP(req *models.VerifyOTPRequest) (*models.VerifyOTP
 	}
 
 	// Verify OTP
+
+		if s.otpService == nil {
+			return nil, errors.New("OTP service is currently unavailable. Please contact support.")
+		}
 	valid, err := s.otpService.VerifyOTP(user.ID, req.OTP)
 	if err != nil {
 		return nil, err
@@ -292,6 +311,10 @@ func (s *authService) ResendOTP(email string) error {
 	}
 
 	// Generate and store new OTP
+
+		if s.otpService == nil {
+			return errors.New("OTP service is currently unavailable. Please try again later.")
+		}
 	otp := s.otpService.GenerateOTP()
 	if err := s.otpService.StoreOTP(user.ID, otp); err != nil {
 		log.Printf("Error storing OTP for resend: %v", err)
@@ -315,6 +338,10 @@ func (s *authService) ForgotPassword(email string) error {
 	if err != nil {
 		// Don't reveal if email exists or not
 		log.Printf("Forgot password attempt for non-existent email: %s", email)
+
+		if s.otpService == nil {
+			return errors.New("OTP service is currently unavailable. Please contact support.")
+		}
 		return nil
 	}
 
@@ -340,6 +367,10 @@ func (s *authService) ResetPassword(req *models.ResetPasswordRequest) error {
 	// Find user by email
 	user, err := s.userRepo.FindByEmail(req.Email)
 	if err != nil {
+
+		if s.otpService == nil {
+			return errors.New("OTP service is currently unavailable. Please contact support.")
+		}
 		return errors.New("user not found")
 	}
 

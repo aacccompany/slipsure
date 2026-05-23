@@ -71,13 +71,18 @@ func main() {
 	}
 
 	emailService := services.NewEmailService()
-
-	// Initialize Redis OTP service (no fallback - Redis only!)
-	otpService, err := services.NewRedisOTPService(redisAddr, emailService)
-	if err != nil {
-		log.Fatalf("Failed to initialize Redis OTP service: %v", err)
+	var err error
+	// Initialize Redis OTP service (optional - can fail gracefully in development)
+	log.Println(" Attempting to initialize Redis OTP service...")
+	var otpService *services.RedisOTPService
+	if otpService, err = services.NewRedisOTPService(redisAddr, emailService); err != nil {
+		log.Printf(" Warning: Failed to initialize Redis OTP service: %v", err)
+		log.Println(" OTP functionality will be unavailable. Start Redis server for full functionality.")
+		log.Println(" To enable OTP: 1) Install Redis, 2) Start Redis server, 3) Restart this API")
+	} else {
+		log.Println(" Redis OTP service initialized successfully")
+		defer otpService.Close()
 	}
-	defer otpService.Close()
 
 	// Initialize LINE OAuth service (optional - can fail gracefully)
 	log.Println(" Attempting to initialize LINE OAuth service...")
@@ -89,8 +94,22 @@ func main() {
 		log.Println(" LINE OAuth service initialized successfully")
 	}
 
+	// Initialize merchant repository and Stripe service first (needed by auth)
+	log.Println(" Attempting to initialize Stripe service...")
+	var stripeService *services.StripeService
+	if stripeService, err = services.NewStripeService(); err != nil {
+		log.Printf(" Warning: Failed to initialize Stripe service: %v", err)
+		log.Println(" Stripe checkout functionality will be unavailable")
+	} else {
+		log.Println(" Stripe service initialized successfully")
+	}
+
+	merchantRepo := repositories.NewMerchantRepository(database.DB)
+	merchantService := services.NewMerchantService(merchantRepo, stripeService)
+	merchantHandler := handlers.NewMerchantHandler(merchantService, stripeService)
+
 	// Initialize services with dependency injection
-	authService := services.NewAuthServiceWithOTP(userRepo, otpService, lineOAuth)
+	authService := services.NewAuthServiceWithOTP(userRepo, merchantRepo, otpService, lineOAuth)
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(authService)
@@ -121,13 +140,49 @@ func main() {
 			auth.POST("/reset-password", authHandler.ResetPassword)
 		}
 
-		// Protected routes (require authentication)
+		// Protected routes (require authentication + email verification)
 		protected := v1.Group("/auth")
 		protected.Use(middleware.AuthMiddleware())
+		protected.Use(middleware.EmailVerificationMiddleware(userRepo))
 		{
 			protected.GET("/me", authHandler.GetProfile)
 			protected.PUT("/profile", authHandler.UpdateProfile)
 			protected.POST("/logout", authHandler.Logout)
+		}
+
+		// Merchant & Subscription routes (public)
+		v1.GET("/plans", merchantHandler.GetPlans)
+		v1.POST("/checkout/webhook", merchantHandler.HandleStripeWebhook)
+
+		// Checkout routes (protected + email verification required)
+		checkout := v1.Group("/checkout")
+		checkout.Use(middleware.AuthMiddleware())
+		checkout.Use(middleware.EmailVerificationMiddleware(userRepo))
+		{
+			checkout.POST("", merchantHandler.CreateCheckout)
+		}
+
+		// Merchant routes (protected + email verification required)
+		merchants := v1.Group("/merchants/me")
+		merchants.Use(middleware.AuthMiddleware())
+		merchants.Use(middleware.EmailVerificationMiddleware(userRepo))
+		{
+			// Profile management
+			merchants.POST("/profile", merchantHandler.CreateProfile)
+		merchants.GET("/profile", merchantHandler.GetProfile)
+			merchants.PUT("/profile", merchantHandler.UpdateProfile)
+			merchants.POST("/logo", merchantHandler.UploadLogo)
+
+			// Settings management
+			merchants.GET("/settings", merchantHandler.GetSettings)
+			merchants.PUT("/settings", merchantHandler.UpdateSettings)
+
+			// Subscription management
+			merchants.GET("/subscription", merchantHandler.GetSubscription)
+			merchants.POST("/subscription/cancel", merchantHandler.CancelSubscription)
+
+			// Quota management
+			merchants.GET("/quota", merchantHandler.GetQuota)
 		}
 
 		// Alternative protected routes (removed duplicate /me endpoint)
