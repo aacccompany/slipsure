@@ -13,7 +13,7 @@ import (
 
 // RedisOTPService handles OTP operations using Redis for fast storage with auto-expiration
 type RedisOTPService struct {
-	client      *redis.Client
+	client       *redis.Client
 	emailService EmailService
 }
 
@@ -41,9 +41,9 @@ func NewRedisOTPService(redisAddr string, emailService EmailService) (*RedisOTPS
 		return nil, fmt.Errorf("failed to connect to Redis: %w", err)
 	}
 
-	log.Println("✅ Redis OTP service initialized")
+	log.Println(" Redis OTP service initialized")
 	return &RedisOTPService{
-		client:      client,
+		client:       client,
 		emailService: emailService,
 	}, nil
 }
@@ -119,7 +119,7 @@ func (s *RedisOTPService) VerifyOTP(userID uuid.UUID, otp string) (bool, error) 
 	// Delete OTP after successful verification (one-time use)
 	s.client.Del(ctx, key)
 
-	log.Printf("✅ OTP verified successfully for user %s", userID)
+	log.Printf(" OTP verified successfully for user %s", userID)
 	return true, nil
 }
 

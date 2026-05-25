@@ -14,13 +14,15 @@ import (
 type MerchantService struct {
 	merchantRepo repositories.MerchantRepository
 	stripeService *StripeService
+	userRepo     repositories.UserRepository
 }
 
 // NewMerchantService creates a new merchant service instance
-func NewMerchantService(merchantRepo repositories.MerchantRepository, stripeService *StripeService) *MerchantService {
+func NewMerchantService(merchantRepo repositories.MerchantRepository, stripeService *StripeService, userRepo repositories.UserRepository) *MerchantService {
 	return &MerchantService{
 		merchantRepo:  merchantRepo,
 		stripeService: stripeService,
+		userRepo:     userRepo,
 	}
 }
 
@@ -140,6 +142,17 @@ func (s *MerchantService) CreateProfile(ownerID uuid.UUID, req *models.CreateMer
 	err = s.merchantRepo.CreateMerchant(profile)
 	if err != nil {
 		return nil, err
+	}
+
+	// Update user's merchant_id
+	user, err := s.userRepo.FindByID(ownerID)
+	if err != nil {
+		return nil, errors.New("failed to find user for merchant association")
+	}
+
+	user.MerchantID = &profile.ID
+	if err := s.userRepo.Update(user); err != nil {
+		return nil, errors.New("failed to associate merchant with user")
 	}
 
 	return &models.MerchantProfileResponse{

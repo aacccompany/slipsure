@@ -17,6 +17,7 @@ type AuthService interface {
 	Register(req *models.RegisterRequest) (*models.RegisterResponse, error)
 	Login(req *models.LoginRequest) (*models.AuthResponse, error)
 	LineLogin(req *models.LineLoginRequest) (*models.LineLoginResponse, error)
+	ConnectLineAccount(userID uuid.UUID, req *models.ConnectLineRequest) (*models.ConnectLineResponse, error)
 	VerifyOTP(req *models.VerifyOTPRequest) (*models.VerifyOTPResponse, error)
 	ResendOTP(email string) error
 	ForgotPassword(email string) error
@@ -248,6 +249,67 @@ func (s *authService) LineLogin(req *models.LineLoginRequest) (*models.LineLogin
 		ExpiresIn:    3600,
 		IsNewUser:    isNewUser,
 		User:         *user,
+	}, nil
+}
+
+// ConnectLineAccount connects a LINE account to an existing user
+func (s *authService) ConnectLineAccount(userID uuid.UUID, req *models.ConnectLineRequest) (*models.ConnectLineResponse, error) {
+	// Check if LINE OAuth service is available
+	if s.lineOAuth == nil {
+		log.Printf("LINE OAuth service not available")
+		return nil, errors.New("LINE OAuth service is not available")
+	}
+
+	// Get current user
+	user, err := s.userRepo.FindByID(userID)
+	if err != nil {
+		log.Printf("Error finding user: %v", err)
+		return nil, errors.New("user not found")
+	}
+
+	// Check if user already has LINE linked
+	if user.LineLinked {
+		return nil, errors.New("LINE account is already connected to this account")
+	}
+
+	// Exchange code for LINE access token
+	tokenResp, err := s.lineOAuth.ExchangeCodeForToken(req.Code, req.RedirectURI)
+	if err != nil {
+		log.Printf("Error exchanging LINE code: %v", err)
+		return nil, errors.New("failed to authenticate with LINE")
+	}
+
+	// Get LINE profile
+	profile, err := s.lineOAuth.GetUserProfile(tokenResp.AccessToken)
+	if err != nil {
+		log.Printf("Error getting LINE profile: %v", err)
+		return nil, errors.New("failed to get LINE profile")
+	}
+
+	// Check if this LINE ID is already linked to another account
+	existingUser, err := s.userRepo.FindByLineUserID(profile.UserID)
+	if err == nil && existingUser.ID != userID {
+		return nil, errors.New("this LINE account is already linked to another account")
+	}
+
+	// Update user with LINE information
+	user.LineUserID = &profile.UserID
+	user.LineLinked = true
+	if user.Name == "" {
+		user.Name = profile.DisplayName // Update name if empty
+	}
+
+	// Save changes
+	if err := s.userRepo.Update(user); err != nil {
+		log.Printf("Error updating user: %v", err)
+		return nil, errors.New("failed to link LINE account")
+	}
+
+	log.Printf("LINE account connected successfully for user %s (LINE ID: %s)", user.ID, profile.UserID)
+
+	return &models.ConnectLineResponse{
+		Message: "LINE account connected successfully",
+		User:    *user,
 	}, nil
 }
 

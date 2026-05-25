@@ -228,6 +228,75 @@ func (h *AuthHandler) LineLogin(c *gin.Context) {
 	})
 }
 
+// ConnectLineAccount handles POST /auth/connect-line
+func (h *AuthHandler) ConnectLineAccount(c *gin.Context) {
+	// Get user ID from JWT context
+	userIDStr, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"success": false,
+			"error":   "UNAUTHORIZED",
+			"message": "User not authenticated",
+		})
+		return
+	}
+
+	// Parse user ID from string to UUID
+	userID, err := uuid.Parse(userIDStr.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "INVALID_USER_ID",
+			"message": "Invalid user ID format",
+		})
+		return
+	}
+
+	var req models.ConnectLineRequest
+
+	// Bind and validate request
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "VALIDATION_ERROR",
+			"message": "Invalid request data",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Call auth service
+	response, err := h.authService.ConnectLineAccount(userID, &req)
+	if err != nil {
+		log.Printf("Connect LINE account error: %v", err)
+
+		errorCode := "CONNECT_LINE_FAILED"
+		statusCode := http.StatusBadRequest
+
+		errorMsg := err.Error()
+		if strings.Contains(strings.ToLower(errorMsg), "not available") {
+			errorCode = "SERVICE_UNAVAILABLE"
+			statusCode = http.StatusServiceUnavailable
+		} else if strings.Contains(strings.ToLower(errorMsg), "already connected") {
+			errorCode = "LINE_ALREADY_CONNECTED"
+		} else if strings.Contains(strings.ToLower(errorMsg), "already linked") {
+			errorCode = "LINE_ALREADY_LINKED_TO_ANOTHER_ACCOUNT"
+		}
+
+		c.JSON(statusCode, gin.H{
+			"success": false,
+			"error":   errorCode,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    response,
+	})
+}
+
 // ForgotPassword handles POST /auth/forgot-password
 func (h *AuthHandler) ForgotPassword(c *gin.Context) {
 	var req models.ForgotPasswordRequest

@@ -105,6 +105,18 @@ type LineLoginRequest struct {
 	RedirectURI string `json:"redirect_uri" binding:"required"`
 }
 
+// ConnectLineRequest represents connect LINE account request
+type ConnectLineRequest struct {
+	Code        string `json:"line_code" binding:"required"`
+	RedirectURI string `json:"redirect_uri" binding:"required"`
+}
+
+// ConnectLineResponse represents connect LINE account response
+type ConnectLineResponse struct {
+	Message string `json:"message"`
+	User    User   `json:"user"`
+}
+
 // UpdateProfileRequest represents profile update request
 type UpdateProfileRequest struct {
 	Name  string `json:"name" binding:"required"`

@@ -4,8 +4,9 @@ import (
 	"database/sql"
 	"errors"
 
-	"github.com/google/uuid"
 	"slipsure-backend/internal/models"
+
+	"github.com/google/uuid"
 )
 
 // UserRepository defines the interface for user data operations
@@ -60,7 +61,7 @@ func (r *userRepository) Create(user *models.User) error {
 // FindByID retrieves a user by ID
 func (r *userRepository) FindByID(id uuid.UUID) (*models.User, error) {
 	query := `
-		SELECT id, name, email, phone, password_hash, role,
+		SELECT id, name, email, phone, password_hash, role, merchant_id,
 			   line_user_id, line_linked, email_verified, created_at, updated_at
 		FROM users
 		WHERE id = $1
@@ -68,10 +69,11 @@ func (r *userRepository) FindByID(id uuid.UUID) (*models.User, error) {
 
 	var user models.User
 	var phone *string
+	var merchantID *uuid.UUID
 	var lineUserID *string
 
 	err := r.db.QueryRow(query, id).Scan(
-		&user.ID, &user.Name, &user.Email, &phone, &user.PasswordHash, &user.Role,
+		&user.ID, &user.Name, &user.Email, &phone, &user.PasswordHash, &user.Role, &merchantID,
 		&lineUserID, &user.LineLinked, &user.EmailVerified, &user.CreatedAt, &user.UpdatedAt,
 	)
 
@@ -83,6 +85,7 @@ func (r *userRepository) FindByID(id uuid.UUID) (*models.User, error) {
 	}
 
 	user.Phone = phone
+	user.MerchantID = merchantID
 	user.LineUserID = lineUserID
 
 	return &user, nil
@@ -91,7 +94,7 @@ func (r *userRepository) FindByID(id uuid.UUID) (*models.User, error) {
 // FindByEmail retrieves a user by email
 func (r *userRepository) FindByEmail(email string) (*models.User, error) {
 	query := `
-		SELECT id, name, email, phone, password_hash, role,
+		SELECT id, name, email, phone, password_hash, role, merchant_id,
 			   line_user_id, line_linked, email_verified, created_at, updated_at
 		FROM users
 		WHERE email = $1
@@ -99,10 +102,11 @@ func (r *userRepository) FindByEmail(email string) (*models.User, error) {
 
 	var user models.User
 	var phone *string
+	var merchantID *uuid.UUID
 	var lineUserID *string
 
 	err := r.db.QueryRow(query, email).Scan(
-		&user.ID, &user.Name, &user.Email, &phone, &user.PasswordHash, &user.Role,
+		&user.ID, &user.Name, &user.Email, &phone, &user.PasswordHash, &user.Role, &merchantID,
 		&lineUserID, &user.LineLinked, &user.EmailVerified, &user.CreatedAt, &user.UpdatedAt,
 	)
 
@@ -114,6 +118,7 @@ func (r *userRepository) FindByEmail(email string) (*models.User, error) {
 	}
 
 	user.Phone = phone
+	user.MerchantID = merchantID
 	user.LineUserID = lineUserID
 
 	return &user, nil
@@ -122,7 +127,7 @@ func (r *userRepository) FindByEmail(email string) (*models.User, error) {
 // FindByLineUserID retrieves a user by LINE user ID
 func (r *userRepository) FindByLineUserID(lineUserID string) (*models.User, error) {
 	query := `
-		SELECT id, name, email, phone, password_hash, role,
+		SELECT id, name, email, phone, password_hash, role, merchant_id,
 			   line_user_id, line_linked, email_verified, created_at, updated_at
 		FROM users
 		WHERE line_user_id = $1
@@ -130,11 +135,12 @@ func (r *userRepository) FindByLineUserID(lineUserID string) (*models.User, erro
 
 	var user models.User
 	var phone *string
-	var userID *string
+	var merchantID *uuid.UUID
+	var lineUserIDResult *string
 
 	err := r.db.QueryRow(query, lineUserID).Scan(
-		&user.ID, &user.Name, &user.Email, &phone, &user.PasswordHash, &user.Role,
-		&userID, &user.LineLinked, &user.EmailVerified, &user.CreatedAt, &user.UpdatedAt,
+		&user.ID, &user.Name, &user.Email, &phone, &user.PasswordHash, &user.Role, &merchantID,
+		&lineUserIDResult, &user.LineLinked, &user.EmailVerified, &user.CreatedAt, &user.UpdatedAt,
 	)
 
 	if err != nil {
@@ -145,7 +151,8 @@ func (r *userRepository) FindByLineUserID(lineUserID string) (*models.User, erro
 	}
 
 	user.Phone = phone
-	user.LineUserID = userID
+	user.MerchantID = merchantID
+	user.LineUserID = lineUserIDResult
 
 	return &user, nil
 }
@@ -241,7 +248,7 @@ func (r *userRepository) LinkLineAccount(userID uuid.UUID, lineUserID string) er
 // FindByMerchantID retrieves all users associated with a merchant
 func (r *userRepository) FindByMerchantID(merchantID uuid.UUID) ([]*models.User, error) {
 	query := `
-		SELECT u.id, u.name, u.email, u.phone, u.password_hash, u.role,
+		SELECT u.id, u.name, u.email, u.phone, u.password_hash, u.role, u.merchant_id,
 			   u.line_user_id, u.line_linked, u.email_verified, u.created_at, u.updated_at
 		FROM users u
 		WHERE u.merchant_id = $1
@@ -259,10 +266,11 @@ func (r *userRepository) FindByMerchantID(merchantID uuid.UUID) ([]*models.User,
 	for rows.Next() {
 		var user models.User
 		var phone *string
+		var userMerchantID *uuid.UUID
 		var lineUserID *string
 
 		err := rows.Scan(
-			&user.ID, &user.Name, &user.Email, &phone, &user.PasswordHash, &user.Role,
+			&user.ID, &user.Name, &user.Email, &phone, &user.PasswordHash, &user.Role, &userMerchantID,
 			&lineUserID, &user.LineLinked, &user.EmailVerified, &user.CreatedAt, &user.UpdatedAt,
 		)
 		if err != nil {
@@ -270,6 +278,7 @@ func (r *userRepository) FindByMerchantID(merchantID uuid.UUID) ([]*models.User,
 		}
 
 		user.Phone = phone
+		user.MerchantID = userMerchantID
 		user.LineUserID = lineUserID
 		users = append(users, &user)
 	}

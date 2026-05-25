@@ -105,8 +105,41 @@ func main() {
 	}
 
 	merchantRepo := repositories.NewMerchantRepository(database.DB)
-	merchantService := services.NewMerchantService(merchantRepo, stripeService)
+	merchantService := services.NewMerchantService(merchantRepo, stripeService, userRepo)
 	merchantHandler := handlers.NewMerchantHandler(merchantService, stripeService)
+
+		// Initialize storage service (DigitalOcean Spaces)
+		log.Println(" Attempting to initialize DigitalOcean Spaces storage service...")
+		var storageService *services.StorageService
+		if storageService, err = services.NewStorageService(); err != nil {
+			log.Printf(" Warning: Failed to initialize storage service: %v", err)
+			log.Println(" File upload functionality will be limited")
+		} else {
+			log.Println(" DigitalOcean Spaces storage service initialized successfully")
+		}
+
+	// Initialize slip verification service
+	slipRepo := repositories.NewSlipRepository(database.DB)
+	transactionRepo := repositories.NewTransactionRepository(database.DB)
+	usageCounterRepo := repositories.NewUsageCounterRepository(database.DB)
+	slipVerificationService := services.NewSlipVerificationService(slipRepo, transactionRepo, usageCounterRepo, storageService)
+	slipHandler := handlers.NewSlipHandler(slipVerificationService)
+
+	// Initialize LINE messaging service (optional - can fail gracefully)
+	log.Println(" Attempting to initialize LINE Messaging service...")
+	var lineMessagingService *services.LINEMessagingService
+	if lineMessagingService, err = services.NewLINEMessagingService(); err != nil {
+		log.Printf(" Warning: Failed to initialize LINE Messaging service: %v", err)
+		log.Println(" LINE Bot functionality will be unavailable")
+	} else {
+		log.Println(" LINE Messaging service initialized successfully")
+	}
+
+	// Initialize LINE webhook handler
+	var lineWebhookHandler *handlers.LINEWebhookHandler
+	if lineMessagingService != nil {
+		lineWebhookHandler = handlers.NewLINEWebhookHandler(lineMessagingService, slipVerificationService, merchantRepo, userRepo)
+	}
 
 	// Initialize services with dependency injection
 	authService := services.NewAuthServiceWithOTP(userRepo, merchantRepo, otpService, lineOAuth)
@@ -147,6 +180,7 @@ func main() {
 		{
 			protected.GET("/me", authHandler.GetProfile)
 			protected.PUT("/profile", authHandler.UpdateProfile)
+			protected.POST("/connect-line", authHandler.ConnectLineAccount)
 			protected.POST("/logout", authHandler.Logout)
 		}
 
@@ -190,6 +224,23 @@ func main() {
 		altProtected.Use(middleware.AuthMiddleware())
 		{
 			// Additional protected endpoints can be added here
+		}
+
+		// Slip verification routes (protected + email verification required)
+		slips := v1.Group("/slips")
+		slips.Use(middleware.AuthMiddleware())
+		slips.Use(middleware.EmailVerificationMiddleware(userRepo))
+		{
+			slips.POST("/upload", slipHandler.UploadSlip)
+			slips.POST("/scan", slipHandler.ScanQRData)
+			slips.GET("/:slip_id", slipHandler.GetSlip)
+			slips.POST("/:slip_id/reprocess", slipHandler.ReprocessSlip)
+			slips.GET("", slipHandler.ListSlips)
+		}
+
+		// LINE webhook routes (public - called by LINE Platform)
+		if lineWebhookHandler != nil {
+			v1.POST("/line/webhook", lineWebhookHandler.HandleWebhook)
 		}
 
 		// API info
