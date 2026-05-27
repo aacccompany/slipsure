@@ -52,6 +52,9 @@ func (s *SlipVerificationService) UploadAndVerify(ctx context.Context, merchantI
 	}
 
 	// Upload image to DigitalOcean Spaces
+	if s.storage == nil {
+		return nil, fmt.Errorf("storage service not initialized - please check DigitalOcean Spaces configuration")
+	}
 	imageURL, err := s.storage.UploadSlipImage(imageData, slip.ID.String(), contentType)
 	if err != nil {
 		return nil, fmt.Errorf("failed to upload image to Spaces: %w", err)

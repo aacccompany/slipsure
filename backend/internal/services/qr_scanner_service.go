@@ -238,11 +238,13 @@ func (s *QRScannerService) ParseEMVCoData(qrData string) (*models.EMVCoData, err
 		QRRawData: qrData,
 	}
 
-	// Parse EMVCo format (simplified Thai PromptPay/QR payment format)
-	// Format: ID-Length-Value triples
-
 	// Remove whitespace
 	qrData = strings.TrimSpace(qrData)
+
+	// Check if it's a Thai bank-specific format first (like KBank, SCB, etc.)
+	if s.isThaiBankFormat(qrData) {
+		return s.parseThaiBankFormat(qrData)
+	}
 
 	// Check if it's a valid EMVCo QR string
 	if !strings.HasPrefix(qrData, "0002") && !strings.HasPrefix(qrData, "01") {
@@ -434,4 +436,157 @@ func (s *QRScannerService) ValidateQRData(qrData string) error {
 	}
 
 	return nil
+}
+
+// isThaiBankFormat checks if QR data matches Thai bank-specific format
+func (s *QRScannerService) isThaiBankFormat(qrData string) bool {
+	// Thai bank QR format typically starts with specific patterns
+	// Format: XXXX0006... (like KBank, SCB, BBL, etc.)
+	if len(qrData) < 20 {
+		return false
+	}
+
+	// Check for Thai bank signature patterns (first 4 digits + 0006)
+	patterns := []string{
+		"00380006", // KBank/Thai bank format
+		"00380008", // Another Thai bank variant
+		"00370006", // SCB format
+		"00170006", // BBL format
+		"00410006", // Another Thai bank variant (your pattern!)
+		"00390006", // Additional Thai bank variant
+		"00460006", // Additional Thai bank variant
+	}
+
+	// Check specific patterns first
+	for _, pattern := range patterns {
+		if strings.HasPrefix(qrData, pattern) {
+			return true
+		}
+	}
+
+	// General pattern: XXXX0006 (4 digits + 0006)
+	if len(qrData) >= 8 {
+		prefix := qrData[0:4]
+		if qrData[4:8] == "0006" {
+			fmt.Printf("Detected Thai bank format by pattern: %s0006\n", prefix)
+			return true
+		}
+	}
+
+	return false
+}
+
+// parseThaiBankFormat parses Thai bank-specific QR format
+func (s *QRScannerService) parseThaiBankFormat(qrData string) (*models.EMVCoData, error) {
+	data := &models.EMVCoData{
+		QRRawData: qrData,
+	}
+
+	fmt.Printf("Parsing Thai bank QR format\n")
+	fmt.Printf("QR Data Length: %d\n", len(qrData))
+	fmt.Printf("Raw Data: %s\n\n", qrData)
+
+	// Thai bank format structure:
+	// 0038 (4 bytes) - Header
+	// 0006 (4 bytes) - Type/Version
+	// [Variable length timestamp/transaction data]
+	// [Reference ID starts when first alphabetic character appears]
+	// Reference ID continues until "5102" delimiter
+	// 5102 (4 bytes) - Suffix/delimiter
+	// TH... (remaining) - Serial/transaction data
+
+	if len(qrData) < 20 {
+		return data, fmt.Errorf("QR data too short for Thai bank format")
+	}
+
+	// Extract header info
+	header := qrData[0:4]
+	typeVersion := qrData[4:8]
+
+	fmt.Printf("Header: %s\n", header)
+	fmt.Printf("Type/Version: %s\n", typeVersion)
+
+	// Find where the reference ID starts - based on pattern analysis
+	// Thai bank format: reference ID starts at position 25 (after 25 bytes of header/data)
+	refIDStart := 25
+
+	// Validate we have enough data
+	if refIDStart >= len(qrData) {
+		return data, fmt.Errorf("QR data too short for reference ID extraction")
+	}
+
+	// Extract timestamp/data before reference ID
+	timestamp := qrData[8:refIDStart]
+	fmt.Printf("Transaction Data: %s\n", timestamp)
+
+	// Find reference ID end - look for "5102" delimiter
+	delimiter := "5102"
+	refIDEnd := -1
+
+	if refIDStart < len(qrData) {
+		dataAfterRefStart := qrData[refIDStart:]
+		if idx := strings.Index(dataAfterRefStart, delimiter); idx != -1 && idx > 0 {
+			refIDEnd = refIDStart + idx
+		}
+	}
+
+	// Extract reference ID
+	if refIDEnd != -1 && refIDEnd > refIDStart {
+		referenceID := qrData[refIDStart:refIDEnd]
+		data.ReferenceNumber = referenceID
+
+		fmt.Printf("\n*** THAI BANK FORMAT DETECTED ***\n")
+		fmt.Printf("Reference ID: %s (%d characters)\n", referenceID, len(referenceID))
+
+		// Extract suffix if available
+		if refIDEnd+4 <= len(qrData) {
+			suffix := qrData[refIDEnd:refIDEnd+4]
+			fmt.Printf("Suffix: %s\n", suffix)
+
+			// Extract serial if available
+			if refIDEnd+4 < len(qrData) {
+				serial := qrData[refIDEnd+4:]
+				fmt.Printf("Serial: %s\n", serial)
+			}
+		}
+
+		// Show structure breakdown
+		fmt.Println("\nStructure Breakdown:")
+		fmt.Printf("Positions 0-4 (Header):     [%s]\n", qrData[0:4])
+		fmt.Printf("Positions 4-8 (Type):       [%s]\n", qrData[4:8])
+		fmt.Printf("Positions 8-%d (Data):      [%s]\n", refIDStart, timestamp)
+		fmt.Printf("Positions %d-%d (Ref ID):   [%s] ← REFERENCE\n", refIDStart, refIDEnd, referenceID)
+		if refIDEnd+4 <= len(qrData) {
+			fmt.Printf("Positions %d-%d (Suffix):   [%s]\n", refIDEnd, refIDEnd+4, qrData[refIDEnd:refIDEnd+4])
+		}
+		if refIDEnd+4 < len(qrData) {
+			fmt.Printf("Positions %d-end (Serial): [%s]\n", refIDEnd+4, qrData[refIDEnd+4:])
+		}
+
+	} else {
+		// Fallback: use everything from refIDStart as reference ID
+		referenceID := qrData[refIDStart:]
+		data.ReferenceNumber = referenceID
+
+		fmt.Printf("Warning: Could not find delimiter '5102', using rest as reference\n")
+		fmt.Printf("Reference ID: %s\n", referenceID)
+	}
+
+	// Try to extract amount if present
+	amountPattern := regexp.MustCompile(`(\d{3,8})\d{2}`) // Look for amount-like patterns
+	if matches := amountPattern.FindAllString(qrData, -1); len(matches) > 0 {
+		// Try to find a reasonable amount (avoiding timestamps, etc.)
+		for _, match := range matches {
+			if amount, err := strconv.ParseFloat(match, 64); err == nil {
+				// Convert from satang to baht if it looks like satang
+				if amount > 100000 && amount < 10000000 { // Reasonable range: 1,000-100,000 THB
+					data.TransactionAmount = amount / 100.0
+					fmt.Printf("Extracted Amount: %.2f THB\n", data.TransactionAmount)
+					break
+				}
+			}
+		}
+	}
+
+	return data, nil
 }

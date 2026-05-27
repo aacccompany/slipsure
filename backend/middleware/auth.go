@@ -54,15 +54,11 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		// Debug logging
 		log.Printf("DEBUG: UserID from claims: %s (type: %T)", claims.UserID, claims.UserID)
-		log.Printf("DEBUG: MerchantID from claims: %v", claims.MerchantID)
 
-		// Set user context
+		// Set user context (only user_id, email, role)
 		c.Set("user_id", claims.UserID)
 		c.Set("user_email", claims.Email)
 		c.Set("user_role", claims.Role)
-		if claims.MerchantID != nil {
-			c.Set("merchant_id", *claims.MerchantID)
-		}
 
 		// Debug: log the user ID being set
 		log.Printf("Auth: Setting user_id='%s' for email=%s", claims.UserID, claims.Email)

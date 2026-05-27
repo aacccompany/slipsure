@@ -10,16 +10,18 @@ RUN apk add --no-cache git ca-certificates tzdata
 
 WORKDIR /app
 
-# Copy go mod files and download dependencies
-COPY go.mod ./
-RUN go mod download
+# Set Go proxy for better reliability
+ENV GOPROXY=https://goproxy.cn,direct
+
+# Copy go mod files first for better caching
+COPY go.mod go.sum ./
+
+# Download dependencies (with retry logic)
+RUN go mod download || \
+    (echo "Retrying go mod download..." && go mod download)
 
 # Copy source code
 COPY . .
-
-# Download dependencies again for caching and update go.sum
-RUN go mod tidy
-RUN go mod download
 
 # Build the application
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .

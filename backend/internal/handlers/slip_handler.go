@@ -8,18 +8,21 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"slipsure-backend/internal/models"
+	"slipsure-backend/internal/repositories"
 	"slipsure-backend/internal/services"
 )
 
 // SlipHandler handles slip verification HTTP requests
 type SlipHandler struct {
 	verificationService *services.SlipVerificationService
+	userRepo            repositories.UserRepository
 }
 
 // NewSlipHandler creates a new slip handler
-func NewSlipHandler(verificationService *services.SlipVerificationService) *SlipHandler {
+func NewSlipHandler(verificationService *services.SlipVerificationService, userRepo repositories.UserRepository) *SlipHandler {
 	return &SlipHandler{
 		verificationService: verificationService,
+		userRepo:            userRepo,
 	}
 }
 

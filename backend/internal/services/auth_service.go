@@ -98,15 +98,15 @@ func (s *authService) Register(req *models.RegisterRequest) (*models.RegisterRes
 	// Generate and store OTP
 	log.Printf("Generating OTP for user %s", user.ID)
 
-		// Check if OTP service is available
-		if s.otpService == nil {
-			log.Printf("OTP service not available, user created but verification email not sent")
-			return &models.RegisterResponse{
-								Email:    user.Email,
-				OTPSent:  false,
-				Message:  "Account created successfully. OTP service is currently unavailable.",
-			}, nil
-		}
+	// Check if OTP service is available
+	if s.otpService == nil {
+		log.Printf("OTP service not available, user created but verification email not sent")
+		return &models.RegisterResponse{
+			Email:   user.Email,
+			OTPSent: false,
+			Message: "Account created successfully. OTP service is currently unavailable.",
+		}, nil
+	}
 	otp := s.otpService.GenerateOTP()
 	log.Printf("OTP generated: %s", otp)
 
@@ -152,15 +152,8 @@ func (s *authService) Login(req *models.LoginRequest) (*models.AuthResponse, err
 		return nil, errors.New("please verify your email before logging in. Check your inbox for the OTP code")
 	}
 
-	// Check if user has a merchant profile
-	var merchantID *uuid.UUID
-	merchant, err := s.merchantRepo.FindByOwnerID(user.ID)
-	if err == nil && merchant != nil {
-		merchantID = &merchant.ID
-	}
-
-	// Generate JWT token with merchant ID if exists
-	accessToken, err := utils.GenerateToken(user.ID, merchantID, string(user.Role), user.Email)
+	// Generate JWT token
+	accessToken, err := utils.GenerateToken(user.ID, string(user.Role), user.Email)
 	if err != nil {
 		log.Printf("Error generating token: %v", err)
 		return nil, errors.New("failed to generate authentication token")
@@ -237,7 +230,7 @@ func (s *authService) LineLogin(req *models.LineLoginRequest) (*models.LineLogin
 	}
 
 	// Generate JWT token
-	accessToken, err := utils.GenerateToken(user.ID, user.MerchantID, string(user.Role), user.Email)
+	accessToken, err := utils.GenerateToken(user.ID, string(user.Role), user.Email)
 	if err != nil {
 		log.Printf("Error generating token: %v", err)
 		return nil, errors.New("failed to generate authentication token")
@@ -324,9 +317,9 @@ func (s *authService) VerifyOTP(req *models.VerifyOTPRequest) (*models.VerifyOTP
 
 	// Verify OTP
 
-		if s.otpService == nil {
-			return nil, errors.New("OTP service is currently unavailable. Please contact support.")
-		}
+	if s.otpService == nil {
+		return nil, errors.New("OTP service is currently unavailable. Please contact support.")
+	}
 	valid, err := s.otpService.VerifyOTP(user.ID, req.OTP)
 	if err != nil {
 		return nil, err
@@ -343,7 +336,7 @@ func (s *authService) VerifyOTP(req *models.VerifyOTPRequest) (*models.VerifyOTP
 	}
 
 	// Generate JWT token
-	accessToken, err := utils.GenerateToken(user.ID, user.MerchantID, string(user.Role), user.Email)
+	accessToken, err := utils.GenerateToken(user.ID, string(user.Role), user.Email)
 	if err != nil {
 		log.Printf("Error generating token: %v", err)
 		return nil, errors.New("failed to generate authentication token")
@@ -374,9 +367,9 @@ func (s *authService) ResendOTP(email string) error {
 
 	// Generate and store new OTP
 
-		if s.otpService == nil {
-			return errors.New("OTP service is currently unavailable. Please try again later.")
-		}
+	if s.otpService == nil {
+		return errors.New("OTP service is currently unavailable. Please try again later.")
+	}
 	otp := s.otpService.GenerateOTP()
 	if err := s.otpService.StoreOTP(user.ID, otp); err != nil {
 		log.Printf("Error storing OTP for resend: %v", err)
@@ -471,13 +464,22 @@ func (s *authService) GetProfile(userID uuid.UUID) (*models.UserProfileResponse,
 		return nil, errors.New("user not found")
 	}
 
+	var merchantID *uuid.UUID
+	if user.MerchantID != "" {
+		if mid, err := uuid.Parse(user.MerchantID); err == nil {
+			merchantID = &mid
+		} else {
+			log.Printf("failed to parse MerchantID %s: %v", user.MerchantID, err)
+		}
+	}
+
 	return &models.UserProfileResponse{
 		ID:            user.ID,
 		Name:          user.Name,
 		Email:         user.Email,
 		Phone:         user.Phone,
 		Role:          user.Role,
-		MerchantID:    user.MerchantID,
+		MerchantID:    merchantID,
 		LineLinked:    user.LineLinked,
 		EmailVerified: user.EmailVerified,
 		CreatedAt:     user.CreatedAt,

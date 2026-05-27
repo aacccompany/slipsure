@@ -183,8 +183,10 @@ func (h *LINEWebhookHandler) processSlipVerificationAsync(event services.LINEEve
 		return
 	}
 
-	if user.MerchantID == nil {
-		log.Printf("User %s has no merchant account associated", user.ID)
+	// Query merchant database directly by owner_id
+	merchant, err := h.merchantRepo.FindByOwnerID(user.ID)
+	if err != nil {
+		log.Printf("No merchant found for user %s: %v", user.ID, err)
 		message := "ไม่พบบัญชีร้านค้า\n\n"
 		message += "กรุณาสร้างบัญชีร้านค้าก่อนใช้งานระบบตรวจสอบสลิปครับ/ค่ะ"
 
@@ -195,11 +197,11 @@ func (h *LINEWebhookHandler) processSlipVerificationAsync(event services.LINEEve
 		return
 	}
 
-	log.Printf("Found LINE user %s, merchant ID: %s", user.ID, *user.MerchantID)
+	log.Printf("Found LINE user %s, merchant: %s (ID: %s)", user.ID, merchant.ShopName, merchant.ID)
 
 	// Send processing message
 	message := fmt.Sprintf("🙏 ขอบคุณที่ส่งสลิปครับ/ค่ะ\n\n")
-	message += fmt.Sprintf("ร้านค้า: %s\n", user.Name)
+	message += fmt.Sprintf("ร้านค้า: %s\n", merchant.ShopName)
 	message += "ระบบกำลังตรวจสอบสลิป...\n"
 
 	reply := services.BuildTextMessage(message)
@@ -208,7 +210,7 @@ func (h *LINEWebhookHandler) processSlipVerificationAsync(event services.LINEEve
 	}
 
 	// Call actual slip verification service
-	slip, err := h.slipService.UploadAndVerify(context.Background(), *user.MerchantID, imageData, contentType)
+	slip, err := h.slipService.UploadAndVerify(context.Background(), merchant.ID, imageData, contentType)
 	if err != nil {
 		log.Printf("Failed to start slip verification: %v", err)
 
@@ -418,7 +420,6 @@ func (h *LINEWebhookHandler) sendVerificationResult(lineUserID, merchantName str
 		message += fmt.Sprintf("ร้านค้า: %s\n", merchantName)
 		message += fmt.Sprintf("ยอดโอน: %.2f บาท\n", slip.Transaction.Amount)
 		message += fmt.Sprintf("เวลาทำรายการ: %s\n", formatThaiTime(slip.Transaction.TransferAt))
-		message += fmt.Sprintf("จากบัญชี: %s-%s\n", slip.Transaction.SenderBank, slip.Transaction.SenderAccount)
 		message += fmt.Sprintf("หมายเลขอ้างอิง: %s\n", slip.Transaction.ReferenceNo)
 
 		if slip.Transaction.IsDuplicate {

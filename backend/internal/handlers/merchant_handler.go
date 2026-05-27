@@ -8,6 +8,7 @@ import (
 
 	"slipsure-backend/database"
 	"slipsure-backend/internal/models"
+	"slipsure-backend/internal/repositories"
 	"slipsure-backend/internal/services"
 
 	"github.com/gin-gonic/gin"
@@ -18,22 +19,40 @@ import (
 type MerchantHandler struct {
 	merchantService *services.MerchantService
 	stripeService   *services.StripeService
+	userRepo        repositories.UserRepository
+	merchantRepo    repositories.MerchantRepository
 }
 
-// Helper function to get and parse merchant ID from context
-func getMerchantID(c *gin.Context) (uuid.UUID, error) {
-	merchantIDStr, exists := c.Get("merchant_id")
+// Helper function to get merchant ID by querying merchants by owner_id from user ID in JWT
+func getMerchantID(c *gin.Context, merchantRepo repositories.MerchantRepository) (uuid.UUID, error) {
+	// Get user ID from JWT context
+	userIDStr, exists := c.Get("user_id")
 	if !exists {
-		return uuid.Nil, errors.New("merchant_id not found in context")
+		return uuid.Nil, errors.New("user_id not found in context")
 	}
-	return uuid.Parse(merchantIDStr.(string))
+
+	// Parse user ID
+	userID, err := uuid.Parse(userIDStr.(string))
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("invalid user ID format: %w", err)
+	}
+
+	// Query merchants table directly by owner_id
+	merchant, err := merchantRepo.FindByOwnerID(userID)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("merchant not found for user: %w", err)
+	}
+
+	return merchant.ID, nil
 }
 
 // NewMerchantHandler creates a new merchant handler instance
-func NewMerchantHandler(merchantService *services.MerchantService, stripeService *services.StripeService) *MerchantHandler {
+func NewMerchantHandler(merchantService *services.MerchantService, stripeService *services.StripeService, userRepo repositories.UserRepository, merchantRepo repositories.MerchantRepository) *MerchantHandler {
 	return &MerchantHandler{
 		merchantService: merchantService,
 		stripeService:   stripeService,
+		userRepo:        userRepo,
+		merchantRepo:    merchantRepo,
 	}
 }
 
@@ -150,8 +169,14 @@ func (h *MerchantHandler) HandleStripeWebhook(c *gin.Context) {
 	// Get Stripe signature
 	signature := c.GetHeader("Stripe-Signature")
 
+	// Debug logging
+	fmt.Printf("Webhook received from %s\n", c.ClientIP())
+	fmt.Printf("Stripe-Signature header: %s\n", signature)
+	fmt.Printf("Payload length: %d bytes\n", len(payload))
+
 	// Verify webhook signature
 	if err := h.stripeService.VerifyWebhookSignature(payload, signature); err != nil {
+		fmt.Printf("Webhook signature verification failed: %v\n", err)
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"success": false,
 			"error":   "UNAUTHORIZED",
@@ -242,7 +267,7 @@ func (h *MerchantHandler) HandleStripeWebhook(c *gin.Context) {
 
 // GetSubscription handles GET /merchants/me/subscription - get current subscription
 func (h *MerchantHandler) GetSubscription(c *gin.Context) {
-	merchantID, err := getMerchantID(c)
+	merchantID, err := getMerchantID(c, h.merchantRepo)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"success": false,
@@ -254,10 +279,13 @@ func (h *MerchantHandler) GetSubscription(c *gin.Context) {
 
 	subscription, err := h.merchantService.GetSubscription(merchantID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"error":   "INTERNAL_ERROR",
-			"message": "Failed to retrieve subscription",
+		// No subscription found - return proper response
+		c.JSON(http.StatusNotFound, gin.H{
+			"success": true,
+			"data": gin.H{
+				"subscription": nil,
+				"message":      "No active subscription found. Please choose a plan to continue.",
+			},
 		})
 		return
 	}
@@ -280,7 +308,7 @@ func (h *MerchantHandler) CancelSubscription(c *gin.Context) {
 		return
 	}
 
-	merchantID, err := getMerchantID(c)
+	merchantID, err := getMerchantID(c, h.merchantRepo)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"success": false,
@@ -380,24 +408,13 @@ func (h *MerchantHandler) CreateProfile(c *gin.Context) {
 
 // GetProfile handles GET /merchants/me/profile - get merchant shop profile
 func (h *MerchantHandler) GetProfile(c *gin.Context) {
-	// Try to get merchant ID from context
-	merchantIDStr, exists := c.Get("merchant_id")
-	if !exists {
+	// Get merchant ID by querying database
+	merchantID, err := getMerchantID(c, h.merchantRepo)
+	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"success": false,
 			"error":   "MERCHANT_NOT_FOUND",
 			"message": "Merchant profile not found. Please create a profile first.",
-		})
-		return
-	}
-
-	// Parse merchant ID
-	merchantID, err := uuid.Parse(merchantIDStr.(string))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"error":   "INVALID_MERCHANT_ID",
-			"message": "Invalid merchant ID format",
 		})
 		return
 	}
@@ -430,7 +447,7 @@ func (h *MerchantHandler) UpdateProfile(c *gin.Context) {
 		return
 	}
 
-	merchantID, err := getMerchantID(c)
+	merchantID, err := getMerchantID(c, h.merchantRepo)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"success": false,
@@ -458,7 +475,7 @@ func (h *MerchantHandler) UpdateProfile(c *gin.Context) {
 
 // UploadLogo handles POST /merchants/me/logo - upload shop logo
 func (h *MerchantHandler) UploadLogo(c *gin.Context) {
-	merchantID, err := getMerchantID(c)
+	merchantID, err := getMerchantID(c, h.merchantRepo)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"success": false,
@@ -518,7 +535,7 @@ func (h *MerchantHandler) UploadLogo(c *gin.Context) {
 
 // GetSettings handles GET /merchants/me/settings - get merchant settings
 func (h *MerchantHandler) GetSettings(c *gin.Context) {
-	merchantID, err := getMerchantID(c)
+	merchantID, err := getMerchantID(c, h.merchantRepo)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"success": false,
@@ -556,7 +573,7 @@ func (h *MerchantHandler) UpdateSettings(c *gin.Context) {
 		return
 	}
 
-	merchantID, err := getMerchantID(c)
+	merchantID, err := getMerchantID(c, h.merchantRepo)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"success": false,
@@ -590,7 +607,7 @@ func (h *MerchantHandler) UpdateSettings(c *gin.Context) {
 
 // GetQuota handles GET /merchants/me/quota - get current quota status
 func (h *MerchantHandler) GetQuota(c *gin.Context) {
-	merchantID, err := getMerchantID(c)
+	merchantID, err := getMerchantID(c, h.merchantRepo)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"success": false,
@@ -602,10 +619,18 @@ func (h *MerchantHandler) GetQuota(c *gin.Context) {
 
 	quota, err := h.merchantService.GetQuotaStatus(merchantID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"error":   "INTERNAL_ERROR",
-			"message": "Failed to retrieve quota status",
+		// No subscription/quota found - return proper response
+		c.JSON(http.StatusNotFound, gin.H{
+			"success": true,
+			"data": gin.H{
+				"quota": gin.H{
+					"limit":      0,
+					"used":       0,
+					"remaining":  0,
+					"reset_date": "N/A",
+					"message":    "No active subscription. Please choose a plan to use slip verification features.",
+				},
+			},
 		})
 		return
 	}

@@ -33,8 +33,13 @@ func NewStorageService() (*StorageService, error) {
 	accessKey := os.Getenv("SPACES_ACCESS_KEY")
 	secretKey := os.Getenv("SPACES_SECRET_KEY")
 
+	// Debug logging
+	fmt.Printf("Storage Service Config: bucket='%s', region='%s', access_key='%s', secret_key_length=%d\n",
+		spaceName, region, accessKey, len(secretKey))
+
 	if spaceName == "" || region == "" || accessKey == "" || secretKey == "" {
-		return nil, fmt.Errorf("missing DigitalOcean Spaces credentials")
+		return nil, fmt.Errorf("missing DigitalOcean Spaces credentials: bucket=%v, region=%v, access_key=%v, secret_key=%v",
+			spaceName != "", region != "", accessKey != "", secretKey != "")
 	}
 
 	// Create AWS session with DigitalOcean Spaces endpoint

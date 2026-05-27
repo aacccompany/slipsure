@@ -106,24 +106,26 @@ func main() {
 
 	merchantRepo := repositories.NewMerchantRepository(database.DB)
 	merchantService := services.NewMerchantService(merchantRepo, stripeService, userRepo)
-	merchantHandler := handlers.NewMerchantHandler(merchantService, stripeService)
+	merchantHandler := handlers.NewMerchantHandler(merchantService, stripeService, userRepo, merchantRepo)
 
-		// Initialize storage service (DigitalOcean Spaces)
-		log.Println(" Attempting to initialize DigitalOcean Spaces storage service...")
-		var storageService *services.StorageService
-		if storageService, err = services.NewStorageService(); err != nil {
-			log.Printf(" Warning: Failed to initialize storage service: %v", err)
-			log.Println(" File upload functionality will be limited")
-		} else {
-			log.Println(" DigitalOcean Spaces storage service initialized successfully")
-		}
+	// Initialize storage service (DigitalOcean Spaces)
+	log.Println(" Attempting to initialize DigitalOcean Spaces storage service...")
+	storageService, err := services.NewStorageService()
+	if err != nil {
+		log.Printf(" Warning: Failed to initialize storage service: %v", err)
+		log.Println(" File upload functionality will be limited")
+		// Create a nil storage service to prevent panic
+		storageService = nil
+	} else {
+		log.Println(" DigitalOcean Spaces storage service initialized successfully")
+	}
 
 	// Initialize slip verification service
 	slipRepo := repositories.NewSlipRepository(database.DB)
 	transactionRepo := repositories.NewTransactionRepository(database.DB)
 	usageCounterRepo := repositories.NewUsageCounterRepository(database.DB)
 	slipVerificationService := services.NewSlipVerificationService(slipRepo, transactionRepo, usageCounterRepo, storageService)
-	slipHandler := handlers.NewSlipHandler(slipVerificationService)
+	slipHandler := handlers.NewSlipHandler(slipVerificationService, userRepo)
 
 	// Initialize LINE messaging service (optional - can fail gracefully)
 	log.Println(" Attempting to initialize LINE Messaging service...")
@@ -203,7 +205,7 @@ func main() {
 		{
 			// Profile management
 			merchants.POST("/profile", merchantHandler.CreateProfile)
-		merchants.GET("/profile", merchantHandler.GetProfile)
+			merchants.GET("/profile", merchantHandler.GetProfile)
 			merchants.PUT("/profile", merchantHandler.UpdateProfile)
 			merchants.POST("/logo", merchantHandler.UploadLogo)
 

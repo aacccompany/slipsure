@@ -12,15 +12,14 @@ import (
 
 // JWTClaims represents JWT claims structure
 type JWTClaims struct {
-	UserID     string  `json:"sub"`
-	MerchantID *string `json:"merchant_id,omitempty"`
-	Role       string  `json:"role"`
-	Email      string  `json:"email"`
+	UserID string `json:"sub"`
+	Role   string `json:"role"`
+	Email  string `json:"email"`
 	jwt.RegisteredClaims
 }
 
 // GenerateToken creates a new JWT token for a user
-func GenerateToken(userID uuid.UUID, merchantID *uuid.UUID, role, email string) (string, error) {
+func GenerateToken(userID uuid.UUID, role, email string) (string, error) {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
 		secret = "your-super-secret-jwt-key-change-in-production"
@@ -36,18 +35,10 @@ func GenerateToken(userID uuid.UUID, merchantID *uuid.UUID, role, email string) 
 		expirationTime = 1 * time.Hour
 	}
 
-	// Convert UUIDs to strings for JWT
-	var merchantIDStr *string
-	if merchantID != nil {
-		str := merchantID.String()
-		merchantIDStr = &str
-	}
-
 	claims := JWTClaims{
-		UserID:     userID.String(),
-		MerchantID: merchantIDStr,
-		Role:       role,
-		Email:      email,
+		UserID: userID.String(),
+		Role:   role,
+		Email:  email,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(expirationTime)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

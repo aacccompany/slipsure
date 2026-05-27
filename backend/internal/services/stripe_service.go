@@ -37,6 +37,13 @@ func NewStripeService() (*StripeService, error) {
 
 	webhookSecret := os.Getenv("STRIPE_WEBHOOK_SECRET")
 
+	// Debug logging
+	if webhookSecret == "" {
+		fmt.Printf("WARNING: STRIPE_WEBHOOK_SECRET is empty or not set!\n")
+	} else {
+		fmt.Printf("Loaded STRIPE_WEBHOOK_SECRET: %s... (first 10 chars)\n", webhookSecret[:10])
+	}
+
 	// Initialize Stripe
 	stripe.Key = apiKey
 

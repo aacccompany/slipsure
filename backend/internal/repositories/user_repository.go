@@ -61,7 +61,7 @@ func (r *userRepository) Create(user *models.User) error {
 // FindByID retrieves a user by ID
 func (r *userRepository) FindByID(id uuid.UUID) (*models.User, error) {
 	query := `
-		SELECT id, name, email, phone, password_hash, role, merchant_id,
+		SELECT id, name, email, phone, password_hash, role,
 			   line_user_id, line_linked, email_verified, created_at, updated_at
 		FROM users
 		WHERE id = $1
@@ -69,11 +69,10 @@ func (r *userRepository) FindByID(id uuid.UUID) (*models.User, error) {
 
 	var user models.User
 	var phone *string
-	var merchantID *uuid.UUID
 	var lineUserID *string
 
 	err := r.db.QueryRow(query, id).Scan(
-		&user.ID, &user.Name, &user.Email, &phone, &user.PasswordHash, &user.Role, &merchantID,
+		&user.ID, &user.Name, &user.Email, &phone, &user.PasswordHash, &user.Role,
 		&lineUserID, &user.LineLinked, &user.EmailVerified, &user.CreatedAt, &user.UpdatedAt,
 	)
 
@@ -85,7 +84,6 @@ func (r *userRepository) FindByID(id uuid.UUID) (*models.User, error) {
 	}
 
 	user.Phone = phone
-	user.MerchantID = merchantID
 	user.LineUserID = lineUserID
 
 	return &user, nil
@@ -118,7 +116,6 @@ func (r *userRepository) FindByEmail(email string) (*models.User, error) {
 	}
 
 	user.Phone = phone
-	user.MerchantID = merchantID
 	user.LineUserID = lineUserID
 
 	return &user, nil
@@ -151,7 +148,6 @@ func (r *userRepository) FindByLineUserID(lineUserID string) (*models.User, erro
 	}
 
 	user.Phone = phone
-	user.MerchantID = merchantID
 	user.LineUserID = lineUserIDResult
 
 	return &user, nil
@@ -161,7 +157,7 @@ func (r *userRepository) FindByLineUserID(lineUserID string) (*models.User, erro
 func (r *userRepository) Update(user *models.User) error {
 	query := `
 		UPDATE users
-		SET name = $2, email = $3, phone = $4, line_user_id = $5, line_linked = $6, email_verified = $7, updated_at = CURRENT_TIMESTAMP
+		SET name = $2, email = $3, phone = $4, merchant_id = $5, line_user_id = $6, line_linked = $7, email_verified = $8, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $1
 	`
 
@@ -170,12 +166,17 @@ func (r *userRepository) Update(user *models.User) error {
 		phone = *user.Phone
 	}
 
+	var merchantID interface{} = nil
+	if user.MerchantID != "" {
+		merchantID = user.MerchantID
+	}
+
 	var lineUserID interface{} = nil
 	if user.LineUserID != nil {
 		lineUserID = *user.LineUserID
 	}
 
-	result, err := r.db.Exec(query, user.ID, user.Name, user.Email, phone, lineUserID, user.LineLinked, user.EmailVerified)
+	result, err := r.db.Exec(query, user.ID, user.Name, user.Email, phone, merchantID, lineUserID, user.LineLinked, user.EmailVerified)
 	if err != nil {
 		return err
 	}
@@ -278,7 +279,9 @@ func (r *userRepository) FindByMerchantID(merchantID uuid.UUID) ([]*models.User,
 		}
 
 		user.Phone = phone
-		user.MerchantID = userMerchantID
+		if userMerchantID != nil {
+			user.MerchantID = userMerchantID.String()
+		}
 		user.LineUserID = lineUserID
 		users = append(users, &user)
 	}

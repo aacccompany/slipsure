@@ -5,16 +5,17 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"slipsure-backend/internal/models"
 	"slipsure-backend/internal/repositories"
+
+	"github.com/google/uuid"
 )
 
 // MerchantService handles merchant business logic
 type MerchantService struct {
-	merchantRepo repositories.MerchantRepository
+	merchantRepo  repositories.MerchantRepository
 	stripeService *StripeService
-	userRepo     repositories.UserRepository
+	userRepo      repositories.UserRepository
 }
 
 // NewMerchantService creates a new merchant service instance
@@ -22,7 +23,7 @@ func NewMerchantService(merchantRepo repositories.MerchantRepository, stripeServ
 	return &MerchantService{
 		merchantRepo:  merchantRepo,
 		stripeService: stripeService,
-		userRepo:     userRepo,
+		userRepo:      userRepo,
 	}
 }
 
@@ -63,13 +64,77 @@ func (s *MerchantService) CreateCheckout(userID uuid.UUID, userEmail string, req
 	// Log plan validation
 	fmt.Printf("Plan validated: %s (%s) - %.2f THB/%s for user %s\n", plan.Name, plan.ID, plan.PriceMonthly, req.BillingCycle, userEmail)
 
-	// Create Stripe checkout session with real email
+	// Handle free plans - activate immediately without Stripe
+	if plan.PriceMonthly == 0 && plan.PriceYearly == 0 {
+		return s.activateFreePlan(userID, req.PlanID, req.BillingCycle)
+	}
+
+	// Create Stripe checkout session for paid plans
 	checkoutResp, err := s.stripeService.CreateCheckoutSession(userID, userEmail, req.PlanID, string(req.BillingCycle))
 	if err != nil {
 		return nil, fmt.Errorf("stripe checkout failed: %w", err)
 	}
 
 	return checkoutResp, nil
+}
+
+// activateFreePlan activates a free plan immediately without Stripe checkout
+func (s *MerchantService) activateFreePlan(userID uuid.UUID, planID string, billingCycle models.BillingCycle) (*models.CheckoutResponse, error) {
+	// Get or create merchant profile first
+	merchant, err := s.merchantRepo.FindByOwnerID(userID)
+	if err != nil {
+		// Create merchant profile if it doesn't exist
+		profileReq := &models.CreateMerchantProfileRequest{
+			ShopName:   "My Shop",
+			StrictMode: true,
+		}
+		profileResp, err := s.CreateProfile(userID, profileReq)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create merchant profile: %w", err)
+		}
+		merchant = profileResp.Profile
+	}
+
+	merchantID := merchant.ID
+
+	// Calculate subscription expiration (free plans never expire, but set a far future date)
+	expiresAt := time.Now().AddDate(100, 0, 0) // 100 years from now
+
+	// Create subscription record directly in database
+	freePlanID := "free_plan"
+	expiresAtPtr := &expiresAt
+
+	subscription := &models.Subscription{
+		MerchantID:           merchantID,
+		PlanID:               planID,
+		Status:               models.SubscriptionStatusActive,
+		BillingCycle:         billingCycle,
+		StripeSubscriptionID: &freePlanID,
+		StripeCustomerID:     nil,
+		StartedAt:            time.Now(),
+		ExpiresAt:            expiresAtPtr,
+		AutoRenew:            false,
+		CreatedAt:            time.Now(),
+		UpdatedAt:            time.Now(),
+	}
+
+	err = s.merchantRepo.CreateSubscription(subscription)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create free plan subscription: %w", err)
+	}
+
+	fmt.Printf("Free plan activated for merchant %s, plan %s (%s)\n", merchantID, planID, billingCycle)
+
+	// Return a response indicating free plan activation
+	return &models.CheckoutResponse{
+		CheckoutSessionID: "free_plan_" + merchantID.String(),
+		CheckoutURL:       "", // No checkout URL for free plans
+		Amount:            0,
+		Currency:          "THB",
+		PlanID:            planID,
+		BillingCycle:      billingCycle,
+		ExpiresAt:         expiresAt,
+	}, nil
 }
 
 // GetSubscription retrieves current merchant subscription
@@ -150,7 +215,7 @@ func (s *MerchantService) CreateProfile(ownerID uuid.UUID, req *models.CreateMer
 		return nil, errors.New("failed to find user for merchant association")
 	}
 
-	user.MerchantID = &profile.ID
+	user.MerchantID = profile.ID.String()
 	if err := s.userRepo.Update(user); err != nil {
 		return nil, errors.New("failed to associate merchant with user")
 	}

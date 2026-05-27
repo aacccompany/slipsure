@@ -1,0 +1,216 @@
+🔍 Scanning QR codes from folder: ./slip
+====================================
+
+📁 Found 6 image file(s)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📷 Image 1/6: 45699.jpg
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ QR Code Content: 0041000600000101030040220016145082856BTF061935102TH9104823E
+──────────────────────────────────────────────────────────────
+📋 Parsed Structure:
+──────────────────────────────────────────────────────────────
+Total Length: 59 characters
+Raw Data: 0041000600000101030040220016145082856BTF061935102TH9104823E
+
+Header: 0041
+Type/Version: 0006
+Timestamp: 000001010300
+Prefix: 40220
+
+*** REFERENCE ID: 016145082856BTF06193 ***
+Suffix: 5102
+Serial Number: TH9104823E
+
+Character Positions:
+Positions 0-25 (Header+Type+Timestamp+Prefix): 0041000600000101030040220
+Positions 25-45 (Reference ID): 016145082856BTF06193
+Positions 45-49 (Suffix): 5102
+Positions 49-end (Serial): TH9104823E
+
+Detailed Field Breakdown:
+1. Header (0-4):          [0041]
+2. Type/Version (4-8):    [0006]
+3. Timestamp (8-20):     [000001010300]
+4. Prefix (20-25):       [40220]
+5. REF ID (25-45):       [016145082856BTF06193] ← REFERENCE ID (20 chars)
+6. Suffix (45-49):       [5102]
+7. Serial (49-end):      [TH9104823E]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📷 Image 2/6: 75889.jpg
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ QR Code Content: 00390006000001010301102182605241352574684705102TH9104F56C
+──────────────────────────────────────────────────────────────
+📋 Parsed Structure:
+──────────────────────────────────────────────────────────────
+Total Length: 57 characters
+Raw Data: 00390006000001010301102182605241352574684705102TH9104F56C
+
+Header: 0039
+Type/Version: 0006
+Timestamp: 000001010301
+Prefix: 10218
+
+*** REFERENCE ID: 260524135257468470 ***
+Suffix: 5102
+Serial Number: TH9104F56C
+
+Character Positions:
+Positions 0-25 (Header+Type+Timestamp+Prefix): 0039000600000101030110218
+Positions 25-43 (Reference ID): 260524135257468470
+Positions 43-47 (Suffix): 5102
+Positions 47-end (Serial): TH9104F56C
+
+Detailed Field Breakdown:
+1. Header (0-4):          [0039]
+2. Type/Version (4-8):    [0006]
+3. Timestamp (8-20):     [000001010301]
+4. Prefix (20-25):       [10218]
+5. REF ID (25-43):       [260524135257468470] ← REFERENCE ID (18 chars)
+6. Suffix (43-47):       [5102]
+7. Serial (47-end):      [TH9104F56C]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📷 Image 3/6: 75890.jpg
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ QR Code Content: 0046000600000101030140225202605132QzKm4iCoACIlMZcI5102TH9104620E
+──────────────────────────────────────────────────────────────
+📋 Parsed Structure:
+──────────────────────────────────────────────────────────────
+Total Length: 64 characters
+Raw Data: 0046000600000101030140225202605132QzKm4iCoACIlMZcI5102TH9104620E
+
+Header: 0046
+Type/Version: 0006
+Timestamp: 000001010301
+Prefix: 40225
+
+*** REFERENCE ID: 202605132QzKm4iCoACIlMZcI ***
+Suffix: 5102
+Serial Number: TH9104620E
+
+Character Positions:
+Positions 0-25 (Header+Type+Timestamp+Prefix): 0046000600000101030140225
+Positions 25-50 (Reference ID): 202605132QzKm4iCoACIlMZcI
+Positions 50-54 (Suffix): 5102
+Positions 54-end (Serial): TH9104620E
+
+Detailed Field Breakdown:
+1. Header (0-4):          [0046]
+2. Type/Version (4-8):    [0006]
+3. Timestamp (8-20):     [000001010301]
+4. Prefix (20-25):       [40225]
+5. REF ID (25-50):       [202605132QzKm4iCoACIlMZcI] ← REFERENCE ID (25 chars)
+6. Suffix (50-54):       [5102]
+7. Serial (54-end):      [TH9104620E]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📷 Image 4/6: 75892.jpg
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ QR Code Content: 0046000600000101030340225MPI00145740616143118317565102TH9104C5A6
+──────────────────────────────────────────────────────────────
+📋 Parsed Structure:
+──────────────────────────────────────────────────────────────
+Total Length: 64 characters
+Raw Data: 0046000600000101030340225MPI00145740616143118317565102TH9104C5A6
+
+Header: 0046
+Type/Version: 0006
+Timestamp: 000001010303
+Prefix: 40225
+
+*** REFERENCE ID: MPI0014574061614311831756 ***
+Suffix: 5102
+Serial Number: TH9104C5A6
+
+Character Positions:
+Positions 0-25 (Header+Type+Timestamp+Prefix): 0046000600000101030340225
+Positions 25-50 (Reference ID): MPI0014574061614311831756
+Positions 50-54 (Suffix): 5102
+Positions 54-end (Serial): TH9104C5A6
+
+Detailed Field Breakdown:
+1. Header (0-4):          [0046]
+2. Type/Version (4-8):    [0006]
+3. Timestamp (8-20):     [000001010303]
+4. Prefix (20-25):       [40225]
+5. REF ID (25-50):       [MPI0014574061614311831756] ← REFERENCE ID (25 chars)
+6. Suffix (50-54):       [5102]
+7. Serial (54-end):      [TH9104C5A6]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📷 Image 5/6: 75893.jpg
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ QR Code Content: 004600060000010103002022520260524135138230055989085102TH91040436
+──────────────────────────────────────────────────────────────
+📋 Parsed Structure:
+──────────────────────────────────────────────────────────────
+Total Length: 64 characters
+Raw Data: 004600060000010103002022520260524135138230055989085102TH91040436
+
+Header: 0046
+Type/Version: 0006
+Timestamp: 000001010300
+Prefix: 20225
+
+*** REFERENCE ID: 2026052413513823005598908 ***
+Suffix: 5102
+Serial Number: TH91040436
+
+Character Positions:
+Positions 0-25 (Header+Type+Timestamp+Prefix): 0046000600000101030020225
+Positions 25-50 (Reference ID): 2026052413513823005598908
+Positions 50-54 (Suffix): 5102
+Positions 54-end (Serial): TH91040436
+
+Detailed Field Breakdown:
+1. Header (0-4):          [0046]
+2. Type/Version (4-8):    [0006]
+3. Timestamp (8-20):     [000001010300]
+4. Prefix (20-25):       [20225]
+5. REF ID (25-50):       [2026052413513823005598908] ← REFERENCE ID (25 chars)
+6. Suffix (50-54):       [5102]
+7. Serial (54-end):      [TH91040436]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📷 Image 6/6: S__39010320.jpg
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ QR Code Content: 0038000600000101030060217Af7fa93d2fdbf443a5102TH91048B05
+──────────────────────────────────────────────────────────────
+📋 Parsed Structure:
+──────────────────────────────────────────────────────────────
+Total Length: 56 characters
+Raw Data: 0038000600000101030060217Af7fa93d2fdbf443a5102TH91048B05
+
+Header: 0038
+Type/Version: 0006
+Timestamp: 000001010300
+Prefix: 60217
+
+*** REFERENCE ID: Af7fa93d2fdbf443a ***
+Suffix: 5102
+Serial Number: TH91048B05
+
+Character Positions:
+Positions 0-25 (Header+Type+Timestamp+Prefix): 0038000600000101030060217
+Positions 25-42 (Reference ID): Af7fa93d2fdbf443a
+Positions 42-46 (Suffix): 5102
+Positions 46-end (Serial): TH91048B05
+
+Detailed Field Breakdown:
+1. Header (0-4):          [0038]
+2. Type/Version (4-8):    [0006]
+3. Timestamp (8-20):     [000001010300]
+4. Prefix (20-25):       [60217]
+5. REF ID (25-42):       [Af7fa93d2fdbf443a] ← REFERENCE ID (17 chars)
+6. Suffix (42-46):       [5102]
+7. Serial (46-end):      [TH91048B05]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 SCAN SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Total files: 6
+✅ Successfully scanned: 6
+❌ Failed: 0
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
