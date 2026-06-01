@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState } from 'react';
 import Link from 'next/link';
@@ -18,6 +18,7 @@ export const Navbar = () => {
   ];
 
   if (pathname?.startsWith('/dashboard')) return null;
+  if (pathname?.startsWith('/admin')) return null;
 
   return (
     <nav className="fixed top-0 z-[100] w-full border-b border-zinc-200 bg-white">

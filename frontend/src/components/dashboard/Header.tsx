@@ -1,11 +1,15 @@
 ﻿'use client';
 
 import React from 'react';
-import { Search, Bell } from 'lucide-react';
+import { Search, Bell, Menu } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { dashboardService } from '@/services/dashboard';
 
-export const DashboardHeader = () => {
+interface DashboardHeaderProps {
+  onMenuClick: () => void;
+}
+
+export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
   const { data: profile } = useQuery({
     queryKey: ['profile'],
     queryFn: dashboardService.getProfile,
@@ -14,9 +18,16 @@ export const DashboardHeader = () => {
   const initials = profile?.full_name?.split(' ').map((n) => n[0]).join('') || 'U';
 
   return (
-    <header className="h-14 border-b border-zinc-200 bg-white px-6 flex items-center justify-between sticky top-0 z-50">
-      <div className="flex items-center gap-3 w-80">
-        <div className="relative w-full">
+    <header className="h-14 border-b border-zinc-200 bg-white px-6 flex items-center justify-between sticky top-0 z-30">
+      <div className="flex items-center gap-3 md:w-80">
+        <button
+          onClick={onMenuClick}
+          className="md:hidden p-1.5 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 rounded-lg transition-colors shrink-0"
+          aria-label="Open menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+        <div className="relative hidden md:block w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
           <input
             type="text"
@@ -38,7 +49,7 @@ export const DashboardHeader = () => {
           <div className="w-7 h-7 bg-zinc-900 flex items-center justify-center text-white text-[11px] font-bold uppercase font-mono">
             {initials}
           </div>
-          <div>
+          <div className="hidden md:block">
             <p className="text-sm font-medium text-zinc-900 leading-none">{profile?.full_name || '—'}</p>
             <p className="font-mono text-[10px] text-zinc-400 uppercase tracking-widest mt-0.5">{profile?.plan || 'free'}</p>
           </div>

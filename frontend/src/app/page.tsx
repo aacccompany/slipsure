@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { Hero } from '@/components/landing/Hero';
 import { Marquee } from '@/components/landing/Marquee';

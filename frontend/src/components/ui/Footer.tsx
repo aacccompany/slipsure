@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React from 'react';
 import Link from 'next/link';
@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation';
 export const Footer = () => {
   const pathname = usePathname();
   if (pathname?.startsWith('/dashboard')) return null;
+  if (pathname?.startsWith('/admin')) return null;
 
   return (
     <footer className="border-t border-zinc-200 bg-zinc-50">

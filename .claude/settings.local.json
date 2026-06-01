@@ -3,7 +3,23 @@
     "allow": [
       "Bash(gh pr *)",
       "PowerShell(Get-ChildItem D:\\\\Work\\\\slipsure\\\\frontend\\\\src -Recurse -Name | Where-Object { $_ -notmatch 'node_modules' })",
-      "WebFetch(domain:easyslip.com)"
+      "WebFetch(domain:easyslip.com)",
+      "Read(//c/Users/keera/.claude/plugins/**)",
+      "Read(//c/Users/keera/.claude/**)",
+      "Bash(docker-compose up *)",
+      "Bash(docker exec *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000)",
+      "Bash(docker-compose restart *)",
+      "Bash(docker-compose down *)",
+      "Bash(docker compose *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/)",
+      "Bash(curl -s http://localhost:3000/)",
+      "Bash(docker restart *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/admin/login)",
+      "Bash(curl *)",
+      "Bash(Remove-Item *)",
+      "Bash(robocopy D:\\\\Work\\\\slipsure *)",
+      "Bash(robocopy \"D:\\\\Work\\\\slipsure\" \"C:\\\\Users\\\\keera\\\\Downloads\\\\slipsure\" /E /XD \".git\" \"node_modules\" \".next\" /XF \"*.log\" /NFL /NDL /NJH /NJS)"
     ]
   }
 }

@@ -4,3 +4,5 @@
 .env.example
 /backend/.agents
 docker-compose.yml
+.agents/
+.claude/

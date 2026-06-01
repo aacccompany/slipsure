@@ -23,7 +23,12 @@ const menuItems = [
   { name: 'Settings', href: '/dashboard/settings', icon: Settings },
 ];
 
-export const DashboardSidebar = () => {
+interface DashboardSidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -34,7 +39,12 @@ export const DashboardSidebar = () => {
   };
 
   return (
-    <aside className="w-56 border-r border-zinc-200 bg-white flex flex-col h-screen sticky top-0 rounded-r-2xl">
+    <aside className={[
+      'w-56 border-r border-zinc-200 bg-white flex flex-col h-screen',
+      'fixed inset-y-0 left-0 z-50 transition-transform duration-200',
+      'md:sticky md:top-0 md:translate-x-0 md:z-auto',
+      isOpen ? 'translate-x-0' : '-translate-x-full',
+    ].join(' ')}>
       <div className="px-6 py-4 border-b border-zinc-200">
         <Link href="/" className="flex items-center gap-2">
           <span className="font-mono text-sm font-bold text-zinc-900 tracking-tight">FLOWSLIP</span>
@@ -48,6 +58,7 @@ export const DashboardSidebar = () => {
             <Link
               key={item.href}
               href={item.href}
+              onClick={onClose}
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 text-sm transition-colors border-l-2 rounded-r-lg',
                 isActive
