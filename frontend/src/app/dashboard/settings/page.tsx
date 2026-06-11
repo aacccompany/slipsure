@@ -1,172 +1,268 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect } from 'react';
-import { 
-  User, 
-  Building2, 
-  Mail, 
-  Save, 
-  Camera,
-  Loader2
-} from 'lucide-react';
+import { User, Building2, Mail, Phone, MapPin, Save, Loader2, CheckCircle2 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { dashboardService } from '@/services/dashboard';
-import { UserProfile } from '@/types/dashboard';
+import { dashboardApi } from '@/services/dashboardApi';
+import { authApi } from '@/services/authApi';
+import { merchantApi } from '@/services/merchantApi';
 import { toast } from 'sonner';
+import axios from 'axios';
 
 export default function SettingsPage() {
   const queryClient = useQueryClient();
-  const { data: profile, isLoading } = useQuery({
-    queryKey: ['profile'],
-    queryFn: dashboardService.getProfile
+
+  const { data: user, isLoading: userLoading } = useQuery({
+    queryKey: ['user-profile'],
+    queryFn: dashboardApi.getUserProfile,
+    retry: false,
   });
 
-  const [formData, setFormData] = useState({
-    full_name: '',
-    email: '',
-    company_name: '',
-    tax_id: ''
+  const { data: merchant, isLoading: merchantLoading } = useQuery({
+    queryKey: ['merchant-profile'],
+    queryFn: dashboardApi.getMerchantProfile,
+    retry: false,
+  });
+
+  const [accountForm, setAccountForm] = useState({ name: '', phone: '' });
+  const [shopForm, setShopForm] = useState({
+    shop_name: '',
+    contact_email: '',
+    contact_phone: '',
+    address: '',
   });
 
   useEffect(() => {
-    if (profile) {
-      setFormData({
-        full_name: profile.full_name || '',
-        email: profile.email || '',
-        company_name: profile.company_name || '',
-        tax_id: profile.tax_id || ''
+    if (user) {
+      setAccountForm({
+        name: user.name || '',
+        phone: '',
       });
     }
-  }, [profile]);
+  }, [user]);
 
-  const updateMutation = useMutation({
-    mutationFn: (data: Partial<UserProfile>) => dashboardService.updateProfile(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['profile'] });
-      toast.success('Profile updated successfully!');
-    },
-    onError: () => {
-      toast.error('Failed to update profile. Please try again.');
+  useEffect(() => {
+    if (merchant) {
+      setShopForm({
+        shop_name: merchant.shop_name || '',
+        contact_email: merchant.contact_email || '',
+        contact_phone: '',
+        address: '',
+      });
     }
+  }, [merchant]);
+
+  const accountMutation = useMutation({
+    mutationFn: () => authApi.updateProfile({ name: accountForm.name, phone: accountForm.phone || undefined }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-profile'] });
+      toast.success('Account updated.');
+    },
+    onError: (err) => {
+      const msg = axios.isAxiosError(err) ? err.response?.data?.message : null;
+      toast.error(msg || 'Failed to update account.');
+    },
   });
 
-  const handleSave = () => {
-    updateMutation.mutate(formData);
-  };
+  const shopMutation = useMutation({
+    mutationFn: () => merchantApi.updateProfile({
+      shop_name: shopForm.shop_name,
+      contact_email: shopForm.contact_email || undefined,
+      contact_phone: shopForm.contact_phone || undefined,
+      address: shopForm.address || undefined,
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['merchant-profile'] });
+      toast.success('Shop profile updated.');
+    },
+    onError: (err) => {
+      const msg = axios.isAxiosError(err) ? err.response?.data?.message : null;
+      toast.error(msg || 'Failed to update shop profile.');
+    },
+  });
+
+  const isLoading = userLoading || merchantLoading;
 
   if (isLoading) {
     return (
       <div className="flex h-[80vh] items-center justify-center">
-        <Loader2 className="w-10 h-10 text-blue-800 animate-spin" />
+        <Loader2 className="w-6 h-6 text-zinc-400 animate-spin" />
       </div>
     );
   }
 
-  const initials = formData.full_name?.split(' ').map(n => n[0]).join('') || 'U';
+  const initials = user?.name
+    ? user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
+    : 'U';
+
+  const labelClass = 'block font-mono text-[10px] text-zinc-400 uppercase tracking-widest mb-2';
+  const inputClass = 'w-full px-4 py-3 border border-zinc-200 bg-white text-sm text-zinc-900 focus:outline-none focus:border-zinc-900 transition-colors placeholder:text-zinc-400 rounded-lg';
+  const inputDisabledClass = 'w-full px-4 py-3 border border-zinc-100 bg-zinc-50 text-sm text-zinc-400 rounded-lg cursor-not-allowed';
 
   return (
-    <div className="p-8 space-y-8 max-w-4xl">
-      <div>
-        <h1 className="text-3xl font-black text-zinc-900 tracking-tight mb-2">Settings</h1>
-        <p className="text-sm font-medium text-zinc-500">Manage your account preferences and business information.</p>
+    <div className="p-6 space-y-6 max-w-2xl">
+
+      <div className="border-b border-zinc-200 pb-4">
+        <p className="font-mono text-[11px] text-zinc-400 uppercase tracking-widest mb-1">/ SETTINGS</p>
+        <h1 className="text-xl font-bold text-zinc-900 tracking-tight">Account Settings</h1>
       </div>
 
-      <div className="space-y-8">
-        {/* Profile Section */}
-        <section className="bg-white border border-zinc-200 rounded-2xl p-8">
-           <div className="flex items-center gap-6 mb-10">
-              <div className="relative group">
-                 <div className="w-24 h-24 rounded-3xl bg-blue-50 flex items-center justify-center text-blue-900 text-2xl font-black border-4 border-white shadow-lg uppercase">
-                    {initials}
-                 </div>
-                 <button className="absolute -bottom-2 -right-2 p-2 bg-zinc-900 text-white rounded-xl shadow-lg hover:scale-110 transition-transform">
-                    <Camera className="w-4 h-4" />
-                 </button>
-              </div>
-              <div>
-                 <h3 className="text-xl font-bold text-zinc-900 mb-1">{formData.full_name}</h3>
-                 <p className="text-sm font-medium text-zinc-500">{formData.email}</p>
-              </div>
-           </div>
-
-           <div className="grid md:grid-cols-2 gap-8">
-              <div className="space-y-2">
-                 <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest px-1">Full Name</label>
-                 <div className="relative">
-                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-                    <input 
-                        type="text" 
-                        value={formData.full_name}
-                        onChange={(e) => setFormData({...formData, full_name: e.target.value})}
-                        className="w-full pl-12 pr-4 py-3.5 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm font-bold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-700/20 transition-all"
-                    />
-                 </div>
-              </div>
-              <div className="space-y-2">
-                 <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest px-1">Email Address</label>
-                 <div className="relative">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-                    <input 
-                        type="email" 
-                        value={formData.email}
-                        onChange={(e) => setFormData({...formData, email: e.target.value})}
-                        className="w-full pl-12 pr-4 py-3.5 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm font-bold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-700/20 transition-all"
-                    />
-                 </div>
-              </div>
-           </div>
-        </section>
-
-        {/* Business Section */}
-        <section className="bg-white border border-zinc-200 rounded-2xl p-8">
-           <h3 className="text-sm font-bold text-zinc-900 mb-8 uppercase tracking-widest flex items-center gap-2">
-              <Building2 className="w-4 h-4 text-blue-700" />
-              Business Information
-           </h3>
-           <div className="space-y-6">
-              <div className="space-y-2">
-                 <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest px-1">Company Name</label>
-                 <input 
-                    type="text" 
-                    value={formData.company_name}
-                    onChange={(e) => setFormData({...formData, company_name: e.target.value})}
-                    className="w-full px-4 py-3.5 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm font-bold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-700/20 transition-all"
-                 />
-              </div>
-              <div className="space-y-2">
-                 <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest px-1">Tax ID (Optional)</label>
-                 <input 
-                    type="text" 
-                    value={formData.tax_id}
-                    onChange={(e) => setFormData({...formData, tax_id: e.target.value})}
-                    className="w-full px-4 py-3.5 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm font-bold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-700/20 transition-all"
-                 />
-              </div>
-           </div>
-        </section>
-
-        <div className="flex items-center justify-end gap-4">
-            <button 
-              onClick={() => profile && setFormData({
-                full_name: profile.full_name || '',
-                email: profile.email || '',
-                company_name: profile.company_name || '',
-                tax_id: profile.tax_id || ''
-              })}
-              className="px-8 py-4 text-sm font-bold text-zinc-500 hover:text-zinc-900 transition-colors"
-            >
-                Discard Changes
-            </button>
-            <button 
-                onClick={handleSave}
-                disabled={updateMutation.isPending}
-                className="bg-zinc-900 text-white px-10 py-4 rounded-2xl font-bold text-sm hover:bg-black transition-all shadow-xl flex items-center gap-2 disabled:opacity-50"
-            >
-                {updateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                Save Changes
-            </button>
+      {/* Account Section */}
+      <section className="bg-white border border-zinc-200 rounded-2xl overflow-hidden">
+        <div className="border-b border-zinc-200 px-6 py-3 flex items-center gap-2">
+          <User className="w-3.5 h-3.5 text-zinc-400" />
+          <p className="font-mono text-[11px] text-zinc-500 uppercase tracking-widest">/ Account</p>
         </div>
-      </div>
+        <div className="p-6 space-y-5">
+          <div className="flex items-center gap-4 pb-4 border-b border-zinc-100">
+            <div className="w-12 h-12 bg-zinc-900 flex items-center justify-center text-white text-sm font-bold uppercase font-mono rounded-xl">
+              {initials}
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-zinc-900">{user?.name || '—'}</p>
+              <p className="font-mono text-[10px] text-zinc-400">{user?.email}</p>
+              {user?.email_verified && (
+                <span className="inline-flex items-center gap-1 font-mono text-[9px] text-emerald-600 uppercase tracking-widest mt-0.5">
+                  <CheckCircle2 className="w-3 h-3" /> Verified
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label className={labelClass}>Full Name</label>
+              <input
+                type="text"
+                value={accountForm.name}
+                onChange={(e) => setAccountForm({ ...accountForm, name: e.target.value })}
+                placeholder="Your name"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Email Address</label>
+              <input
+                type="email"
+                value={user?.email || ''}
+                disabled
+                className={inputDisabledClass}
+              />
+              <p className="font-mono text-[9px] text-zinc-400 mt-1">Email cannot be changed.</p>
+            </div>
+            <div>
+              <label className={labelClass}>Phone</label>
+              <input
+                type="tel"
+                value={accountForm.phone}
+                onChange={(e) => setAccountForm({ ...accountForm, phone: e.target.value })}
+                placeholder="0812345678"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Role</label>
+              <input
+                type="text"
+                value={user?.role || ''}
+                disabled
+                className={inputDisabledClass}
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <button
+              onClick={() => accountMutation.mutate()}
+              disabled={accountMutation.isPending}
+              className="bg-blue-800 text-white px-6 py-2.5 text-sm font-medium hover:bg-blue-900 transition-colors disabled:opacity-60 flex items-center gap-2 rounded-lg"
+            >
+              {accountMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              Save Account
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Shop Section */}
+      <section className="bg-white border border-zinc-200 rounded-2xl overflow-hidden">
+        <div className="border-b border-zinc-200 px-6 py-3 flex items-center gap-2">
+          <Building2 className="w-3.5 h-3.5 text-zinc-400" />
+          <p className="font-mono text-[11px] text-zinc-500 uppercase tracking-widest">/ Shop Profile</p>
+        </div>
+        <div className="p-6 space-y-5">
+          {!merchant ? (
+            <div className="text-center py-6">
+              <p className="font-mono text-[11px] text-zinc-400 uppercase tracking-widest">No shop profile found.</p>
+              <p className="text-xs text-zinc-400 mt-1">Complete onboarding to create your shop profile.</p>
+            </div>
+          ) : (
+            <>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="sm:col-span-2">
+                  <label className={labelClass}>Shop Name</label>
+                  <input
+                    type="text"
+                    value={shopForm.shop_name}
+                    onChange={(e) => setShopForm({ ...shopForm, shop_name: e.target.value })}
+                    placeholder="Your shop name"
+                    className={inputClass}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>
+                    <Mail className="w-3 h-3 inline mr-1" />Contact Email
+                  </label>
+                  <input
+                    type="email"
+                    value={shopForm.contact_email}
+                    onChange={(e) => setShopForm({ ...shopForm, contact_email: e.target.value })}
+                    placeholder="shop@example.com"
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>
+                    <Phone className="w-3 h-3 inline mr-1" />Contact Phone
+                  </label>
+                  <input
+                    type="tel"
+                    value={shopForm.contact_phone}
+                    onChange={(e) => setShopForm({ ...shopForm, contact_phone: e.target.value })}
+                    placeholder="0812345678"
+                    className={inputClass}
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className={labelClass}>
+                    <MapPin className="w-3 h-3 inline mr-1" />Address
+                  </label>
+                  <input
+                    type="text"
+                    value={shopForm.address}
+                    onChange={(e) => setShopForm({ ...shopForm, address: e.target.value })}
+                    placeholder="123 Main St, Bangkok"
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <button
+                  onClick={() => shopMutation.mutate()}
+                  disabled={shopMutation.isPending || !shopForm.shop_name}
+                  className="bg-blue-800 text-white px-6 py-2.5 text-sm font-medium hover:bg-blue-900 transition-colors disabled:opacity-60 flex items-center gap-2 rounded-lg"
+                >
+                  {shopMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Save Shop
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </section>
+
     </div>
   );
 }

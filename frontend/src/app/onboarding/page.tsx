@@ -1,151 +1,361 @@
-﻿'use client';
+'use client';
 
-import React, { useState } from 'react';
-import { Store, Image as ImageIcon, Send, ArrowRight, ArrowLeft, CheckCircle2, MessageSquare } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import React, { useState, useEffect, useRef } from 'react';
+import { Store, ImageIcon, MessageSquare, ArrowRight, ArrowLeft, CheckCircle2, Loader2, AlertCircle, Upload, ExternalLink } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { toast } from 'sonner';
+import { merchantApi } from '@/services/merchantApi';
+import axios from 'axios';
+
+const STEPS = [
+  { id: 1, label: 'Shop Profile', icon: Store },
+  { id: 2, label: 'Logo', icon: ImageIcon },
+  { id: 3, label: 'LINE Bot', icon: MessageSquare },
+];
 
 export default function OnboardingPage() {
-  const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({
-    shopName: '',
-    description: '',
-    lineToken: '',
-  });
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleNext = () => setStep(step + 1);
-  const handleBack = () => setStep(step - 1);
-  
+  const [step, setStep] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  // Step 1
+  const [shopName, setShopName] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [address, setAddress] = useState('');
+
+  // Step 2
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) router.push('/login');
+  }, [router]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      setError('File must be under 2MB.');
+      return;
+    }
+    setLogoFile(file);
+    setLogoPreview(URL.createObjectURL(file));
+    setError('');
+  };
+
+  const handleStep1 = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+    try {
+      await merchantApi.createProfile({
+        shop_name: shopName,
+        contact_email: contactEmail || undefined,
+        contact_phone: contactPhone || undefined,
+        address: address || undefined,
+        strict_mode: false,
+      });
+      setStep(2);
+    } catch (err) {
+      const msg = axios.isAxiosError(err)
+        ? err.response?.data?.message || 'Failed to save profile.'
+        : 'Failed to save profile.';
+      setError(msg);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleStep2 = async () => {
+    if (!logoFile) {
+      setStep(3);
+      return;
+    }
+    setIsLoading(true);
+    setError('');
+    try {
+      await merchantApi.uploadLogo(logoFile);
+      setStep(3);
+    } catch (err) {
+      const msg = axios.isAxiosError(err)
+        ? err.response?.data?.message || 'Failed to upload logo.'
+        : 'Failed to upload logo.';
+      setError(msg);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleComplete = () => {
-    // Save to local storage for demo
     localStorage.setItem('hasCompletedOnboarding', 'true');
+    toast.success('Setup complete! Welcome to FlowSlip.');
     router.push('/dashboard');
   };
 
+  const labelClass = 'block font-mono text-[10px] text-zinc-400 uppercase tracking-widest mb-2';
+  const inputClass = 'w-full px-4 py-3 border border-zinc-200 bg-white text-sm text-zinc-900 focus:outline-none focus:border-zinc-900 transition-colors placeholder:text-zinc-400 rounded-lg';
+
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col items-center justify-center p-6 font-sans">
-      <div className="w-full max-w-xl">
-        {/* Progress Bar */}
-        <div className="flex items-center justify-between mb-12 relative px-4">
-          <div className="absolute left-4 right-4 top-1/2 -translate-y-1/2 h-0.5 bg-zinc-200 dark:bg-zinc-800 -z-0" />
-          {[1, 2, 3].map((s) => (
-            <div 
-              key={s}
-              className={cn(
-                "w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm border-2 transition-all relative z-10",
-                step >= s ? "bg-blue-900 border-blue-800 text-white" : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-400"
-              )}
-            >
-              {step > s ? <CheckCircle2 className="w-6 h-6" /> : s}
-            </div>
-          ))}
+    <div className="min-h-screen bg-zinc-50 flex flex-col items-center justify-center p-6">
+      <div className="w-full max-w-lg">
+
+        {/* Header */}
+        <div className="mb-8">
+          <Link href="/" className="font-mono text-sm font-bold text-zinc-900 tracking-tight block mb-6">
+            ← FLOWSLIP
+          </Link>
+          <h1 className="text-2xl font-black text-zinc-900 tracking-tight">Account Setup</h1>
+          <p className="font-mono text-[11px] text-zinc-400 uppercase tracking-widest mt-1">
+            <span className="text-emerald-600">● </span>STEP {step} OF {STEPS.length}
+          </p>
         </div>
 
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-8 md:p-12 shadow-sm">
-          {step === 1 && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-              <div className="text-center mb-8">
-                <div className="w-16 h-16 bg-blue-50 dark:bg-emerald-900/20 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-blue-50 dark:border-emerald-800">
-                  <Store className="w-8 h-8 text-blue-800" />
+        {/* Step indicators */}
+        <div className="flex items-center gap-0 mb-8">
+          {STEPS.map((s, i) => {
+            const Icon = s.icon;
+            const isDone = step > s.id;
+            const isActive = step === s.id;
+            return (
+              <React.Fragment key={s.id}>
+                <div className="flex flex-col items-center gap-1.5">
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center border-2 transition-all ${
+                    isDone ? 'bg-blue-800 border-blue-800 text-white'
+                    : isActive ? 'bg-white border-zinc-900 text-zinc-900'
+                    : 'bg-white border-zinc-200 text-zinc-400'
+                  }`}>
+                    {isDone ? <CheckCircle2 className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
+                  </div>
+                  <span className={`font-mono text-[9px] uppercase tracking-widest ${isActive ? 'text-zinc-900' : 'text-zinc-400'}`}>
+                    {s.label}
+                  </span>
                 </div>
-                <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">Shop Profile</h1>
-                <p className="text-zinc-500 text-sm mt-2">Tell us about your business to get started.</p>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Shop Name</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. Premium Coffee Hub" 
-                    className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-700/20"
-                    onChange={(e) => setFormData({...formData, shopName: e.target.value})}
+                {i < STEPS.length - 1 && (
+                  <div className={`flex-1 h-px mx-2 mb-4 ${step > s.id ? 'bg-blue-800' : 'bg-zinc-200'}`} />
+                )}
+              </React.Fragment>
+            );
+          })}
+        </div>
+
+        {/* Card */}
+        <div className="bg-white border border-zinc-200 rounded-2xl overflow-hidden">
+          <div className="p-8 space-y-6">
+
+            {/* Step 1: Shop Profile */}
+            {step === 1 && (
+              <form onSubmit={handleStep1} className="space-y-5">
+                <div>
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="w-10 h-10 bg-blue-50 border border-blue-100 rounded-xl flex items-center justify-center">
+                      <Store className="w-5 h-5 text-blue-800" />
+                    </div>
+                    <div>
+                      <h2 className="text-base font-black text-zinc-900 tracking-tight">Shop Profile</h2>
+                      <p className="font-mono text-[10px] text-zinc-400 uppercase tracking-wider">Tell us about your business</p>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <label className={labelClass}>Shop Name <span className="text-rose-400">*</span></label>
+                  <input
+                    type="text"
+                    value={shopName}
+                    onChange={(e) => setShopName(e.target.value)}
+                    placeholder="e.g. Premium Coffee Hub"
+                    className={inputClass}
+                    required
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Description</label>
-                  <textarea 
-                    placeholder="A brief description of your shop..." 
-                    className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm h-24 focus:outline-none focus:ring-2 focus:ring-blue-700/20 resize-none"
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                <div>
+                  <label className={labelClass}>Contact Email</label>
+                  <input
+                    type="email"
+                    value={contactEmail}
+                    onChange={(e) => setContactEmail(e.target.value)}
+                    placeholder="shop@example.com"
+                    className={inputClass}
                   />
                 </div>
-              </div>
-            </div>
-          )}
-
-          {step === 2 && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-              <div className="text-center mb-8">
-                <div className="w-16 h-16 bg-blue-50 dark:bg-emerald-900/20 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-blue-50 dark:border-emerald-800">
-                  <ImageIcon className="w-8 h-8 text-blue-800" />
-                </div>
-                <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">Identity Branding</h1>
-                <p className="text-zinc-500 text-sm mt-2">Upload your shop logo for receipts and notifications.</p>
-              </div>
-              
-              <div className="border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl p-12 text-center hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer transition-colors">
-                <div className="w-12 h-12 bg-zinc-100 dark:bg-zinc-800 rounded-xl flex items-center justify-center mx-auto mb-4">
-                  <ImageIcon className="w-6 h-6 text-zinc-400" />
-                </div>
-                <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Click to upload logo</p>
-                <p className="text-[10px] text-zinc-400 mt-1">PNG or JPG, Max 2MB</p>
-              </div>
-            </div>
-          )}
-
-          {step === 3 && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-              <div className="text-center mb-8">
-                <div className="w-16 h-16 bg-blue-50 dark:bg-emerald-900/20 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-blue-50 dark:border-emerald-800">
-                  <MessageSquare className="w-8 h-8 text-blue-800" />
-                </div>
-                <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">Bot Integration</h1>
-                <p className="text-zinc-500 text-sm mt-2">Connect your LINE Official Account Messaging API.</p>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">LINE Channel Access Token</label>
-                  <input 
-                    type="password" 
-                    placeholder="Enter your token here..." 
-                    className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-700/20"
-                    onChange={(e) => setFormData({...formData, lineToken: e.target.value})}
+                <div>
+                  <label className={labelClass}>Contact Phone</label>
+                  <input
+                    type="tel"
+                    value={contactPhone}
+                    onChange={(e) => setContactPhone(e.target.value)}
+                    placeholder="0812345678"
+                    className={inputClass}
                   />
                 </div>
-                <div className="p-4 bg-zinc-50 dark:bg-zinc-800 rounded-xl border border-zinc-100 dark:border-zinc-700">
-                   <p className="text-[10px] font-medium text-zinc-500 leading-relaxed uppercase tracking-wider">
-                     Tip: You can find this in your LINE Developers Console under Messaging API settings.
-                   </p>
+                <div>
+                  <label className={labelClass}>Address</label>
+                  <input
+                    type="text"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="123 Main St, Bangkok"
+                    className={inputClass}
+                  />
                 </div>
-              </div>
-            </div>
-          )}
-
-          <div className="mt-12 flex items-center gap-4">
-            {step > 1 && (
-              <button 
-                onClick={handleBack}
-                className="px-6 py-3 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm font-bold text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all flex items-center gap-2"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Back
-              </button>
+                {error && (
+                  <div className="flex items-center gap-2 text-rose-500 bg-rose-50 border border-rose-200 px-4 py-3 rounded-lg">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <p className="text-xs">{error}</p>
+                  </div>
+                )}
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full bg-blue-800 text-white py-3 text-sm font-medium hover:bg-blue-900 transition-colors disabled:opacity-60 flex items-center justify-center gap-2 rounded-lg"
+                >
+                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><span>Continue</span><ArrowRight className="w-4 h-4" /></>}
+                </button>
+              </form>
             )}
-            <button 
-              onClick={step === 3 ? handleComplete : handleNext}
-              className="flex-1 px-6 py-3 bg-zinc-900 dark:bg-blue-800 text-white rounded-xl text-sm font-bold hover:bg-black dark:hover:bg-blue-800 transition-all flex items-center justify-center gap-2 shadow-lg"
-            >
-              {step === 3 ? 'Finish Setup' : 'Continue'}
-              <ArrowRight className="w-4 h-4" />
-            </button>
+
+            {/* Step 2: Logo */}
+            {step === 2 && (
+              <div className="space-y-5">
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-10 h-10 bg-blue-50 border border-blue-100 rounded-xl flex items-center justify-center">
+                    <ImageIcon className="w-5 h-5 text-blue-800" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-black text-zinc-900 tracking-tight">Shop Logo</h2>
+                    <p className="font-mono text-[10px] text-zinc-400 uppercase tracking-wider">Optional — you can skip this</p>
+                  </div>
+                </div>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+
+                {logoPreview ? (
+                  <div className="flex flex-col items-center gap-4">
+                    <img src={logoPreview} alt="Logo preview" className="w-24 h-24 rounded-xl object-cover border border-zinc-200" />
+                    <button
+                      type="button"
+                      onClick={() => { setLogoFile(null); setLogoPreview(null); }}
+                      className="font-mono text-[10px] text-zinc-400 uppercase tracking-widest hover:text-zinc-700"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full border-2 border-dashed border-zinc-200 rounded-xl p-10 flex flex-col items-center gap-3 hover:border-zinc-400 hover:bg-zinc-50 transition-colors"
+                  >
+                    <div className="w-10 h-10 bg-zinc-100 rounded-xl flex items-center justify-center">
+                      <Upload className="w-5 h-5 text-zinc-400" />
+                    </div>
+                    <div className="text-center">
+                      <p className="font-mono text-[11px] text-zinc-500 uppercase tracking-wider">Click to upload</p>
+                      <p className="font-mono text-[10px] text-zinc-400 mt-1">PNG or JPG · Max 2MB</p>
+                    </div>
+                  </button>
+                )}
+
+                {error && (
+                  <div className="flex items-center gap-2 text-rose-500 bg-rose-50 border border-rose-200 px-4 py-3 rounded-lg">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <p className="text-xs">{error}</p>
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setStep(1)}
+                    className="px-5 py-3 border border-zinc-200 rounded-lg text-sm font-medium text-zinc-500 hover:bg-zinc-50 transition-colors flex items-center gap-2"
+                  >
+                    <ArrowLeft className="w-4 h-4" /> Back
+                  </button>
+                  <button
+                    onClick={handleStep2}
+                    disabled={isLoading}
+                    className="flex-1 bg-blue-800 text-white py-3 text-sm font-medium hover:bg-blue-900 transition-colors disabled:opacity-60 flex items-center justify-center gap-2 rounded-lg"
+                  >
+                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><span>{logoFile ? 'Upload & Continue' : 'Skip for Now'}</span><ArrowRight className="w-4 h-4" /></>}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: LINE Bot */}
+            {step === 3 && (
+              <div className="space-y-5">
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-10 h-10 bg-[#06C755]/10 border border-[#06C755]/20 rounded-xl flex items-center justify-center">
+                    <MessageSquare className="w-5 h-5 text-[#06C755]" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-black text-zinc-900 tracking-tight">LINE Bot</h2>
+                    <p className="font-mono text-[10px] text-zinc-400 uppercase tracking-wider">Connect your LINE OA</p>
+                  </div>
+                </div>
+
+                <div className="space-y-3 bg-zinc-50 border border-zinc-200 rounded-xl p-5">
+                  <p className="font-mono text-[11px] text-zinc-500 uppercase tracking-widest">Setup Guide</p>
+                  <ol className="space-y-2">
+                    {[
+                      'Go to LINE Developers Console',
+                      'Create or select a Messaging API channel',
+                      'Copy the Channel Access Token',
+                      'Paste the Webhook URL from your Dashboard',
+                    ].map((step, i) => (
+                      <li key={i} className="flex items-start gap-2.5">
+                        <span className="font-mono text-[10px] text-blue-800 mt-0.5 shrink-0">{String(i + 1).padStart(2, '0')}</span>
+                        <span className="text-xs text-zinc-600">{step}</span>
+                      </li>
+                    ))}
+                  </ol>
+                  <a
+                    href="https://developers.line.biz/console/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 font-mono text-[10px] text-blue-800 uppercase tracking-widest hover:underline mt-2"
+                  >
+                    Open LINE Console <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+
+                <p className="font-mono text-[10px] text-zinc-400 uppercase tracking-widest">
+                  You can configure this later from your Dashboard settings.
+                </p>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setStep(2)}
+                    className="px-5 py-3 border border-zinc-200 rounded-lg text-sm font-medium text-zinc-500 hover:bg-zinc-50 transition-colors flex items-center gap-2"
+                  >
+                    <ArrowLeft className="w-4 h-4" /> Back
+                  </button>
+                  <button
+                    onClick={handleComplete}
+                    className="flex-1 bg-blue-800 text-white py-3 text-sm font-medium hover:bg-blue-900 transition-colors flex items-center justify-center gap-2 rounded-lg"
+                  >
+                    Finish Setup <CheckCircle2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+
           </div>
         </div>
-        
-        <p className="text-center mt-8 text-[10px] font-bold text-zinc-400 uppercase tracking-[0.3em]">
-           Step {step} of 3 // FlowSlip Onboarding
+
+        <p className="font-mono text-[10px] text-zinc-400 uppercase tracking-widest text-center mt-6">
+          © 2026 FLOWSLIP
         </p>
       </div>
     </div>

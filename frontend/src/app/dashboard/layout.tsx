@@ -16,10 +16,11 @@ export default function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
+    const accessToken = localStorage.getItem('accessToken');
     const isLoggedIn = localStorage.getItem('isLoggedIn');
     const hasCompletedOnboarding = localStorage.getItem('hasCompletedOnboarding');
 
-    if (isLoggedIn !== 'true') {
+    if (!accessToken || isLoggedIn !== 'true') {
       router.push('/login');
     } else if (hasCompletedOnboarding !== 'true') {
       router.push('/onboarding');

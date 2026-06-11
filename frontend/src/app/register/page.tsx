@@ -2,43 +2,49 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, AlertCircle, MessageSquare } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { authApi, saveAuthSession } from '@/services/authApi';
+import { authApi } from '@/services/authApi';
 import axios from 'axios';
 
-export default function LoginPage() {
+export default function RegisterPage() {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
     setError('');
 
-    try {
-      const res = await authApi.login(email, password);
-      saveAuthSession(res.data);
-      toast.success('Welcome back!');
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
 
-      const hasOnboarding = localStorage.getItem('hasCompletedOnboarding');
-      router.push(hasOnboarding === 'true' ? '/dashboard' : '/onboarding');
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await authApi.register({ name, email, password, phone: phone || undefined });
+      toast.success('Account created! Please verify your email.');
+      router.push(`/verify-email?email=${encodeURIComponent(email)}`);
     } catch (err) {
       const msg = axios.isAxiosError(err)
-        ? err.response?.data?.message || 'Login failed. Please try again.'
-        : 'Login failed. Please try again.';
+        ? err.response?.data?.message || 'Registration failed. Please try again.'
+        : 'Registration failed. Please try again.';
       setError(msg);
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleLineLogin = () => {
-    toast.info('LINE login requires OAuth configuration.');
   };
 
   const inputClass = "w-full px-4 py-3 border border-zinc-200 bg-white text-sm text-zinc-900 focus:outline-none focus:border-zinc-900 transition-colors placeholder:text-zinc-400 rounded-lg";
@@ -49,15 +55,29 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
 
         <div className="mb-8">
-          <h1 className="text-2xl font-black text-zinc-900 tracking-tight">Merchant Access</h1>
+          <Link href="/" className="font-mono text-sm font-bold text-zinc-900 tracking-tight block mb-6">
+            ← FLOWSLIP
+          </Link>
+          <h1 className="text-2xl font-black text-zinc-900 tracking-tight">Create Account</h1>
           <p className="font-mono text-[11px] text-zinc-400 uppercase tracking-widest mt-1">
-            <span className="text-blue-700">● </span>PORTAL ONLINE
+            <span className="text-emerald-600">● </span>NEW MERCHANT
           </p>
         </div>
 
         <div className="bg-white border border-zinc-200 rounded-2xl overflow-hidden">
-          <div className="p-8 space-y-5">
-            <form onSubmit={handleLogin} className="space-y-5">
+          <div className="p-8">
+            <form onSubmit={handleRegister} className="space-y-5">
+              <div>
+                <label className={labelClass}>Full Name</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Your name"
+                  className={inputClass}
+                  required
+                />
+              </div>
               <div>
                 <label className={labelClass}>Email Address</label>
                 <input
@@ -70,14 +90,32 @@ export default function LoginPage() {
                 />
               </div>
               <div>
-                <div className="flex justify-between mb-2">
-                  <label className={labelClass}>Password</label>
-                  <Link href="/forgot-password" className="font-mono text-[10px] text-zinc-400 uppercase tracking-widest hover:text-zinc-900">Forgot?</Link>
-                </div>
+                <label className={labelClass}>Phone (optional)</label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="0812345678"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Password</label>
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Min. 8 characters"
+                  className={inputClass}
+                  required
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Confirm Password</label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="••••••••"
                   className={inputClass}
                   required
@@ -94,33 +132,16 @@ export default function LoginPage() {
                 disabled={isLoading}
                 className="w-full bg-blue-800 text-white py-3 text-sm font-medium hover:bg-blue-900 transition-colors disabled:opacity-60 flex items-center justify-center gap-2 rounded-lg"
               >
-                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Sign In →'}
+                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create Account →'}
               </button>
             </form>
-
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-zinc-100" />
-              </div>
-              <div className="relative flex justify-center">
-                <span className="bg-white px-3 font-mono text-[10px] text-zinc-300 uppercase tracking-widest">or</span>
-              </div>
-            </div>
-
-            <button
-              onClick={handleLineLogin}
-              className="w-full bg-[#06C755] text-white py-3 text-sm font-medium hover:brightness-105 transition-all flex items-center justify-center gap-2 rounded-lg"
-            >
-              <MessageSquare className="w-4 h-4 fill-current" />
-              Continue with LINE
-            </button>
           </div>
         </div>
 
         <p className="font-mono text-[10px] text-zinc-400 uppercase tracking-widest text-center mt-6">
-          No account?{' '}
-          <Link href="/register" className="text-zinc-600 hover:text-zinc-900 underline underline-offset-2">
-            Register
+          Already have an account?{' '}
+          <Link href="/login" className="text-zinc-600 hover:text-zinc-900 underline underline-offset-2">
+            Sign In
           </Link>
         </p>
       </div>

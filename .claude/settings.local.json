@@ -19,7 +19,9 @@
       "Bash(curl *)",
       "Bash(Remove-Item *)",
       "Bash(robocopy D:\\\\Work\\\\slipsure *)",
-      "Bash(robocopy \"D:\\\\Work\\\\slipsure\" \"C:\\\\Users\\\\keera\\\\Downloads\\\\slipsure\" /E /XD \".git\" \"node_modules\" \".next\" /XF \"*.log\" /NFL /NDL /NJH /NJS)"
+      "Bash(robocopy \"D:\\\\Work\\\\slipsure\" \"C:\\\\Users\\\\keera\\\\Downloads\\\\slipsure\" /E /XD \".git\" \"node_modules\" \".next\" /XF \"*.log\" /NFL /NDL /NJH /NJS)",
+      "Bash(dir /s /b \"D:\\\\Work\\\\slipsure\")",
+      "Bash(findstr /E \"\\\\.go$|\\\\.ts$|\\\\.tsx$|go.mod|package.json|docker-compose|\\\\.env\")"
     ]
   }
 }

@@ -55,6 +55,7 @@ func main() {
 
 	// Create router
 	router := gin.Default()
+	router.Use(middleware.CORSMiddleware())
 
 	// Initialize repositories
 	userRepo := repositories.NewUserRepository(database.DB)

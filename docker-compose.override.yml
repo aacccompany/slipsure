@@ -6,6 +6,10 @@ services:
   # To rebuild: docker-compose build backend && docker-compose up backend
 
   frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: deps
     user: root
     volumes:
       - ./frontend:/app

@@ -1,21 +1,32 @@
-﻿'use client';
+'use client';
 
 import React from 'react';
 import { Search, Bell, Menu } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { dashboardService } from '@/services/dashboard';
+import { dashboardApi } from '@/services/dashboardApi';
 
 interface DashboardHeaderProps {
   onMenuClick: () => void;
 }
 
 export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
-  const { data: profile } = useQuery({
-    queryKey: ['profile'],
-    queryFn: dashboardService.getProfile,
+  const { data: user } = useQuery({
+    queryKey: ['user-profile'],
+    queryFn: dashboardApi.getUserProfile,
+    retry: false,
   });
 
-  const initials = profile?.full_name?.split(' ').map((n) => n[0]).join('') || 'U';
+  const { data: subscription } = useQuery({
+    queryKey: ['subscription'],
+    queryFn: dashboardApi.getSubscription,
+    retry: false,
+  });
+
+  const initials = user?.name
+    ? user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
+    : 'U';
+
+  const planLabel = subscription?.plan?.name || subscription?.plan_id || 'Free';
 
   return (
     <header className="h-14 border-b border-zinc-200 bg-white px-6 flex items-center justify-between sticky top-0 z-30">
@@ -31,7 +42,7 @@ export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
           <input
             type="text"
-            placeholder="Search logs, keys..."
+            placeholder="Search logs, transaction ref..."
             className="w-full pl-9 pr-4 py-1.5 bg-zinc-50 border border-zinc-200 rounded-full text-sm text-zinc-700 focus:outline-none focus:border-zinc-400 transition-colors placeholder:text-zinc-400"
           />
         </div>
@@ -50,8 +61,8 @@ export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
             {initials}
           </div>
           <div className="hidden md:block">
-            <p className="text-sm font-medium text-zinc-900 leading-none">{profile?.full_name || '—'}</p>
-            <p className="font-mono text-[10px] text-zinc-400 uppercase tracking-widest mt-0.5">{profile?.plan || 'free'}</p>
+            <p className="text-sm font-medium text-zinc-900 leading-none">{user?.name || '—'}</p>
+            <p className="font-mono text-[10px] text-zinc-400 uppercase tracking-widest mt-0.5">{planLabel}</p>
           </div>
         </div>
       </div>
