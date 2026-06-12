@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -16,8 +16,6 @@ export default function LoginPage() {
   const [mode, setMode] = useState<LoginMode>('password');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [otp, setOtp] = useState('');
-  const [isOtpSent, setIsOtpSent] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -81,39 +79,14 @@ export default function LoginPage() {
     <div className="min-h-screen bg-zinc-50 flex items-center justify-center p-6">
       <div className="w-full max-w-sm">
 
-        {/* Header */}
         <div className="mb-8">
-          <Link href="/" className="font-mono text-sm font-bold text-zinc-900 tracking-tight block mb-6">
-            ← FLOWSLIP
-          </Link>
           <h1 className="text-2xl font-black text-zinc-900 tracking-tight">Merchant Access</h1>
           <p className="font-mono text-[11px] text-zinc-400 uppercase tracking-widest mt-1">
             <span className="text-blue-700">● </span>PORTAL ONLINE
           </p>
         </div>
 
-        {/* Card */}
         <div className="bg-white border border-zinc-200 rounded-2xl overflow-hidden">
-
-          {/* Mode Switcher */}
-          {!isOtpSent && (
-            <div className="flex border-b border-zinc-200">
-              {(['password', 'otp'] as LoginMode[]).map((m) => (
-                <button
-                  key={m}
-                  onClick={() => { setMode(m); setError(''); }}
-                  className={`flex-1 py-3 font-mono text-[11px] uppercase tracking-widest transition-colors border-b-2 -mb-px ${
-                    mode === m
-                      ? 'border-zinc-900 text-zinc-900'
-                      : 'border-transparent text-zinc-400 hover:text-zinc-600'
-                  }`}
-                >
-                  {m === 'password' ? 'Password' : 'Access Code'}
-                </button>
-              ))}
-            </div>
-          )}
-
           <div className="p-8 space-y-5">
             {mode === 'password' ? (
               <form onSubmit={handleLogin} className="space-y-5">

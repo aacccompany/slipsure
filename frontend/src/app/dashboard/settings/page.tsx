@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -119,7 +119,7 @@ export default function SettingsPage() {
   if (merchantLoading || settingsLoading) {
     return (
       <div className="flex h-[80vh] items-center justify-center">
-        <Loader2 className="w-10 h-10 text-blue-800 animate-spin" />
+        <Loader2 className="w-6 h-6 text-zinc-400 animate-spin" />
       </div>
     );
   }
@@ -127,10 +127,11 @@ export default function SettingsPage() {
   const initials = user?.name?.split(' ').map(n => n[0]).join('') || 'U';
 
   return (
-    <div className="p-8 space-y-8 max-w-4xl">
-      <div>
-        <h1 className="text-3xl font-black text-zinc-900 tracking-tight mb-2">Settings</h1>
-        <p className="text-sm font-medium text-zinc-500">Manage your account preferences and business information.</p>
+    <div className="p-6 space-y-6 max-w-2xl">
+
+      <div className="border-b border-zinc-200 pb-4">
+        <p className="font-mono text-[11px] text-zinc-400 uppercase tracking-widest mb-1">/ SETTINGS</p>
+        <h1 className="text-xl font-bold text-zinc-900 tracking-tight">Account Settings</h1>
       </div>
 
       <div className="space-y-8">

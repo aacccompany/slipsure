@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
@@ -46,8 +47,8 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
       isOpen ? 'translate-x-0' : '-translate-x-full',
     ].join(' ')}>
       <div className="px-6 py-4 border-b border-zinc-200">
-        <Link href="/" className="flex items-center gap-2">
-          <span className="font-mono text-sm font-bold text-zinc-900 tracking-tight">FLOWSLIP</span>
+        <Link href="/" className="flex items-center">
+          <Image src="/logo.png" alt="Flowslip" width={96} height={26} className="h-6 w-auto" priority />
         </Link>
       </div>
 
