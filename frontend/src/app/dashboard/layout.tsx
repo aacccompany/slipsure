@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { DashboardSidebar } from '@/components/dashboard/Sidebar';
 import { DashboardHeader } from '@/components/dashboard/Header';
 import { Loader2 } from 'lucide-react';
+import { useAuth } from '@/contexts/auth-context';
+import { tokenManager } from '@/lib/api-client';
 
 export default function DashboardLayout({
   children,
@@ -12,23 +14,17 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const [isAuthorized, setIsAuthorized] = useState(false);
+  const { user, isLoading: authLoading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    const isLoggedIn = localStorage.getItem('isLoggedIn');
-    const hasCompletedOnboarding = localStorage.getItem('hasCompletedOnboarding');
-
-    if (isLoggedIn !== 'true') {
+    // Check authentication on client side
+    if (!authLoading && !user) {
       router.push('/login');
-    } else if (hasCompletedOnboarding !== 'true') {
-      router.push('/onboarding');
-    } else {
-      setTimeout(() => setIsAuthorized(true), 0);
     }
-  }, [router]);
+  }, [user, authLoading, router]);
 
-  if (!isAuthorized) {
+  if (authLoading || !user) {
     return (
       <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
         <Loader2 className="w-10 h-10 text-blue-800 animate-spin" />

@@ -16,10 +16,12 @@ type SlipVerificationService struct {
 	slipRepo        repositories.SlipRepository
 	transactionRepo repositories.TransactionRepository
 	usageRepo       repositories.UsageCounterRepository
+	merchantRepo    repositories.MerchantRepository
 	storage         *StorageService
 	qrScanner       *QRScannerService
 	bankValidator   *BankValidationService
 	duplicateWindow int
+	verificationCallback func(slip *models.Slip, merchantID uuid.UUID)
 }
 
 // NewSlipVerificationService creates a new slip verification service
@@ -27,12 +29,14 @@ func NewSlipVerificationService(
 	slipRepo repositories.SlipRepository,
 	transactionRepo repositories.TransactionRepository,
 	usageRepo repositories.UsageCounterRepository,
+	merchantRepo repositories.MerchantRepository,
 	storage *StorageService,
 ) *SlipVerificationService {
 	return &SlipVerificationService{
 		slipRepo:        slipRepo,
 		transactionRepo: transactionRepo,
 		usageRepo:       usageRepo,
+		merchantRepo:    merchantRepo,
 		storage:         storage,
 		qrScanner:       NewQRScannerService(),
 		bankValidator:   NewBankValidationService(),
@@ -40,8 +44,31 @@ func NewSlipVerificationService(
 	}
 }
 
+// SetVerificationCallback sets a callback function to be called when verification completes
+func (s *SlipVerificationService) SetVerificationCallback(callback func(slip *models.Slip, merchantID uuid.UUID)) {
+	s.verificationCallback = callback
+}
+
 // UploadAndVerify uploads a slip image and starts verification process
 func (s *SlipVerificationService) UploadAndVerify(ctx context.Context, merchantID uuid.UUID, imageData []byte, contentType string) (*models.Slip, error) {
+	// Check if merchant has active subscription
+	subscription, err := s.merchantRepo.FindByMerchantID(merchantID)
+	if err != nil || subscription == nil || subscription.Status != "active" {
+		return nil, fmt.Errorf("merchant must have an active subscription to verify slips")
+	}
+
+	// Check quota status
+	quotaStatus, err := s.merchantRepo.GetQuotaStatus(merchantID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check quota status: %w", err)
+	}
+
+	// Block if quota exceeded
+	if quotaStatus.IsBlocked {
+		return nil, fmt.Errorf("monthly quota exceeded (%d/%d used). Please upgrade your plan or wait until %s",
+			quotaStatus.Used, quotaStatus.QuotaLimit, quotaStatus.ResetDate.Format("2006-01-02"))
+	}
+
 	// Create slip record
 	slip := &models.Slip{
 		ID:         uuid.New(),
@@ -185,6 +212,13 @@ func (s *SlipVerificationService) verifySlipAsync(slip *models.Slip) {
 	} else {
 		slip.Status = models.SlipStatusFailed
 		s.slipRepo.UpdateWithTransaction(slip, transaction)
+	}
+
+	// Call verification callback if set
+	if s.verificationCallback != nil {
+		// Attach transaction to slip for callback
+		slip.Transaction = transaction
+		s.verificationCallback(slip, slip.MerchantID)
 	}
 }
 

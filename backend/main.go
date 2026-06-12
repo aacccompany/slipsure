@@ -124,30 +124,36 @@ func main() {
 	slipRepo := repositories.NewSlipRepository(database.DB)
 	transactionRepo := repositories.NewTransactionRepository(database.DB)
 	usageCounterRepo := repositories.NewUsageCounterRepository(database.DB)
-	slipVerificationService := services.NewSlipVerificationService(slipRepo, transactionRepo, usageCounterRepo, storageService)
+	slipVerificationService := services.NewSlipVerificationService(slipRepo, transactionRepo, usageCounterRepo, merchantRepo, storageService)
 	slipHandler := handlers.NewSlipHandler(slipVerificationService, userRepo)
-
-	// Initialize LINE messaging service (optional - can fail gracefully)
-	log.Println(" Attempting to initialize LINE Messaging service...")
-	var lineMessagingService *services.LINEMessagingService
-	if lineMessagingService, err = services.NewLINEMessagingService(); err != nil {
-		log.Printf(" Warning: Failed to initialize LINE Messaging service: %v", err)
-		log.Println(" LINE Bot functionality will be unavailable")
-	} else {
-		log.Println(" LINE Messaging service initialized successfully")
-	}
-
-	// Initialize LINE webhook handler
-	var lineWebhookHandler *handlers.LINEWebhookHandler
-	if lineMessagingService != nil {
-		lineWebhookHandler = handlers.NewLINEWebhookHandler(lineMessagingService, slipVerificationService, merchantRepo, userRepo)
-	}
 
 	// Initialize services with dependency injection
 	authService := services.NewAuthServiceWithOTP(userRepo, merchantRepo, otpService, lineOAuth)
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(authService)
+	// Initialize crypto service for LINE webhook encryption
+	log.Println(" Initializing crypto service for LINE webhook...")
+	cryptoService, err := services.NewCryptoService()
+	if err != nil {
+		log.Printf(" Warning: Failed to initialize crypto service: %v", err)
+		log.Println(" LINE webhook configuration will be unavailable")
+	}
+
+	// Initialize multi-merchant LINE webhook service (only if crypto is available)
+	var lineWebhookService *services.LINEWebhookService
+	var lineWebhookConfigHandler *handlers.LINEWebhookConfigHandler
+	if cryptoService != nil {
+		log.Println(" Initializing multi-merchant LINE webhook service...")
+		baseURL := os.Getenv("BASE_URL")
+		if baseURL == "" {
+			baseURL = "https://supersilent-patripotestal-vernetta.ngrok-free.dev"
+		}
+		lineWebhookService = services.NewLINEWebhookService(merchantRepo, cryptoService, slipVerificationService, baseURL)
+
+		// Initialize LINE webhook config handler
+		lineWebhookConfigHandler = handlers.NewLINEWebhookConfigHandler(lineWebhookService, merchantRepo)
+	}
 
 	// Health check endpoint
 	router.GET("/health", func(c *gin.Context) {
@@ -240,11 +246,22 @@ func main() {
 			slips.GET("", slipHandler.ListSlips)
 		}
 
-		// LINE webhook routes (public - called by LINE Platform)
-		if lineWebhookHandler != nil {
-			v1.POST("/line/webhook", lineWebhookHandler.HandleWebhook)
-		}
+			// LINE webhook configuration routes (protected + email verification required)
+			if lineWebhookConfigHandler != nil {
+				lineWebhookConfig := v1.Group("/merchants/me")
+				lineWebhookConfig.Use(middleware.AuthMiddleware())
+				lineWebhookConfig.Use(middleware.EmailVerificationMiddleware(userRepo))
+				{
+					lineWebhookConfig.GET("/line-webhook", lineWebhookConfigHandler.GetConfig)
+					lineWebhookConfig.PUT("/line-webhook", lineWebhookConfigHandler.UpdateConfig)
+					lineWebhookConfig.DELETE("/line-webhook", lineWebhookConfigHandler.DeleteConfig)
+					lineWebhookConfig.POST("/test", lineWebhookConfigHandler.TestWebhook)
+					lineWebhookConfig.GET("/webhook-url", lineWebhookConfigHandler.GenerateWebhookURL)
+				}
 
+				// Multi-merchant LINE webhook route (public - called by LINE Platform)
+				v1.POST("/line/webhook/:ref_id", lineWebhookConfigHandler.ProcessWebhook)
+			}
 		// API info
 		v1.GET("/", func(c *gin.Context) {
 			c.JSON(200, gin.H{

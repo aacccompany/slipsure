@@ -14,6 +14,7 @@ import {
 import { StatCard } from '@/components/dashboard/StatCard';
 import { useQuery } from '@tanstack/react-query';
 import { dashboardService } from '@/services/dashboard';
+import { api } from '@/lib/api-client';
 
 export default function DashboardPage() {
   const { data: stats, isLoading: statsLoading } = useQuery({
@@ -24,6 +25,11 @@ export default function DashboardPage() {
   const { data: dailyUsage, isLoading: usageLoading } = useQuery({
     queryKey: ['dashboard-usage-daily'],
     queryFn: dashboardService.getDailyUsage,
+  });
+
+  const { data: quotaData } = useQuery({
+    queryKey: ['quota'],
+    queryFn: () => api.getQuota(),
   });
 
   if (statsLoading || usageLoading) {
@@ -149,10 +155,13 @@ export default function DashboardPage() {
             <div className="mb-4">
               <div className="flex justify-between font-mono text-[10px] text-zinc-400 uppercase tracking-widest mb-2">
                 <span>API Credits</span>
-                <span>12,482 / 50,000</span>
+                <span>{quotaData?.data ? `${quotaData.data.used} / ${quotaData.data.quota_limit}` : 'Loading...'}</span>
               </div>
               <div className="w-full h-1.5 bg-zinc-100">
-                <div className="w-[25%] h-full bg-blue-800" />
+                <div
+                  className="h-full bg-blue-800"
+                  style={{ width: quotaData?.data ? `${(quotaData.data.used / quotaData.data.quota_limit) * 100}%` : '0%' }}
+                />
               </div>
             </div>
             <button className="w-full border border-zinc-200 py-2.5 text-xs font-medium text-zinc-600 hover:border-zinc-900 hover:text-zinc-900 transition-colors">

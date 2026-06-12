@@ -197,3 +197,31 @@ type MerchantSettingsResponse struct {
 type SubscriptionResponse struct {
 	Subscription *Subscription `json:"subscription"`
 }
+
+// LINEWebhookConfig represents LINE webhook configuration for a merchant
+type LINEWebhookConfig struct {
+	MerchantID         uuid.UUID `json:"merchant_id"`
+	LINEChannelID      string    `json:"line_channel_id"`
+	IsConfigured       bool      `json:"is_configured"`
+	WebhookReferenceID *string   `json:"webhook_reference_id,omitempty"`
+	WebhookURL         *string   `json:"webhook_url,omitempty"`
+	CreatedAt          time.Time `json:"created_at"`
+	UpdatedAt          time.Time `json:"updated_at"`
+}
+
+// UpdateLINEWebhookRequest represents LINE webhook configuration update request
+type UpdateLINEWebhookRequest struct {
+	LINEChannelID      string `json:"line_channel_id" binding:"required"`
+	LINEChannelSecret  string `json:"line_channel_secret" binding:"required"`
+	LINEAccessToken    string `json:"line_access_token" binding:"required"`
+}
+
+// LINEWebhookTestResponse represents LINE webhook test response
+type LINEWebhookTestResponse struct {
+	WebhookStatus       string    `json:"webhook_status"`
+	ConnectionStatus    string    `json:"connection_status"`
+	SignatureValidation string    `json:"signature_validation"`
+	APIAccess          string    `json:"api_access"`
+	TestedAt           time.Time `json:"tested_at"`
+	ResponseTimeMs     int64     `json:"response_time_ms"`
+}

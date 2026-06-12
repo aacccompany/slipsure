@@ -6,14 +6,8 @@ services:
   # To rebuild: docker-compose build backend && docker-compose up backend
 
   frontend:
-    user: root
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    environment:
-      - NODE_ENV=development
-      - WATCHPACK_POLLING=true
-    command: npm run dev
+    ports:
+      - "3000:3000"
 
   postgres:
     ports:

@@ -37,7 +37,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: slipsure-backend
-    command: sh -c "./main migrate && ./main"
+    command: ./main
     ports:
       - "8080:8080"
     environment:
@@ -82,6 +82,7 @@ services:
       - STRIPE_PRICE_ID_PRO_YEARLY=${STRIPE_PRICE_ID_PRO_YEARLY}
       - STRIPE_SUCCESS_URL=${STRIPE_SUCCESS_URL}
       - STRIPE_CANCEL_URL=${STRIPE_CANCEL_URL}
+      - ENCRYPTION_MASTER_KEY=${ENCRYPTION_MASTER_KEY}
     volumes:
       - backend_uploads:/root/uploads
     depends_on:

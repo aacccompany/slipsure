@@ -1,14 +1,18 @@
 ﻿'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2, AlertCircle, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/auth-context';
+import { api } from '@/lib/api-client';
 
 type LoginMode = 'otp' | 'password';
 
 export default function LoginPage() {
+  const { login } = useAuth();
+  const searchParams = useSearchParams();
   const [mode, setMode] = useState<LoginMode>('password');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -18,55 +22,56 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
+  // Check if redirected from registration
+  React.useEffect(() => {
+    const registeredEmail = searchParams.get('email');
+    if (registeredEmail) {
+      setEmail(registeredEmail);
+      setMode('otp');
+      setIsOtpSent(true);
+    }
+  }, [searchParams]);
+
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!email) return;
+
     setIsLoading(true);
     setError('');
-    await new Promise(resolve => setTimeout(resolve, 800));
-    setIsOtpSent(true);
-    setIsLoading(false);
-    toast.success('Access code sent to your email!');
+
+    try {
+      await api.resendOTP(email);
+      setIsOtpSent(true);
+      toast.success('Access code sent to your email!');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to send code');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-    await new Promise(resolve => setTimeout(resolve, 800));
 
-    if (mode === 'otp') {
-      if (otp === '123456') {
-        localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('accessToken', 'mock_jwt_token_otp');
-        toast.success('Login successful!');
-        router.push('/dashboard');
+    try {
+      if (mode === 'otp') {
+        // For OTP mode, redirect to verify page
+        router.push(`/auth/verify?email=${encodeURIComponent(email)}`);
       } else {
-        const msg = 'Invalid code. Please check your email.';
-        setError(msg);
-        setIsLoading(false);
+        await login(email, password);
       }
-    } else {
-      if (password.length >= 6) {
-        localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('accessToken', 'mock_jwt_token_password');
-        toast.success('Welcome back!');
-        router.push('/dashboard');
-      } else {
-        const msg = 'Password must be at least 6 characters.';
-        setError(msg);
-        setIsLoading(false);
-      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed');
+      setIsLoading(false);
     }
   };
 
   const handleLineLogin = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      localStorage.setItem('isLoggedIn', 'true');
-      localStorage.setItem('accessToken', 'mock_jwt_token_line');
-      toast.success('Login successful with LINE!');
-      router.push('/dashboard');
-    }, 800);
+    // LINE login requires redirect URI setup
+    const redirectUri = `${window.location.origin}/login`;
+    window.location.href = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=${process.env.NEXT_PUBLIC_LINE_LOGIN_CHANNEL_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&state=login&scope=profile%20openid%20email`;
   };
 
   const inputClass = "w-full px-4 py-3 border border-zinc-200 bg-white text-sm text-zinc-900 focus:outline-none focus:border-zinc-900 transition-colors placeholder:text-zinc-400 rounded-lg";
@@ -126,7 +131,7 @@ export default function LoginPage() {
                 <div>
                   <div className="flex justify-between mb-2">
                     <label className={labelClass}>Password</label>
-                    <Link href="#" className="font-mono text-[10px] text-zinc-400 uppercase tracking-widest hover:text-zinc-900">Forgot?</Link>
+                    <Link href="/forgot-password" className="font-mono text-[10px] text-zinc-400 uppercase tracking-widest hover:text-zinc-900">Forgot?</Link>
                   </div>
                   <input
                     type="password"
@@ -219,18 +224,20 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <button
-              onClick={handleLineLogin}
-              className="w-full bg-[#06C755] text-white py-3 text-sm font-medium hover:brightness-105 transition-all flex items-center justify-center gap-2"
-            >
-              <MessageSquare className="w-4 h-4 fill-current" />
-              Continue with LINE
-            </button>
+            {process.env.NEXT_PUBLIC_ENABLE_LINE_LOGIN === 'true' && (
+              <button
+                onClick={handleLineLogin}
+                className="w-full bg-[#06C755] text-white py-3 text-sm font-medium hover:brightness-105 transition-all flex items-center justify-center gap-2"
+              >
+                <MessageSquare className="w-4 h-4 fill-current" />
+                Continue with LINE
+              </button>
+            )}
           </div>
         </div>
 
         <p className="font-mono text-[10px] text-zinc-400 uppercase tracking-widest text-center mt-6">
-          © 2026 FLOWSLIP
+          No account? <Link href="/register" className="text-zinc-900 hover:underline">Register</Link>
         </p>
       </div>
     </div>

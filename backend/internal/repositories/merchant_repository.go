@@ -36,6 +36,13 @@ type MerchantRepository interface {
 	// Quota operations
 	GetQuotaStatus(merchantID uuid.UUID) (*models.QuotaStatus, error)
 	UpdateUsageCounter(merchantID uuid.UUID, year, month int, increment int) error
+
+	// LINE webhook operations
+	GetLINEWebhookConfig(merchantID uuid.UUID) (*models.LINEWebhookConfig, error)
+	UpdateLINEWebhookConfig(merchantID uuid.UUID, lineChannelID, encryptedChannelSecret, encryptedAccessToken, webhookRefID string) error
+	DeleteLINEWebhookConfig(merchantID uuid.UUID) error
+	GetLINECredentials(merchantID uuid.UUID) (channelID, encryptedSecret, encryptedToken, webhookRefID string, err error)
+	FindByWebhookReferenceID(webhookRefID string) (*models.MerchantProfile, error)
 }
 
 type merchantRepository struct {
@@ -528,4 +535,134 @@ func (r *merchantRepository) getUsageThisMonth(merchantID uuid.UUID) int {
 	}
 
 	return count
+}
+
+// LINE webhook operations
+
+// GetLINEWebhookConfig retrieves LINE webhook configuration for a merchant
+func (r *merchantRepository) GetLINEWebhookConfig(merchantID uuid.UUID) (*models.LINEWebhookConfig, error) {
+	query := `
+		SELECT merchant_id, line_channel_id, webhook_reference_id, created_at, updated_at
+		FROM line_webhook_configs
+		WHERE merchant_id = $1
+	`
+
+	var config models.LINEWebhookConfig
+	var webhookRefID sql.NullString
+
+	err := r.db.QueryRow(query, merchantID).Scan(
+		&config.MerchantID,
+		&config.LINEChannelID,
+		&webhookRefID,
+		&config.CreatedAt,
+		&config.UpdatedAt,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return &models.LINEWebhookConfig{
+				MerchantID:   merchantID,
+				IsConfigured: false,
+			}, nil
+		}
+		return nil, err
+	}
+
+	config.IsConfigured = true
+	if webhookRefID.Valid {
+		config.WebhookReferenceID = &webhookRefID.String
+	}
+
+	return &config, nil
+}
+
+// UpdateLINEWebhookConfig updates LINE webhook configuration for a merchant
+func (r *merchantRepository) UpdateLINEWebhookConfig(merchantID uuid.UUID, lineChannelID, encryptedChannelSecret, encryptedAccessToken, webhookRefID string) error {
+	query := `
+		INSERT INTO line_webhook_configs (merchant_id, line_channel_id, encrypted_channel_secret, encrypted_access_token, webhook_reference_id)
+		VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT (merchant_id)
+		DO UPDATE SET
+			line_channel_id = $2,
+			encrypted_channel_secret = $3,
+			encrypted_access_token = $4,
+			webhook_reference_id = $5,
+			updated_at = CURRENT_TIMESTAMP
+	`
+
+	_, err := r.db.Exec(query, merchantID, lineChannelID, encryptedChannelSecret, encryptedAccessToken, webhookRefID)
+	return err
+}
+
+// DeleteLINEWebhookConfig removes LINE webhook configuration
+func (r *merchantRepository) DeleteLINEWebhookConfig(merchantID uuid.UUID) error {
+	query := `DELETE FROM line_webhook_configs WHERE merchant_id = $1`
+	_, err := r.db.Exec(query, merchantID)
+	return err
+}
+
+// GetLINECredentials retrieves encrypted LINE credentials for a merchant
+func (r *merchantRepository) GetLINECredentials(merchantID uuid.UUID) (channelID, encryptedSecret, encryptedToken, webhookRefID string, err error) {
+	query := `
+		SELECT line_channel_id, encrypted_channel_secret, encrypted_access_token, webhook_reference_id
+		FROM line_webhook_configs
+		WHERE merchant_id = $1
+	`
+
+	var webhookRefIDNull sql.NullString
+
+	err = r.db.QueryRow(query, merchantID).Scan(
+		&channelID,
+		&encryptedSecret,
+		&encryptedToken,
+		&webhookRefIDNull,
+	)
+
+	if err != nil {
+		return "", "", "", "", err
+	}
+
+	if webhookRefIDNull.Valid {
+		webhookRefID = webhookRefIDNull.String
+	}
+
+	return channelID, encryptedSecret, encryptedToken, webhookRefID, nil
+}
+
+// FindByWebhookReferenceID finds a merchant by webhook reference ID
+func (r *merchantRepository) FindByWebhookReferenceID(webhookRefID string) (*models.MerchantProfile, error) {
+	query := `
+		SELECT m.id, m.owner_id, m.shop_name, m.address, m.contact_email, m.contact_phone,
+		       m.logo_url, m.is_active, m.created_at, m.updated_at
+		FROM merchants m
+		INNER JOIN line_webhook_configs lwc ON m.id = lwc.merchant_id
+		WHERE lwc.webhook_reference_id = $1
+	`
+
+	var merchant models.MerchantProfile
+	err := r.db.QueryRow(query, webhookRefID).Scan(
+		&merchant.ID,
+		&merchant.OwnerID,
+		&merchant.ShopName,
+		&merchant.Address,
+		&merchant.ContactEmail,
+		&merchant.ContactPhone,
+		&merchant.LogoURL,
+		&merchant.IsActive,
+		&merchant.CreatedAt,
+		&merchant.UpdatedAt,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, errors.New("merchant not found with this webhook reference ID")
+		}
+		return nil, err
+	}
+
+	// Load additional settings
+	merchant.BusinessHours = r.getBusinessHours(merchant.ID)
+	merchant.StrictMode = true
+
+	return &merchant, nil
 }
