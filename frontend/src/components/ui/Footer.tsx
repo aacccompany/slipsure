@@ -27,7 +27,7 @@ export const Footer = () => {
           <div className="grid grid-cols-3 gap-12 text-sm">
             <div className="space-y-3">
               <p className="font-mono text-[10px] text-zinc-400 uppercase tracking-widest mb-4">บริการ</p>
-              <Link href="/verify" className="block text-zinc-500 hover:text-zinc-900 transition-colors">ตรวจสอบสลิป</Link>
+              <Link href="/services" className="block text-zinc-500 hover:text-zinc-900 transition-colors">ตรวจสอบสลิป</Link>
               <Link href="/docs" className="block text-zinc-500 hover:text-zinc-900 transition-colors">API Docs</Link>
               <Link href="/services" className="block text-zinc-500 hover:text-zinc-900 transition-colors">Enterprise</Link>
             </div>

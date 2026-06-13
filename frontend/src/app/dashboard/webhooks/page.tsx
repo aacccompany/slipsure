@@ -250,26 +250,88 @@ export default function WebhooksPage() {
             </div>
           </div>
 
-          {/* Webhook URL */}
+          {/* Merchant Webhook Details */}
           <div className="bg-white border border-zinc-200 rounded-2xl p-8 mb-6">
-            <h3 className="text-lg font-bold text-zinc-900 mb-4 flex items-center gap-2">
-              <Key className="w-5 h-5 text-blue-700" />
-              Webhook URL
+            <h3 className="text-lg font-bold text-zinc-900 mb-6 flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 text-green-700" />
+              Your LINE Webhook Configuration
             </h3>
-            <div className="flex items-center gap-4 p-4 bg-zinc-50 rounded-xl">
-              <code className="flex-1 text-sm font-mono text-blue-800 truncate">
-                {config?.webhook_url}
-              </code>
-              <button
-                onClick={() => config?.webhook_url && copyToClipboard(config.webhook_url)}
-                className="p-2 hover:bg-zinc-100 rounded-lg transition-colors"
-              >
-                <Copy className="w-4 h-4 text-zinc-500" />
-              </button>
+
+            <div className="space-y-4">
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2">Reference ID</p>
+                  <div className="flex items-center gap-2">
+                    <code className="text-sm font-mono text-blue-800 bg-blue-50 px-3 py-1.5 rounded-lg">
+                      {config?.webhook_reference_id}
+                    </code>
+                    <button
+                      onClick={() => config?.webhook_reference_id && copyToClipboard(config.webhook_reference_id)}
+                      className="p-1.5 hover:bg-zinc-100 rounded-lg transition-colors"
+                      title="Copy reference ID"
+                    >
+                      <Copy className="w-3.5 h-3.5 text-zinc-400" />
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2">Configuration Status</p>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    <span className="text-sm font-medium text-green-700">Active & Configured</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2">LINE Channel ID</p>
+                  <code className="text-sm font-mono text-zinc-600 bg-zinc-100 px-3 py-1.5 rounded-lg">
+                    {config?.line_channel_id}
+                  </code>
+                </div>
+
+                <div>
+                  <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2">Configured On</p>
+                  <p className="text-sm font-medium text-zinc-900">
+                    {new Date(config.created_at).toLocaleDateString('th-TH', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-zinc-100">
+                <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2">Your Webhook URL</p>
+                <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-100 rounded-xl">
+                  <code className="flex-1 text-sm font-mono text-blue-800 truncate">
+                    {config?.webhook_url}
+                  </code>
+                  <button
+                    onClick={() => config?.webhook_url && copyToClipboard(config.webhook_url)}
+                    className="p-2 bg-white hover:bg-blue-100 rounded-lg transition-colors border border-blue-200"
+                    title="Copy webhook URL"
+                  >
+                    <Copy className="w-4 h-4 text-blue-700" />
+                  </button>
+                </div>
+                <p className="text-xs text-zinc-500 mt-2">
+                  📌 Use this URL in your LINE Developers Console → Messaging API → Webhook settings
+                </p>
+              </div>
+
+              <div className="pt-4 border-t border-zinc-100">
+                <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2">Last Updated</p>
+                <p className="text-sm text-zinc-600">
+                  {new Date(config.updated_at).toLocaleString('th-TH')}
+                </p>
+              </div>
             </div>
-            <p className="text-xs text-zinc-500 mt-3">
-              Add this URL to your LINE Developers Console → Messaging API → Webhook settings
-            </p>
           </div>
 
           {/* Test & Actions */}

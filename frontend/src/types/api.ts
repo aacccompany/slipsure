@@ -229,6 +229,22 @@ export interface SlipListResponse {
   pagination: Pagination;
 }
 
+export interface DailySlipStats {
+  day: string;
+  verified: number;
+  failed: number;
+}
+
+export interface SlipStatsResponse {
+  total: number;
+  verified: number;
+  failed: number;
+  pending: number;
+  processing: number;
+  success_rate: number;
+  last_7_days: DailySlipStats[];
+}
+
 // LINE Webhook Types
 export interface LINEWebhookConfig {
   merchant_id: string;

@@ -3,8 +3,8 @@
 import React, { useState } from 'react';
 import { Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
-import { authApi } from '@/services/authApi';
-import axios from 'axios';
+import { api } from '@/lib/api-client';
+import { toast } from 'sonner';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -14,17 +14,17 @@ export default function ForgotPasswordPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!email) return;
+
     setIsLoading(true);
     setError('');
 
     try {
-      await authApi.forgotPassword(email);
+      await api.forgotPassword({ email });
       setSent(true);
+      toast.success('Reset code sent to your email!');
     } catch (err) {
-      const msg = axios.isAxiosError(err)
-        ? err.response?.data?.message || 'Failed to send reset code. Please try again.'
-        : 'Failed to send reset code. Please try again.';
-      setError(msg);
+      setError(err instanceof Error ? err.message : 'Failed to send reset code. Please try again.');
     } finally {
       setIsLoading(false);
     }

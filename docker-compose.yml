@@ -7,6 +7,15 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       target: runner
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8080/v1
+        NEXT_PUBLIC_API_TIMEOUT: 30000
+        NEXT_PUBLIC_LINE_LOGIN_CHANNEL_ID: ${LINE_LOGIN_CHANNEL_ID}
+        NEXT_PUBLIC_LINE_LOGIN_CALLBACK_URL: ${LINE_LOGIN_CALLBACK_URL}
+        NEXT_PUBLIC_APP_NAME: SlipSure
+        NEXT_PUBLIC_APP_URL: http://localhost:3000
+        NEXT_PUBLIC_ENABLE_ANALYTICS: true
+        NEXT_PUBLIC_ENABLE_LINE_LOGIN: true
     container_name: flowslip-frontend
     ports:
       - "3000:3000"

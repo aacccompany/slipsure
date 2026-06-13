@@ -21,15 +21,25 @@ import type {
   CheckoutResponse,
   QuotaStatus,
   Slip,
+  SlipStatus,
   SlipUploadResponse,
   SlipListResponse,
+  SlipStatsResponse,
+  ScanRequest,
   LINEWebhookConfig,
   UpdateLINEWebhookRequest,
   LINEWebhookTestResponse,
   HealthStatus,
 } from '@/types/api';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+const normalizeApiBaseUrl = (url: string) => {
+  const trimmed = url.replace(/\/+$/, '');
+  return trimmed.endsWith('/v1') ? trimmed.slice(0, -3) : trimmed;
+};
+
+const API_BASE_URL = normalizeApiBaseUrl(
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+);
 
 class ApiClient {
   private baseURL: string;
@@ -48,9 +58,9 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
     const token = this.getAuthHeader();
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...options.headers,
+      ...(options.headers as Record<string, string>),
     };
 
     if (token) {
@@ -63,7 +73,7 @@ class ApiClient {
         headers,
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
         throw new Error(data.error || data.message || 'Request failed');
@@ -87,7 +97,7 @@ class ApiClient {
     const formData = new FormData();
     formData.append('file', file);
 
-    const headers: HeadersInit = {};
+    const headers: Record<string, string> = {};
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
@@ -100,7 +110,7 @@ class ApiClient {
         body: formData,
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
         throw new Error(data.error || data.message || 'Upload failed');
@@ -113,6 +123,62 @@ class ApiClient {
       }
       throw new Error('An unknown error occurred');
     }
+  }
+
+  private normalizeMerchantProfileResponse(
+    response: ApiResponse<{ profile: MerchantProfile } | MerchantProfile>
+  ): ApiResponse<{ profile: MerchantProfile }> {
+    const data = response.data;
+
+    if (data && 'profile' in data) {
+      return response as ApiResponse<{ profile: MerchantProfile }>;
+    }
+
+    return {
+      ...response,
+      data: data ? { profile: data as MerchantProfile } : undefined,
+    };
+  }
+
+  private normalizeLINEWebhookConfigResponse(
+    response: ApiResponse<{ config: LINEWebhookConfig } | LINEWebhookConfig> & {
+      config?: LINEWebhookConfig;
+    }
+  ): ApiResponse<{ config: LINEWebhookConfig }> {
+    if (response.config) {
+      return {
+        ...response,
+        success: response.success ?? true,
+        data: { config: response.config },
+      };
+    }
+
+    const data = response.data;
+
+    if (data && 'config' in data) {
+      return response as ApiResponse<{ config: LINEWebhookConfig }>;
+    }
+
+    return {
+      ...response,
+      success: response.success ?? Boolean(data),
+      data: data ? { config: data as LINEWebhookConfig } : undefined,
+    };
+  }
+
+  private normalizePlansResponse(
+    response: ApiResponse<{ plans: SubscriptionPlan[] } | SubscriptionPlan[]>
+  ): ApiResponse<{ plans: SubscriptionPlan[] }> {
+    const data = response.data;
+
+    if (Array.isArray(data)) {
+      return {
+        ...response,
+        data: { plans: data },
+      };
+    }
+
+    return response as ApiResponse<{ plans: SubscriptionPlan[] }>;
   }
 
   // Health Check
@@ -196,7 +262,8 @@ class ApiClient {
 
   // Plans
   async getPlans(): Promise<ApiResponse<{ plans: SubscriptionPlan[] }>> {
-    return this.request('/v1/plans');
+    const response = await this.request<{ plans: SubscriptionPlan[] } | SubscriptionPlan[]>('/v1/plans');
+    return this.normalizePlansResponse(response);
   }
 
   // Checkout
@@ -209,21 +276,24 @@ class ApiClient {
 
   // Merchant Profile
   async createMerchantProfile(data: Partial<MerchantProfile>): Promise<ApiResponse<{ profile: MerchantProfile }>> {
-    return this.request('/v1/merchants/me/profile', {
+    const response = await this.request<{ profile: MerchantProfile } | MerchantProfile>('/v1/merchants/me/profile', {
       method: 'POST',
       body: JSON.stringify(data),
     });
+    return this.normalizeMerchantProfileResponse(response);
   }
 
   async getMerchantProfile(): Promise<ApiResponse<{ profile: MerchantProfile }>> {
-    return this.request('/v1/merchants/me/profile');
+    const response = await this.request<{ profile: MerchantProfile } | MerchantProfile>('/v1/merchants/me/profile');
+    return this.normalizeMerchantProfileResponse(response);
   }
 
   async updateMerchantProfile(data: Partial<MerchantProfile>): Promise<ApiResponse<{ profile: MerchantProfile }>> {
-    return this.request('/v1/merchants/me/profile', {
+    const response = await this.request<{ profile: MerchantProfile } | MerchantProfile>('/v1/merchants/me/profile', {
       method: 'PUT',
       body: JSON.stringify(data),
     });
+    return this.normalizeMerchantProfileResponse(response);
   }
 
   async uploadLogo(file: File): Promise<ApiResponse<{ logo_url: string }>> {
@@ -261,14 +331,29 @@ class ApiClient {
 
   // LINE Webhook Configuration
   async getLINEWebhookConfig(): Promise<ApiResponse<{ config: LINEWebhookConfig }>> {
-    return this.request('/v1/merchants/me/line-webhook');
+    const response = await this.request<{ config: LINEWebhookConfig } | LINEWebhookConfig>('/v1/merchants/me/line-webhook') as ApiResponse<{ config: LINEWebhookConfig } | LINEWebhookConfig> & {
+      config?: LINEWebhookConfig;
+    };
+    return this.normalizeLINEWebhookConfigResponse(response);
   }
 
   async updateLINEWebhookConfig(data: UpdateLINEWebhookRequest): Promise<ApiResponse<{ message: string; config: LINEWebhookConfig }>> {
-    return this.request('/v1/merchants/me/line-webhook', {
+    const response = await this.request<{ message: string; config: LINEWebhookConfig } | LINEWebhookConfig>('/v1/merchants/me/line-webhook', {
       method: 'PUT',
       body: JSON.stringify(data),
-    });
+    }) as ApiResponse<{ message: string; config: LINEWebhookConfig } | LINEWebhookConfig> & {
+      config?: LINEWebhookConfig;
+    };
+    const normalized = this.normalizeLINEWebhookConfigResponse(response);
+    return {
+      ...normalized,
+      data: normalized.data
+        ? {
+            message: response.message || ('message' in (response.data || {}) ? (response.data as { message?: string }).message || '' : ''),
+            config: normalized.data.config,
+          }
+        : undefined,
+    };
   }
 
   async deleteLINEWebhookConfig(): Promise<ApiResponse<{ message: string }>> {
@@ -278,13 +363,41 @@ class ApiClient {
   }
 
   async testLINEWebhook(): Promise<ApiResponse<{ result: LINEWebhookTestResponse }>> {
-    return this.request('/v1/merchants/me/test', {
+    const response = await this.request<{ result: LINEWebhookTestResponse }>('/v1/merchants/me/test', {
       method: 'POST',
-    });
+    }) as ApiResponse<{ result: LINEWebhookTestResponse }> & {
+      result?: LINEWebhookTestResponse;
+    };
+
+    if (response.result) {
+      return {
+        ...response,
+        success: response.success ?? true,
+        data: { result: response.result },
+      };
+    }
+
+    return response;
   }
 
   async getWebhookURL(): Promise<ApiResponse<{ webhook_url: string; webhook_reference_id: string }>> {
-    return this.request('/v1/merchants/me/webhook-url');
+    const response = await this.request<{ webhook_url: string; webhook_reference_id: string }>('/v1/merchants/me/webhook-url') as ApiResponse<{ webhook_url: string; webhook_reference_id: string }> & {
+      webhook_url?: string;
+      webhook_reference_id?: string;
+    };
+
+    if (response.webhook_url || response.webhook_reference_id) {
+      return {
+        ...response,
+        success: response.success ?? true,
+        data: {
+          webhook_url: response.webhook_url || '',
+          webhook_reference_id: response.webhook_reference_id || '',
+        },
+      };
+    }
+
+    return response;
   }
 
   // Slips
@@ -313,6 +426,10 @@ class ApiClient {
   async getSlips(params?: { page?: number; limit?: number; status?: SlipStatus }): Promise<ApiResponse<SlipListResponse>> {
     const queryString = new URLSearchParams(params as any).toString();
     return this.request(`/v1/slips${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getSlipStats(): Promise<ApiResponse<SlipStatsResponse>> {
+    return this.request('/v1/slips/stats');
   }
 }
 

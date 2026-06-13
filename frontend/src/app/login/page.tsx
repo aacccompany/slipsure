@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2, AlertCircle, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
@@ -10,15 +10,29 @@ import { api } from '@/lib/api-client';
 
 type LoginMode = 'otp' | 'password';
 
-export default function LoginPage() {
-  const { login } = useAuth();
+function LoginContent() {
+  const { login, lineLogin, isAuthenticated, user } = useAuth();
   const searchParams = useSearchParams();
   const [mode, setMode] = useState<LoginMode>('password');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isOtpSent, setIsOtpSent] = useState(false);
   const router = useRouter();
+  const lineCallbackHandledRef = React.useRef(false);
+
+  const getLineRedirectUri = () => {
+    return process.env.NEXT_PUBLIC_LINE_LOGIN_CALLBACK_URL || `${window.location.origin}/auth/line/callback`;
+  };
+
+  // Redirect if already logged in
+  React.useEffect(() => {
+    if (isAuthenticated && user) {
+      router.push('/dashboard');
+    }
+  }, [isAuthenticated, user, router]);
 
   // Check if redirected from registration
   React.useEffect(() => {
@@ -29,6 +43,30 @@ export default function LoginPage() {
       setIsOtpSent(true);
     }
   }, [searchParams]);
+
+  React.useEffect(() => {
+    const code = searchParams.get('code');
+    const state = searchParams.get('state');
+    const lineError = searchParams.get('error_description') || searchParams.get('error');
+
+    if (lineError) {
+      setError(lineError);
+      return;
+    }
+
+    if (!code || state !== 'login' || lineCallbackHandledRef.current) {
+      return;
+    }
+
+    lineCallbackHandledRef.current = true;
+    setIsLoading(true);
+    setError('');
+
+    lineLogin(code, getLineRedirectUri()).catch((err) => {
+      setError(err instanceof Error ? err.message : 'LINE login failed');
+      setIsLoading(false);
+    });
+  }, [lineLogin, searchParams]);
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,13 +105,20 @@ export default function LoginPage() {
   };
 
   const handleLineLogin = () => {
-    // LINE login requires redirect URI setup
-    const redirectUri = `${window.location.origin}/login`;
-    window.location.href = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=${process.env.NEXT_PUBLIC_LINE_LOGIN_CHANNEL_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&state=login&scope=profile%20openid%20email`;
+    const channelId = process.env.NEXT_PUBLIC_LINE_LOGIN_CHANNEL_ID;
+
+    if (!channelId || channelId === 'your_line_login_channel_id_here') {
+      toast.error('LINE login channel ID is not configured');
+      return;
+    }
+
+    const redirectUri = getLineRedirectUri();
+    window.location.href = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=${channelId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=login&scope=profile%20openid%20email`;
   };
 
   const inputClass = "w-full px-4 py-3 border border-zinc-200 bg-white text-sm text-zinc-900 focus:outline-none focus:border-zinc-900 transition-colors placeholder:text-zinc-400 rounded-lg";
   const labelClass = "block font-mono text-[10px] text-zinc-400 uppercase tracking-widest mb-2";
+  const isLineLoginEnabled = process.env.NEXT_PUBLIC_ENABLE_LINE_LOGIN !== 'false';
 
   return (
     <div className="min-h-screen bg-zinc-50 flex items-center justify-center p-6">
@@ -197,9 +242,10 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {process.env.NEXT_PUBLIC_ENABLE_LINE_LOGIN === 'true' && (
+            {isLineLoginEnabled && (
               <button
                 onClick={handleLineLogin}
+                disabled={isLoading}
                 className="w-full bg-[#06C755] text-white py-3 text-sm font-medium hover:brightness-105 transition-all flex items-center justify-center gap-2"
               >
                 <MessageSquare className="w-4 h-4 fill-current" />
@@ -214,5 +260,17 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-zinc-50 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-zinc-400 animate-spin" />
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }

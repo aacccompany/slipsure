@@ -45,7 +45,7 @@ export const Navbar = () => {
             </Link>
           ))}
           <Link
-            href="/verify"
+            href="/register"
             className="text-sm font-medium bg-blue-800 text-white hover:bg-blue-900 transition-colors px-5 py-2 rounded-full"
           >
             เริ่มใช้งาน →
@@ -71,7 +71,7 @@ export const Navbar = () => {
               </Link>
             ))}
             <Link
-              href="/verify"
+              href="/register"
               onClick={() => setIsOpen(false)}
               className="bg-blue-800 text-white text-sm font-medium text-center py-3 rounded-xl hover:bg-blue-900 transition-colors"
             >

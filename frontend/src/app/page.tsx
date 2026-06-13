@@ -51,7 +51,7 @@ export default function Home() {
             </div>
             <div className="flex items-center gap-3 shrink-0">
               <Link
-                href="/verify"
+                href="/register"
                 className="bg-blue-800 text-white px-8 py-4 text-sm font-semibold hover:bg-blue-900 transition-colors rounded-full"
               >
                 สมัครใช้งานฟรี →

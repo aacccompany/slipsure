@@ -5,7 +5,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/v
 const api = axios.create({ baseURL: API_BASE_URL });
 
 api.interceptors.request.use((config) => {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
@@ -62,7 +62,7 @@ export const dashboardApi = {
   getSubscription: async (): Promise<MerchantSubscription | null> => {
     try {
       const res = await api.get('/merchants/me/subscription');
-      return res.data.data;
+      return res.data.data?.subscription ?? res.data.data;
     } catch {
       return null;
     }
@@ -85,7 +85,7 @@ export const dashboardApi = {
   getSlips: async (page = 1): Promise<{ data: SlipLog[]; total: number }> => {
     try {
       const res = await api.get(`/slips?page=${page}&limit=10`);
-      return { data: res.data.data || [], total: res.data.total || 0 };
+      return { data: res.data.data?.slips || [], total: res.data.data?.pagination?.total || 0 };
     } catch {
       return { data: [], total: 0 };
     }

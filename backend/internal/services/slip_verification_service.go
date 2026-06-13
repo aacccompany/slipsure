@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -13,14 +14,14 @@ import (
 
 // SlipVerificationService handles slip verification workflow
 type SlipVerificationService struct {
-	slipRepo        repositories.SlipRepository
-	transactionRepo repositories.TransactionRepository
-	usageRepo       repositories.UsageCounterRepository
-	merchantRepo    repositories.MerchantRepository
-	storage         *StorageService
-	qrScanner       *QRScannerService
-	bankValidator   *BankValidationService
-	duplicateWindow int
+	slipRepo             repositories.SlipRepository
+	transactionRepo      repositories.TransactionRepository
+	usageRepo            repositories.UsageCounterRepository
+	merchantRepo         repositories.MerchantRepository
+	storage              *StorageService
+	qrScanner            *QRScannerService
+	bankValidator        *BankValidationService
+	duplicateWindow      int
 	verificationCallback func(slip *models.Slip, merchantID uuid.UUID)
 }
 
@@ -130,12 +131,12 @@ func (s *SlipVerificationService) ScanQRData(merchantID uuid.UUID, qrData string
 
 	// Create slip record
 	slip := &models.Slip{
-		ID:        uuid.New(),
+		ID:         uuid.New(),
 		MerchantID: merchantID,
-		QRRawData: qrData,
-		Status:    models.SlipStatusPending,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		QRRawData:  qrData,
+		Status:     models.SlipStatusPending,
+		CreatedAt:  time.Now(),
+		UpdatedAt:  time.Now(),
 	}
 
 	// Save to database
@@ -188,12 +189,18 @@ func (s *SlipVerificationService) verifySlipAsync(slip *models.Slip) {
 	)
 	if err == nil && duplicateTxn != nil {
 		transaction.IsDuplicate = true
+		s.markAsFailed(slip, models.FailReasonDuplicateSlip, "Duplicate transaction reference found")
+		return
 	}
 
 	// Link transaction to slip
 	transaction.SlipID = slip.ID
 	err = s.transactionRepo.Create(transaction)
 	if err != nil {
+		if errors.Is(err, repositories.ErrDuplicateReferenceNo) {
+			s.markAsFailed(slip, models.FailReasonDuplicateSlip, "Duplicate transaction reference found")
+			return
+		}
 		s.markAsFailed(slip, models.FailReasonBankError, "Failed to create transaction record")
 		return
 	}
@@ -240,6 +247,32 @@ func (s *SlipVerificationService) GetSlip(slipID uuid.UUID) (*models.Slip, error
 	return slip, nil
 }
 
+// ListSlips retrieves slips for a merchant with pagination.
+func (s *SlipVerificationService) ListSlips(merchantID uuid.UUID, limit, offset int) ([]*models.Slip, error) {
+	return s.slipRepo.FindByMerchantID(merchantID, limit, offset)
+}
+
+// CountSlips counts all slips for a merchant.
+func (s *SlipVerificationService) CountSlips(merchantID uuid.UUID) (int, error) {
+	return s.slipRepo.CountByMerchantID(merchantID)
+}
+
+// GetSlipStats retrieves aggregate slip verification stats for a merchant.
+func (s *SlipVerificationService) GetSlipStats(merchantID uuid.UUID) (*models.SlipStatsResponse, error) {
+	stats, err := s.slipRepo.GetStatsByMerchantID(merchantID)
+	if err != nil {
+		return nil, err
+	}
+
+	dailyStats, err := s.slipRepo.GetDailyStatsByMerchantID(merchantID, 7)
+	if err != nil {
+		return nil, err
+	}
+	stats.Last7Days = dailyStats
+
+	return stats, nil
+}
+
 // ReprocessSlip reprocesses a failed slip
 func (s *SlipVerificationService) ReprocessSlip(slipID uuid.UUID, forceVerify bool) error {
 	slip, err := s.slipRepo.FindByID(slipID)
@@ -275,5 +308,13 @@ func (s *SlipVerificationService) markAsFailed(slip *models.Slip, reason models.
 	slip.ProcessingCompletedAt = &completedAt
 	slip.FailReason = &reason
 
-	_ = s.slipRepo.UpdateWithTransaction(slip, nil)
+	if err := s.slipRepo.UpdateWithTransaction(slip, nil); err != nil {
+		log.Printf("Failed to update slip %s as failed: reason=%s message=%q error=%v", slip.ID, reason, message, err)
+	} else {
+		log.Printf("Slip verification failed for slip %s merchant %s: reason=%s message=%q", slip.ID, slip.MerchantID, reason, message)
+	}
+
+	if s.verificationCallback != nil {
+		s.verificationCallback(slip, slip.MerchantID)
+	}
 }

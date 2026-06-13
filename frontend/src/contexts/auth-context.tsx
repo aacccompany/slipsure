@@ -10,6 +10,8 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
+  lineLogin: (code: string, redirectUri: string) => Promise<void>;
+  connectLine: (code: string, redirectUri: string) => Promise<void>;
   register: (name: string, email: string, password: string, phone?: string) => Promise<void>;
   verifyOTP: (email: string, otp: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -49,12 +51,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const login = async (email: string, password: string) => {
-    const response = await api.login({ email, password });
-    if (response.success && response.data) {
-      const { access_token, refresh_token, expires_in, user: userData } = response.data;
-      tokenManager.setTokens({ access_token, refresh_token, expires_in });
-      setUser(userData);
-      router.push('/dashboard');
+    try {
+      const response = await api.login({ email, password });
+
+      if (response.success && response.data) {
+        const { access_token, refresh_token, expires_in, user: userData } = response.data;
+
+        tokenManager.setTokens({ access_token, refresh_token, expires_in });
+        setUser(userData);
+
+        router.push(userData.merchant_id ? '/dashboard' : '/onboarding');
+      } else {
+        throw new Error(response.message || 'Login failed');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
+  };
+
+  const lineLogin = async (code: string, redirectUri: string) => {
+    try {
+      const response = await api.lineLogin({ line_code: code, redirect_uri: redirectUri });
+
+      if (response.success && response.data) {
+        const { access_token, refresh_token, expires_in, user: userData } = response.data;
+
+        tokenManager.setTokens({ access_token, refresh_token, expires_in });
+        setUser(userData);
+
+        router.push(userData.merchant_id ? '/dashboard' : '/onboarding');
+      } else {
+        throw new Error(response.message || 'LINE login failed');
+      }
+    } catch (error) {
+      console.error('LINE login error:', error);
+      throw error;
+    }
+  };
+
+  const connectLine = async (code: string, redirectUri: string) => {
+    try {
+      const response = await api.connectLine({ line_code: code, redirect_uri: redirectUri });
+
+      if (response.success && response.data?.user) {
+        setUser(response.data.user);
+        router.push('/dashboard/account');
+        return;
+      }
+
+      throw new Error(response.message || 'Failed to connect LINE');
+    } catch (error) {
+      console.error('Connect LINE error:', error);
+      throw error;
     }
   };
 
@@ -62,7 +111,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const response = await api.register({ name, email, password, phone });
     if (response.success) {
       // Redirect to OTP verification
-      router.push(`/verify?email=${encodeURIComponent(email)}`);
+      router.push(`/auth/verify?email=${encodeURIComponent(email)}`);
     }
   };
 
@@ -72,7 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { access_token, refresh_token, expires_in } = response.data;
       tokenManager.setTokens({ access_token, refresh_token, expires_in });
       await refreshUser();
-      router.push('/dashboard');
+      router.push('/onboarding');
     }
   };
 
@@ -84,7 +133,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       tokenManager.clearTokens();
       setUser(null);
-      router.push('/');
+      router.push('/login');
     }
   };
 
@@ -95,6 +144,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         isAuthenticated,
         login,
+        lineLogin,
+        connectLine,
         register,
         verifyOTP,
         logout,

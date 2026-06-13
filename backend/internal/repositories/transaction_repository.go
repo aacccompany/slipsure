@@ -2,12 +2,16 @@ package repositories
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 	"slipsure-backend/internal/models"
 )
+
+// ErrDuplicateReferenceNo is returned when a transaction reference already exists.
+var ErrDuplicateReferenceNo = errors.New("duplicate transaction reference number")
 
 // TransactionRepository handles transaction database operations
 type TransactionRepository interface {
@@ -42,6 +46,7 @@ func (r *transactionRepository) Create(transaction *models.Transaction) error {
 			created_at, updated_at
 		)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+		ON CONFLICT (reference_no) DO NOTHING
 		RETURNING id
 	`
 
@@ -54,6 +59,9 @@ func (r *transactionRepository) Create(transaction *models.Transaction) error {
 		transaction.CreatedAt, transaction.UpdatedAt,
 	).Scan(&transaction.ID)
 
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrDuplicateReferenceNo
+	}
 	if err != nil {
 		return fmt.Errorf("failed to create transaction: %w", err)
 	}

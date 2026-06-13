@@ -5,8 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { authApi } from '@/services/authApi';
-import axios from 'axios';
+import { api } from '@/lib/api-client';
 
 function ResetPasswordContent() {
   const searchParams = useSearchParams();
@@ -39,14 +38,11 @@ function ResetPasswordContent() {
 
     setIsLoading(true);
     try {
-      await authApi.resetPassword(email, otp, newPassword);
+      await api.resetPassword({ email, otp, new_password: newPassword });
       setSuccess(true);
       toast.success('Password reset successfully!');
     } catch (err) {
-      const msg = axios.isAxiosError(err)
-        ? err.response?.data?.message || 'Reset failed. Please try again.'
-        : 'Reset failed. Please try again.';
-      setError(msg);
+      setError(err instanceof Error ? err.message : 'Reset failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -159,7 +155,11 @@ function ResetPasswordContent() {
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense>
+    <Suspense fallback={
+      <div className="min-h-screen bg-zinc-50 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-zinc-400 animate-spin" />
+      </div>
+    }>
       <ResetPasswordContent />
     </Suspense>
   );

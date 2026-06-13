@@ -58,7 +58,7 @@ export default function ServicesPage() {
                         ลงชื่อใช้งานวันนี้เพื่อสัมผัสประสบการณ์การตรวจสอบสลิปที่เร็วที่สุดในประเทศไทย
                     </p>
                     <div className="flex flex-wrap gap-4">
-                        <Link href="/verify" className="bg-blue-800 text-white px-10 py-4 rounded-2xl font-bold hover:bg-blue-900 transition-all shadow-lg shadow-blue-500/20 active:scale-95">
+                        <Link href="/register" className="bg-blue-800 text-white px-10 py-4 rounded-2xl font-bold hover:bg-blue-900 transition-all shadow-lg shadow-blue-500/20 active:scale-95">
                             เริ่มใช้งานฟรี
                         </Link>
                         <Link href="#" className="bg-zinc-800 text-white px-10 py-4 rounded-2xl font-bold hover:bg-zinc-700 transition-all active:scale-95">

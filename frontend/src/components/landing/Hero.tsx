@@ -28,7 +28,7 @@ export const Hero = () => {
 
           <div className="flex items-center gap-3 flex-wrap">
             <Link
-              href="/verify"
+              href="/register"
               className="bg-blue-800 text-white px-7 py-3.5 text-sm font-semibold hover:bg-blue-900 transition-colors rounded-full"
             >
               เริ่มต้นใช้งานฟรี →

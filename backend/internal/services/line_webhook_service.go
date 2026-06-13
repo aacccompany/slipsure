@@ -24,22 +24,22 @@ import (
 
 // LINEWebhookService handles LINE webhook operations for multi-merchant support
 type LINEWebhookService struct {
-	merchantRepo repositories.MerchantRepository
-	cryptoService *CryptoService
+	merchantRepo            repositories.MerchantRepository
+	cryptoService           *CryptoService
 	slipVerificationService *SlipVerificationService
-	baseURL string
-	lineUserIDs map[uuid.UUID]string // Track LINE user IDs by slip ID for notifications
-	lineUserIDsMutex sync.RWMutex   // Protect lineUserIDs map from concurrent access
+	baseURL                 string
+	lineUserIDs             map[uuid.UUID]string // Track LINE user IDs by slip ID for notifications
+	lineUserIDsMutex        sync.RWMutex         // Protect lineUserIDs map from concurrent access
 }
 
 // NewLINEWebhookService creates a new LINE webhook service
 func NewLINEWebhookService(merchantRepo repositories.MerchantRepository, cryptoService *CryptoService, slipVerificationService *SlipVerificationService, baseURL string) *LINEWebhookService {
 	service := &LINEWebhookService{
-		merchantRepo: merchantRepo,
-		cryptoService: cryptoService,
+		merchantRepo:            merchantRepo,
+		cryptoService:           cryptoService,
 		slipVerificationService: slipVerificationService,
-		baseURL: baseURL,
-		lineUserIDs: make(map[uuid.UUID]string),
+		baseURL:                 baseURL,
+		lineUserIDs:             make(map[uuid.UUID]string),
 	}
 
 	// Register verification callback if slip service is available
@@ -125,9 +125,9 @@ func (s *LINEWebhookService) TestLINEWebhook(merchantID uuid.UUID) (*models.LINE
 			WebhookStatus:       "not_configured",
 			ConnectionStatus:    "disconnected",
 			SignatureValidation: "skipped",
-			APIAccess:          "unavailable",
-			TestedAt:           time.Now(),
-			ResponseTimeMs:     0,
+			APIAccess:           "unavailable",
+			TestedAt:            time.Now(),
+			ResponseTimeMs:      0,
 		}, nil
 	}
 
@@ -142,9 +142,9 @@ func (s *LINEWebhookService) TestLINEWebhook(merchantID uuid.UUID) (*models.LINE
 		WebhookStatus:       "active",
 		ConnectionStatus:    "connected",
 		SignatureValidation: "passed",
-		APIAccess:          testResult,
-		TestedAt:           time.Now(),
-		ResponseTimeMs:     responseTime,
+		APIAccess:           testResult,
+		TestedAt:            time.Now(),
+		ResponseTimeMs:      responseTime,
 	}, nil
 }
 
@@ -522,11 +522,7 @@ func (s *LINEWebhookService) sendSlipResultNotification(merchant *models.Merchan
 func (s *LINEWebhookService) handleVerificationCompletion(slip *models.Slip, merchantID uuid.UUID) {
 	log.Printf("Verification completed for slip %s: status=%s", slip.ID, slip.Status)
 
-	// Get LINE user ID from tracking map with mutex protection
-	s.lineUserIDsMutex.RLock()
-	lineUserID, exists := s.lineUserIDs[slip.ID]
-	s.lineUserIDsMutex.RUnlock()
-
+	lineUserID, exists := s.waitForLineUserID(slip.ID, 10, 200*time.Millisecond)
 	if !exists {
 		log.Printf("No LINE user ID found for slip %s, cannot send notification", slip.ID)
 		return
@@ -561,4 +557,22 @@ func (s *LINEWebhookService) handleVerificationCompletion(slip *models.Slip, mer
 	if err := s.sendSlipResultNotification(merchant, slip, lineUserID, accessToken); err != nil {
 		log.Printf("Failed to send verification notification: %v", err)
 	}
+}
+
+func (s *LINEWebhookService) waitForLineUserID(slipID uuid.UUID, attempts int, delay time.Duration) (string, bool) {
+	for i := 0; i < attempts; i++ {
+		s.lineUserIDsMutex.RLock()
+		lineUserID, exists := s.lineUserIDs[slipID]
+		s.lineUserIDsMutex.RUnlock()
+
+		if exists {
+			return lineUserID, true
+		}
+
+		if i < attempts-1 {
+			time.Sleep(delay)
+		}
+	}
+
+	return "", false
 }

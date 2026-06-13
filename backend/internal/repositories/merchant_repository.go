@@ -211,6 +211,18 @@ func (r *merchantRepository) CreateSubscription(subscription *models.Subscriptio
 	query := `
 		INSERT INTO subscriptions (merchant_id, plan_id, status, billing_cycle, stripe_subscription_id, stripe_customer_id, started_at, expires_at, auto_renew)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		ON CONFLICT (merchant_id)
+		DO UPDATE SET
+			plan_id = EXCLUDED.plan_id,
+			status = EXCLUDED.status,
+			billing_cycle = EXCLUDED.billing_cycle,
+			stripe_subscription_id = EXCLUDED.stripe_subscription_id,
+			stripe_customer_id = EXCLUDED.stripe_customer_id,
+			started_at = EXCLUDED.started_at,
+			expires_at = EXCLUDED.expires_at,
+			auto_renew = EXCLUDED.auto_renew,
+			cancelled_at = NULL,
+			updated_at = CURRENT_TIMESTAMP
 		RETURNING id, created_at, updated_at
 	`
 

@@ -3,6 +3,7 @@ package handlers
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -28,21 +29,25 @@ func getMerchantID(c *gin.Context, merchantRepo repositories.MerchantRepository)
 	// Get user ID from JWT context
 	userIDStr, exists := c.Get("user_id")
 	if !exists {
+		log.Printf("getMerchantID: user_id not found in context")
 		return uuid.Nil, errors.New("user_id not found in context")
 	}
 
 	// Parse user ID
 	userID, err := uuid.Parse(userIDStr.(string))
 	if err != nil {
+		log.Printf("getMerchantID: invalid user ID format: %v", err)
 		return uuid.Nil, fmt.Errorf("invalid user ID format: %w", err)
 	}
 
 	// Query merchants table directly by owner_id
 	merchant, err := merchantRepo.FindByOwnerID(userID)
 	if err != nil {
+		log.Printf("getMerchantID: merchant not found for user %s: %v", userID, err)
 		return uuid.Nil, fmt.Errorf("merchant not found for user: %w", err)
 	}
 
+	log.Printf("getMerchantID: successfully found merchant %s for user %s", merchant.ID, userID)
 	return merchant.ID, nil
 }
 

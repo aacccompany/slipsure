@@ -5,8 +5,7 @@ import { Store, ImageIcon, MessageSquare, ArrowRight, ArrowLeft, CheckCircle2, L
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { merchantApi } from '@/services/merchantApi';
-import axios from 'axios';
+import { api, tokenManager } from '@/lib/api-client';
 
 const STEPS = [
   { id: 1, label: 'Shop Profile', icon: Store },
@@ -33,8 +32,7 @@ export default function OnboardingPage() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    if (!token) router.push('/login');
+    if (!tokenManager.isAuthenticated()) router.push('/login');
   }, [router]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -54,19 +52,21 @@ export default function OnboardingPage() {
     setIsLoading(true);
     setError('');
     try {
-      await merchantApi.createProfile({
+      await api.createMerchantProfile({
         shop_name: shopName,
         contact_email: contactEmail || undefined,
         contact_phone: contactPhone || undefined,
         address: address || undefined,
+        business_hours: {
+          open: '09:00',
+          close: '18:00',
+          days: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'],
+        },
         strict_mode: false,
       });
       setStep(2);
     } catch (err) {
-      const msg = axios.isAxiosError(err)
-        ? err.response?.data?.message || 'Failed to save profile.'
-        : 'Failed to save profile.';
-      setError(msg);
+      setError(err instanceof Error ? err.message : 'Failed to save profile.');
     } finally {
       setIsLoading(false);
     }
@@ -80,13 +80,10 @@ export default function OnboardingPage() {
     setIsLoading(true);
     setError('');
     try {
-      await merchantApi.uploadLogo(logoFile);
+      await api.uploadLogo(logoFile);
       setStep(3);
     } catch (err) {
-      const msg = axios.isAxiosError(err)
-        ? err.response?.data?.message || 'Failed to upload logo.'
-        : 'Failed to upload logo.';
-      setError(msg);
+      setError(err instanceof Error ? err.message : 'Failed to upload logo.');
     } finally {
       setIsLoading(false);
     }

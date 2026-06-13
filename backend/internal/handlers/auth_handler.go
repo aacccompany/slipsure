@@ -361,11 +361,22 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 
 // GetProfile handles GET /auth/me
 func (h *AuthHandler) GetProfile(c *gin.Context) {
-	userID := c.GetString("user_id")
+	// Get user ID from context (check existence first)
+	userIDStr, exists := c.Get("user_id")
+	if !exists {
+		log.Printf("GetProfile: user_id not found in context")
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"success": false,
+			"error":   "UNAUTHORIZED",
+			"message": "User not authenticated",
+		})
+		return
+	}
 
 	// Parse UUID
-	userUUID, err := uuid.Parse(userID)
+	userUUID, err := uuid.Parse(userIDStr.(string))
 	if err != nil {
+		log.Printf("GetProfile UUID parsing failed: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
 			"error":   "INVALID_USER_ID",
@@ -394,7 +405,16 @@ func (h *AuthHandler) GetProfile(c *gin.Context) {
 
 // UpdateProfile handles PUT /auth/profile
 func (h *AuthHandler) UpdateProfile(c *gin.Context) {
-	userID := c.GetString("user_id")
+	// Get user ID from context (check existence first)
+	userIDStr, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"success": false,
+			"error":   "UNAUTHORIZED",
+			"message": "User not authenticated",
+		})
+		return
+	}
 
 	var req models.UpdateProfileRequest
 
@@ -410,7 +430,7 @@ func (h *AuthHandler) UpdateProfile(c *gin.Context) {
 	}
 
 	// Parse UUID
-	userUUID, err := uuid.Parse(userID)
+	userUUID, err := uuid.Parse(userIDStr.(string))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
@@ -438,10 +458,19 @@ func (h *AuthHandler) UpdateProfile(c *gin.Context) {
 
 // Logout handles POST /auth/logout
 func (h *AuthHandler) Logout(c *gin.Context) {
-	userID := c.GetString("user_id")
+	// Get user ID from context (check existence first)
+	userIDStr, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"success": false,
+			"error":   "UNAUTHORIZED",
+			"message": "User not authenticated",
+		})
+		return
+	}
 
 	// Parse UUID
-	userUUID, err := uuid.Parse(userID)
+	userUUID, err := uuid.Parse(userIDStr.(string))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,

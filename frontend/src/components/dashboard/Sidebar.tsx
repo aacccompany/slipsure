@@ -3,25 +3,20 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
-  Key,
-  Webhook,
-  History,
-  Settings,
+  Store,
+  User,
   LogOut,
-  CreditCard,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/auth-context';
 
 const menuItems = [
-  { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'API Keys', href: '/dashboard/keys', icon: Key },
-  { name: 'Webhooks', href: '/dashboard/webhooks', icon: Webhook },
-  { name: 'Logs', href: '/dashboard/logs', icon: History },
-  { name: 'Subscription', href: '/dashboard/subscription', icon: CreditCard },
-  { name: 'Settings', href: '/dashboard/settings', icon: Settings },
+  { name: 'Overview', href: '/dashboard', icon: LayoutDashboard, exact: true },
+  { name: 'Merchant', href: '/dashboard/merchant', icon: Store },
+  { name: 'Account', href: '/dashboard/account', icon: User },
 ];
 
 interface DashboardSidebarProps {
@@ -31,12 +26,11 @@ interface DashboardSidebarProps {
 
 export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => {
   const pathname = usePathname();
-  const router = useRouter();
+  const { logout } = useAuth();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     localStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('accessToken');
-    router.push('/login');
+    await logout();
   };
 
   return (
@@ -47,14 +41,16 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
       isOpen ? 'translate-x-0' : '-translate-x-full',
     ].join(' ')}>
       <div className="px-6 py-4 border-b border-zinc-200">
-        <Link href="/" className="flex items-center">
+        <Link href="/dashboard" className="flex items-center" onClick={onClose}>
           <Image src="/logo.png" alt="Flowslip" width={96} height={26} className="h-6 w-auto" priority />
         </Link>
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-0.5">
         {menuItems.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive = item.exact
+            ? pathname === item.href
+            : pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
             <Link
               key={item.href}

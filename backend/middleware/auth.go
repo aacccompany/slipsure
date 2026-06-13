@@ -15,9 +15,13 @@ import (
 // AuthMiddleware validates JWT tokens
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		requestPath := c.Request.URL.Path
+		log.Printf("AuthMiddleware: START %s", requestPath)
+
 		// Get Authorization header
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
+			log.Printf("AuthMiddleware: FAIL - Missing auth header for %s", requestPath)
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"success": false,
 				"error":   "UNAUTHORIZED",
@@ -30,6 +34,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		// Extract token from "Bearer <token>"
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 		if tokenString == authHeader {
+			log.Printf("AuthMiddleware: FAIL - Invalid auth format for %s", requestPath)
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"success": false,
 				"error":   "UNAUTHORIZED",
@@ -42,7 +47,12 @@ func AuthMiddleware() gin.HandlerFunc {
 		// Validate token
 		claims, err := utils.ValidateToken(tokenString)
 		if err != nil {
-			log.Printf(" Auth: Token validation failed: %v", err)
+			log.Printf("AuthMiddleware: FAIL - Token validation failed for %s: %v", requestPath, err)
+			tokenPreview := tokenString
+			if len(tokenString) > 20 {
+				tokenPreview = tokenString[:20] + "..."
+			}
+			log.Printf(" Auth: Failed token preview: %s", tokenPreview)
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"success": false,
 				"error":   "UNAUTHORIZED",
@@ -61,9 +71,11 @@ func AuthMiddleware() gin.HandlerFunc {
 		c.Set("user_role", claims.Role)
 
 		// Debug: log the user ID being set
-		log.Printf("Auth: Setting user_id='%s' for email=%s", claims.UserID, claims.Email)
+		log.Printf("AuthMiddleware: SUCCESS - Setting user_id='%s' for email=%s, path=%s", claims.UserID, claims.Email, requestPath)
 
 		c.Next()
+
+		log.Printf("AuthMiddleware: END %s (after handler)", requestPath)
 	}
 }
 

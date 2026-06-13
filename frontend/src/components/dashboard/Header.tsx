@@ -3,24 +3,27 @@
 import React from 'react';
 import { Search, Bell, Menu } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { dashboardApi } from '@/services/dashboardApi';
+import { api } from '@/lib/api-client';
 
 interface DashboardHeaderProps {
   onMenuClick: () => void;
 }
 
 export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
-  const { data: user } = useQuery({
+  const { data: userData } = useQuery({
     queryKey: ['user-profile'],
-    queryFn: dashboardApi.getUserProfile,
+    queryFn: () => api.getProfile(),
     retry: false,
   });
 
-  const { data: subscription } = useQuery({
+  const { data: subscriptionData } = useQuery({
     queryKey: ['subscription'],
-    queryFn: dashboardApi.getSubscription,
+    queryFn: () => api.getSubscription(),
     retry: false,
   });
+
+  const user = userData?.data;
+  const subscription = subscriptionData?.data?.subscription;
 
   const initials = user?.name
     ? user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)

@@ -14,6 +14,9 @@ type SlipRepository interface {
 	Create(slip *models.Slip) error
 	FindByID(id uuid.UUID) (*models.Slip, error)
 	FindByMerchantID(merchantID uuid.UUID, limit, offset int) ([]*models.Slip, error)
+	CountByMerchantID(merchantID uuid.UUID) (int, error)
+	GetStatsByMerchantID(merchantID uuid.UUID) (*models.SlipStatsResponse, error)
+	GetDailyStatsByMerchantID(merchantID uuid.UUID, days int) ([]models.DailySlipStats, error)
 	UpdateStatus(id uuid.UUID, status models.SlipStatus) error
 	UpdateWithTransaction(slip *models.Slip, transaction *models.Transaction) error
 	CountByMerchantAndDate(merchantID uuid.UUID, date time.Time) (int, error)
@@ -110,6 +113,99 @@ func (r *slipRepository) FindByMerchantID(merchantID uuid.UUID, limit, offset in
 	}
 
 	return slips, nil
+}
+
+// CountByMerchantID counts all slips for a merchant.
+func (r *slipRepository) CountByMerchantID(merchantID uuid.UUID) (int, error) {
+	query := `SELECT COUNT(*) FROM slips WHERE merchant_id = $1`
+
+	var count int
+	if err := r.db.QueryRow(query, merchantID).Scan(&count); err != nil {
+		return 0, fmt.Errorf("failed to count slips: %w", err)
+	}
+
+	return count, nil
+}
+
+// GetStatsByMerchantID retrieves aggregate verification stats for a merchant.
+func (r *slipRepository) GetStatsByMerchantID(merchantID uuid.UUID) (*models.SlipStatsResponse, error) {
+	query := `
+		SELECT
+			COUNT(*)::int AS total,
+			COUNT(*) FILTER (WHERE status = 'verified')::int AS verified,
+			COUNT(*) FILTER (WHERE status = 'failed')::int AS failed,
+			COUNT(*) FILTER (WHERE status = 'pending')::int AS pending,
+			COUNT(*) FILTER (WHERE status = 'processing')::int AS processing
+		FROM slips
+		WHERE merchant_id = $1
+	`
+
+	stats := &models.SlipStatsResponse{}
+	err := r.db.QueryRow(query, merchantID).Scan(
+		&stats.Total,
+		&stats.Verified,
+		&stats.Failed,
+		&stats.Pending,
+		&stats.Processing,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get slip stats: %w", err)
+	}
+
+	completed := stats.Verified + stats.Failed
+	if completed > 0 {
+		stats.SuccessRate = int(float64(stats.Verified)/float64(completed)*100 + 0.5)
+	}
+
+	return stats, nil
+}
+
+// GetDailyStatsByMerchantID retrieves daily verified/failed counts for the last N days.
+func (r *slipRepository) GetDailyStatsByMerchantID(merchantID uuid.UUID, days int) ([]models.DailySlipStats, error) {
+	if days < 1 {
+		days = 7
+	}
+
+	query := `
+		WITH dates AS (
+			SELECT generate_series(
+				CURRENT_DATE - (($2::int - 1) * INTERVAL '1 day'),
+				CURRENT_DATE,
+				INTERVAL '1 day'
+			)::date AS day
+		)
+		SELECT
+			TO_CHAR(dates.day, 'Dy') AS day,
+			COUNT(s.id) FILTER (WHERE s.status = 'verified')::int AS verified,
+			COUNT(s.id) FILTER (WHERE s.status = 'failed')::int AS failed
+		FROM dates
+		LEFT JOIN slips s
+			ON s.merchant_id = $1
+			AND s.created_at::date = dates.day
+		GROUP BY dates.day
+		ORDER BY dates.day ASC
+	`
+
+	rows, err := r.db.Query(query, merchantID, days)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get daily slip stats: %w", err)
+	}
+	defer rows.Close()
+
+	stats := make([]models.DailySlipStats, 0, days)
+	for rows.Next() {
+		var stat models.DailySlipStats
+		if err := rows.Scan(&stat.Day, &stat.Verified, &stat.Failed); err != nil {
+			return nil, err
+		}
+		stats = append(stats, stat)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return stats, nil
 }
 
 // UpdateStatus updates the status of a slip

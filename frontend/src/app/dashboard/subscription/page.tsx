@@ -46,7 +46,11 @@ export default function SubscriptionPage() {
     onSuccess: (response) => {
       if (response.data?.checkout_url) {
         window.location.href = response.data.checkout_url;
+        return;
       }
+      toast.success(response.message || 'Plan updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['subscription'] });
+      queryClient.invalidateQueries({ queryKey: ['quota'] });
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : 'Failed to create checkout session');
@@ -58,7 +62,7 @@ export default function SubscriptionPage() {
   const quota = quotaData?.data;
 
   const handleUpgrade = (planId: string, billingCycle: 'monthly' | 'yearly' = 'monthly') => {
-    checkoutMutation.mutate({ plan_id: planId, billing_cycle });
+    checkoutMutation.mutate({ plan_id: planId, billing_cycle: billingCycle });
   };
 
   const handleCancel = () => {

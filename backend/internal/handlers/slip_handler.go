@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -16,35 +17,27 @@ import (
 type SlipHandler struct {
 	verificationService *services.SlipVerificationService
 	userRepo            repositories.UserRepository
+	merchantRepo        repositories.MerchantRepository
 }
 
 // NewSlipHandler creates a new slip handler
-func NewSlipHandler(verificationService *services.SlipVerificationService, userRepo repositories.UserRepository) *SlipHandler {
+func NewSlipHandler(verificationService *services.SlipVerificationService, userRepo repositories.UserRepository, merchantRepo repositories.MerchantRepository) *SlipHandler {
 	return &SlipHandler{
 		verificationService: verificationService,
 		userRepo:            userRepo,
+		merchantRepo:        merchantRepo,
 	}
 }
 
 // UploadSlip handles POST /slips/upload - upload slip image for verification
 func (h *SlipHandler) UploadSlip(c *gin.Context) {
-	// Get merchant ID from JWT context
-	merchantIDStr, exists := c.Get("merchant_id")
-	if !exists {
+	// Get merchant ID using helper function
+	merchantID, err := getSlipMerchantID(c, h.merchantRepo)
+	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"success": false,
 			"error":   "UNAUTHORIZED",
 			"message": "Merchant profile not found",
-		})
-		return
-	}
-
-	merchantID, err := uuid.Parse(merchantIDStr.(string))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"error":   "INVALID_MERCHANT_ID",
-			"message": "Invalid merchant ID format",
 		})
 		return
 	}
@@ -120,23 +113,13 @@ func (h *SlipHandler) UploadSlip(c *gin.Context) {
 
 // ScanQRData handles POST /slips/scan - submit raw QR data for verification
 func (h *SlipHandler) ScanQRData(c *gin.Context) {
-	// Get merchant ID from JWT context
-	merchantIDStr, exists := c.Get("merchant_id")
-	if !exists {
+	// Get merchant ID using helper function
+	merchantID, err := getSlipMerchantID(c, h.merchantRepo)
+	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"success": false,
 			"error":   "UNAUTHORIZED",
 			"message": "Merchant profile not found",
-		})
-		return
-	}
-
-	merchantID, err := uuid.Parse(merchantIDStr.(string))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"error":   "INVALID_MERCHANT_ID",
-			"message": "Invalid merchant ID format",
 		})
 		return
 	}
@@ -265,23 +248,13 @@ func (h *SlipHandler) ReprocessSlip(c *gin.Context) {
 
 // ListSlips handles GET /slips - list merchant's slips
 func (h *SlipHandler) ListSlips(c *gin.Context) {
-	// Get merchant ID from JWT context
-	merchantIDStr, exists := c.Get("merchant_id")
-	if !exists {
+	// Get merchant ID using helper function
+	merchantID, err := getSlipMerchantID(c, h.merchantRepo)
+	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"success": false,
 			"error":   "UNAUTHORIZED",
 			"message": "Merchant profile not found",
-		})
-		return
-	}
-
-	_, err := uuid.Parse(merchantIDStr.(string))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"error":   "INVALID_MERCHANT_ID",
-			"message": "Invalid merchant ID format",
 		})
 		return
 	}
@@ -300,19 +273,71 @@ func (h *SlipHandler) ListSlips(c *gin.Context) {
 		}
 	}
 
-	// Get slips (this would need to be implemented in repository)
-	// For now, return empty list
+	offset := (page - 1) * limit
+	slips, err := h.verificationService.ListSlips(merchantID, limit, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "INTERNAL_ERROR",
+			"message": "Failed to list slips",
+		})
+		return
+	}
+
+	total, err := h.verificationService.CountSlips(merchantID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "INTERNAL_ERROR",
+			"message": "Failed to count slips",
+		})
+		return
+	}
+
+	totalPages := 0
+	if total > 0 {
+		totalPages = (total + limit - 1) / limit
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"data": gin.H{
-			"items": []interface{}{},
+			"slips": slips,
 			"pagination": gin.H{
 				"page":        page,
 				"limit":       limit,
-				"total":       0,
-				"total_pages": 0,
+				"total":       total,
+				"total_pages": totalPages,
 			},
 		},
+	})
+}
+
+// GetSlipStats handles GET /slips/stats - get merchant slip aggregate stats
+func (h *SlipHandler) GetSlipStats(c *gin.Context) {
+	merchantID, err := getSlipMerchantID(c, h.merchantRepo)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"success": false,
+			"error":   "UNAUTHORIZED",
+			"message": "Merchant profile not found",
+		})
+		return
+	}
+
+	stats, err := h.verificationService.GetSlipStats(merchantID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "INTERNAL_ERROR",
+			"message": "Failed to get slip stats",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    stats,
 	})
 }
 
@@ -341,4 +366,27 @@ func parseLimit(s string) (int, error) {
 		return 100, nil
 	}
 	return limit, nil
+}
+
+// Helper function to get merchant ID by querying merchants by owner_id from user ID in JWT
+func getSlipMerchantID(c *gin.Context, merchantRepo repositories.MerchantRepository) (uuid.UUID, error) {
+	// Get user ID from JWT context
+	userIDStr, exists := c.Get("user_id")
+	if !exists {
+		return uuid.Nil, errors.New("user_id not found in context")
+	}
+
+	// Parse user ID
+	userID, err := uuid.Parse(userIDStr.(string))
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("invalid user ID format: %w", err)
+	}
+
+	// Find merchant by owner ID
+	merchant, err := merchantRepo.FindByOwnerID(userID)
+	if err != nil {
+		return uuid.Nil, errors.New("merchant profile not found")
+	}
+
+	return merchant.ID, nil
 }
