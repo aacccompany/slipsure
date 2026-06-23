@@ -144,12 +144,8 @@ func (s *authService) Login(req *models.LoginRequest) (*models.AuthResponse, err
 
 	// Verify password
 	if !utils.CheckPassword(req.Password, user.PasswordHash) {
+		log.Printf("Login failed for %s: password mismatch", req.Email)
 		return nil, errors.New("invalid email or password")
-	}
-
-	// Check if email is verified
-	if !user.EmailVerified {
-		return nil, errors.New("please verify your email before logging in. Check your inbox for the OTP code")
 	}
 
 	// Generate JWT token
@@ -447,8 +443,7 @@ func (s *authService) ResetPassword(req *models.ResetPasswordRequest) error {
 	}
 
 	// Update user password
-	user.PasswordHash = hashedPassword
-	if err := s.userRepo.Update(user); err != nil {
+	if err := s.userRepo.UpdatePassword(user.ID, hashedPassword); err != nil {
 		log.Printf("Error updating password: %v", err)
 		return errors.New("failed to update password")
 	}

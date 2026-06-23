@@ -1,16 +1,34 @@
 package middleware
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
 
-	"slipsure-backend/internal/utils"
 	"slipsure-backend/internal/repositories"
+	"slipsure-backend/internal/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
+
+// RequireRole restricts a route to authenticated users with the requested role.
+func RequireRole(role string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userRole, exists := c.Get("user_role")
+		if !exists || fmt.Sprint(userRole) != role {
+			c.JSON(http.StatusForbidden, gin.H{
+				"success": false,
+				"error":   "FORBIDDEN",
+				"message": "You do not have permission to access this resource",
+			})
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
 
 // AuthMiddleware validates JWT tokens
 func AuthMiddleware() gin.HandlerFunc {

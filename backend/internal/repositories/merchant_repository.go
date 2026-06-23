@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -24,6 +25,8 @@ type MerchantRepository interface {
 	FindByMerchantID(merchantID uuid.UUID) (*models.Subscription, error)
 	UpdateSubscription(subscription *models.Subscription) error
 	CancelSubscription(merchantID uuid.UUID, reason string) error
+	CreatePaymentLog(payment *models.PaymentLog) error
+	ListPaymentLogs(status string, limit, offset int) ([]models.PaymentLog, int, error)
 
 	// Plan operations
 	GetAllPlans() ([]models.SubscriptionPlan, error)
@@ -36,6 +39,7 @@ type MerchantRepository interface {
 	// Quota operations
 	GetQuotaStatus(merchantID uuid.UUID) (*models.QuotaStatus, error)
 	UpdateUsageCounter(merchantID uuid.UUID, year, month int, increment int) error
+	ResetUsageCounter(merchantID uuid.UUID, year, month int) error
 
 	// LINE webhook operations
 	GetLINEWebhookConfig(merchantID uuid.UUID) (*models.LINEWebhookConfig, error)
@@ -245,6 +249,118 @@ func (r *merchantRepository) CreateSubscription(subscription *models.Subscriptio
 	return nil
 }
 
+// CreatePaymentLog records a Stripe payment once per Checkout Session.
+func (r *merchantRepository) CreatePaymentLog(payment *models.PaymentLog) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Stripe may deliver payment_intent.succeeded and checkout.session.completed
+	// concurrently. Serialize writes for the same Checkout Session reference.
+	lockKey := payment.Gateway + ":" + payment.GatewayReferenceID
+	if _, err := tx.Exec(`SELECT pg_advisory_xact_lock(hashtext($1))`, lockKey); err != nil {
+		return err
+	}
+
+	query := `
+		INSERT INTO payment_logs (
+			merchant_id, subscription_id, amount, currency, gateway,
+			gateway_reference_id, status, paid_at
+		)
+		SELECT $1::uuid, $2::uuid, $3::numeric, $4::varchar,
+		       $5::payment_gateway, $6::varchar, $7::payment_status, $8::timestamptz
+		WHERE NOT EXISTS (
+			SELECT 1 FROM payment_logs
+			WHERE gateway = $5::payment_gateway
+			  AND gateway_reference_id = $6::varchar
+		)
+		RETURNING id, created_at
+	`
+
+	err = tx.QueryRow(
+		query,
+		payment.MerchantID,
+		payment.SubscriptionID,
+		payment.Amount,
+		payment.Currency,
+		payment.Gateway,
+		payment.GatewayReferenceID,
+		payment.Status,
+		payment.PaidAt,
+	).Scan(&payment.ID, &payment.CreatedAt)
+	if err == sql.ErrNoRows {
+		return tx.Commit()
+	}
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// ListPaymentLogs retrieves paginated payment history for admins.
+func (r *merchantRepository) ListPaymentLogs(status string, limit, offset int) ([]models.PaymentLog, int, error) {
+	where := ""
+	args := []interface{}{}
+	if status != "" {
+		where = "WHERE p.status = $1"
+		args = append(args, status)
+	}
+
+	countQuery := "SELECT COUNT(*) FROM payment_logs p " + where
+	var total int
+	if err := r.db.QueryRow(countQuery, args...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	limitPosition := len(args) + 1
+	offsetPosition := len(args) + 2
+	query := fmt.Sprintf(`
+		SELECT p.id, p.merchant_id, m.shop_name, p.subscription_id,
+		       p.amount, p.currency, p.gateway::text, p.gateway_reference_id,
+		       p.status::text, p.paid_at, p.created_at
+		FROM payment_logs p
+		JOIN merchants m ON m.id = p.merchant_id
+		%s
+		ORDER BY p.created_at DESC
+		LIMIT $%d OFFSET $%d
+	`, where, limitPosition, offsetPosition)
+	args = append(args, limit, offset)
+
+	rows, err := r.db.Query(query, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	payments := make([]models.PaymentLog, 0)
+	for rows.Next() {
+		var payment models.PaymentLog
+		if err := rows.Scan(
+			&payment.ID,
+			&payment.MerchantID,
+			&payment.MerchantName,
+			&payment.SubscriptionID,
+			&payment.Amount,
+			&payment.Currency,
+			&payment.Gateway,
+			&payment.GatewayReferenceID,
+			&payment.Status,
+			&payment.PaidAt,
+			&payment.CreatedAt,
+		); err != nil {
+			return nil, 0, err
+		}
+		payments = append(payments, payment)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+
+	return payments, total, nil
+}
+
 // FindByMerchantID retrieves subscription by merchant ID
 func (r *merchantRepository) FindByMerchantID(merchantID uuid.UUID) (*models.Subscription, error) {
 	query := `
@@ -301,7 +417,8 @@ func (r *merchantRepository) FindByMerchantID(merchantID uuid.UUID) (*models.Sub
 	subscription.Plan = &plan
 
 	// Load usage statistics
-	subscription.UsageThisMonth = r.getUsageThisMonth(merchantID)
+	periodStart, _ := models.QuotaPeriodFor(subscription.StartedAt, time.Now())
+	subscription.UsageThisMonth = r.getUsageForPeriod(merchantID, periodStart)
 	subscription.RemainingQuota = plan.QuotaPerMonth - subscription.UsageThisMonth
 
 	return &subscription, nil
@@ -481,12 +598,8 @@ func (r *merchantRepository) GetQuotaStatus(merchantID uuid.UUID) (*models.Quota
 		return nil, err
 	}
 
-	// Get current usage
-	now := time.Now()
-	used := r.getUsageThisMonth(merchantID)
-
-	// Calculate reset date (first day of next month)
-	resetDate := time.Date(now.Year(), now.Month()+1, 1, 0, 0, 0, 0, now.Location())
+	periodStart, resetDate := models.QuotaPeriodFor(subscription.StartedAt, time.Now())
+	used := r.getUsageForPeriod(merchantID, periodStart)
 
 	quotaLimit := subscription.Plan.QuotaPerMonth
 	remaining := quotaLimit - used
@@ -516,6 +629,23 @@ func (r *merchantRepository) UpdateUsageCounter(merchantID uuid.UUID, year, mont
 	return err
 }
 
+// ResetUsageCounter starts a fresh quota bucket for a newly activated plan period.
+func (r *merchantRepository) ResetUsageCounter(merchantID uuid.UUID, year, month int) error {
+	query := `
+		INSERT INTO usage_counters (merchant_id, year, month, scan_count, success_count, failed_count)
+		VALUES ($1, $2, $3, 0, 0, 0)
+		ON CONFLICT (merchant_id, year, month)
+		DO UPDATE SET
+			scan_count = 0,
+			success_count = 0,
+			failed_count = 0,
+			updated_at = CURRENT_TIMESTAMP
+	`
+
+	_, err := r.db.Exec(query, merchantID, year, month)
+	return err
+}
+
 // Helper functions
 
 func (r *merchantRepository) getBusinessHours(merchantID uuid.UUID) *models.BusinessHours {
@@ -532,8 +662,7 @@ func (r *merchantRepository) updateBusinessHours(merchantID uuid.UUID, hours *mo
 	return nil
 }
 
-func (r *merchantRepository) getUsageThisMonth(merchantID uuid.UUID) int {
-	now := time.Now()
+func (r *merchantRepository) getUsageForPeriod(merchantID uuid.UUID, periodStart time.Time) int {
 	query := `
 		SELECT COALESCE(scan_count, 0)
 		FROM usage_counters
@@ -541,7 +670,7 @@ func (r *merchantRepository) getUsageThisMonth(merchantID uuid.UUID) int {
 	`
 
 	var count int
-	err := r.db.QueryRow(query, merchantID, now.Year(), int(now.Month())).Scan(&count)
+	err := r.db.QueryRow(query, merchantID, periodStart.Year(), int(periodStart.Month())).Scan(&count)
 	if err != nil {
 		return 0
 	}

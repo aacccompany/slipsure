@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"slipsure-backend/internal/models"
@@ -99,10 +100,10 @@ func (s *StripeService) CreateCheckoutSession(userID uuid.UUID, userEmail string
 	params := &stripe.CheckoutSessionParams{
 		Customer:           stripe.String(customerID),
 		PaymentMethodTypes: stripe.StringSlice([]string{"card", "promptpay"}), // PromptPay works in one-time mode!
-		Mode:               stripe.String("payment"), // One-time payment mode (not subscription)
+		Mode:               stripe.String("payment"),                          // One-time payment mode (not subscription)
 		SuccessURL:         stripe.String(s.successURL),
 		CancelURL:          stripe.String(s.cancelURL),
-		Locale:             stripe.String("th"),  // Thai locale
+		Locale:             stripe.String("th"), // Thai locale
 		LineItems: []*stripe.CheckoutSessionLineItemParams{
 			{
 				Price:    stripe.String(priceID),
@@ -140,10 +141,14 @@ func (s *StripeService) CreateCheckoutSession(userID uuid.UUID, userEmail string
 
 // ProcessWebhook processes incoming Stripe webhook events
 func (s *StripeService) ProcessWebhook(payload []byte, signature string) (stripe.Event, error) {
-	// Verify webhook signature
-	event, err := webhook.ConstructEvent(payload, signature, s.webhookSecret)
+	event, err := webhook.ConstructEventWithOptions(
+		payload,
+		signature,
+		s.webhookSecret,
+		webhook.ConstructEventOptions{IgnoreAPIVersionMismatch: true},
+	)
 	if err != nil {
-		return stripe.Event{}, fmt.Errorf("webhook signature verification failed: %v", err)
+		return stripe.Event{}, fmt.Errorf("failed to construct webhook event: %w", err)
 	}
 
 	return event, nil
@@ -152,29 +157,81 @@ func (s *StripeService) ProcessWebhook(payload []byte, signature string) (stripe
 // HandleCheckoutSessionCompleted handles checkout.session.completed event
 func (s *StripeService) HandleCheckoutSessionCompleted(event stripe.Event) (uuid.UUID, string, string, string, string, error) {
 	// Parse the checkout session from the event
-	var session stripe.CheckoutSession
-	err := json.Unmarshal(event.Data.Raw, &session)
+	var checkoutSession stripe.CheckoutSession
+	err := json.Unmarshal(event.Data.Raw, &checkoutSession)
 	if err != nil {
 		return uuid.Nil, "", "", "", "", err
 	}
 
-	// Extract data from session
-	checkoutSessionID := session.ID
-	customerID := session.Customer.ID
-	userID := session.Metadata["user_id"]
-	planID := session.Metadata["plan_id"]
-	billingCycle := session.Metadata["billing_cycle"]
+	return checkoutSessionActivationData(&checkoutSession)
+}
+
+// HandlePaymentIntentSucceeded resolves the originating Checkout Session and returns activation data.
+func (s *StripeService) HandlePaymentIntentSucceeded(event stripe.Event) (uuid.UUID, string, string, string, string, error) {
+	checkoutSessionID, err := checkoutSessionIDFromPaymentIntent(event.Data.Raw)
+	if err != nil {
+		return uuid.Nil, "", "", "", "", err
+	}
+
+	checkoutSession, err := session.Get(checkoutSessionID, nil)
+	if err != nil {
+		return uuid.Nil, "", "", "", "", fmt.Errorf("failed to retrieve checkout session %s: %w", checkoutSessionID, err)
+	}
+
+	return checkoutSessionActivationData(checkoutSession)
+}
+
+// GetCheckoutSessionPayment returns the amount Stripe actually collected.
+func (s *StripeService) GetCheckoutSessionPayment(checkoutSessionID string) (float64, string, error) {
+	checkoutSession, err := session.Get(checkoutSessionID, nil)
+	if err != nil {
+		return 0, "", fmt.Errorf("failed to retrieve checkout session %s: %w", checkoutSessionID, err)
+	}
+	if checkoutSession.PaymentStatus != stripe.CheckoutSessionPaymentStatusPaid {
+		return 0, "", fmt.Errorf("checkout session %s is not paid", checkoutSessionID)
+	}
+
+	return float64(checkoutSession.AmountTotal) / 100, strings.ToUpper(string(checkoutSession.Currency)), nil
+}
+
+func checkoutSessionIDFromPaymentIntent(raw json.RawMessage) (string, error) {
+	var paymentIntent struct {
+		PaymentDetails struct {
+			OrderReference string `json:"order_reference"`
+		} `json:"payment_details"`
+	}
+	if err := json.Unmarshal(raw, &paymentIntent); err != nil {
+		return "", fmt.Errorf("failed to parse payment intent: %w", err)
+	}
+	if !strings.HasPrefix(paymentIntent.PaymentDetails.OrderReference, "cs_") {
+		return "", errors.New("payment intent does not reference a checkout session")
+	}
+
+	return paymentIntent.PaymentDetails.OrderReference, nil
+}
+
+func checkoutSessionActivationData(checkoutSession *stripe.CheckoutSession) (uuid.UUID, string, string, string, string, error) {
+	if checkoutSession == nil || checkoutSession.ID == "" {
+		return uuid.Nil, "", "", "", "", errors.New("checkout session is missing")
+	}
+	if checkoutSession.Customer == nil || checkoutSession.Customer.ID == "" {
+		return uuid.Nil, "", "", "", "", errors.New("checkout session customer is missing")
+	}
+
+	userID := checkoutSession.Metadata["user_id"]
+	planID := checkoutSession.Metadata["plan_id"]
+	billingCycle := checkoutSession.Metadata["billing_cycle"]
+	if userID == "" || planID == "" || billingCycle == "" {
+		return uuid.Nil, "", "", "", "", errors.New("checkout session metadata is incomplete")
+	}
 
 	// Parse UUID
 	userUUID, err := uuid.Parse(userID)
 	if err != nil {
-		return uuid.Nil, "", "", "", "", err
+		return uuid.Nil, "", "", "", "", fmt.Errorf("invalid checkout user ID: %w", err)
 	}
 
-	// In payment mode, there's no subscription object from Stripe
-	// We'll use checkout session ID as the reference and manage subscription ourselves
-
-	return userUUID, checkoutSessionID, customerID, planID, billingCycle, nil
+	return userUUID, checkoutSession.ID, checkoutSession.Customer.ID, planID, billingCycle, nil
 }
 
 // HandleSubscriptionDeleted handles customer.subscription.deleted event
@@ -275,8 +332,7 @@ func (s *StripeService) VerifyWebhookSignature(payload []byte, signature string)
 		return errors.New("webhook secret not configured")
 	}
 
-	_, err := webhook.ConstructEvent(payload, signature, s.webhookSecret)
-	return err
+	return webhook.ValidatePayload(payload, signature, s.webhookSecret)
 }
 
 // GetCustomer retrieves a Stripe customer

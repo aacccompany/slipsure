@@ -15,7 +15,7 @@
 4. [Module 3 — Slip Verification Engine](#3-slip-verification-engine)
 5. [Module 4 — Transaction & History](#4-transaction--history)
 6. [Module 5 — LINE Bot & Notification](#5-line-bot--notification)
-   - [5.1 Webhook Management (Future)](#51-webhook-management-future)
+   - [5.1 Custom Webhook Management (Future)](#51-custom-webhook-management-future)
    - [5.2 Bank Validation](#52-bank-validation)
    - [5.3 Custom Branding (Future)](#53-custom-branding-future)
 7. [Module 6 — Admin Backoffice](#6-admin-backoffice)
@@ -27,12 +27,12 @@
 
 ## Architecture Overview
 
-**Service Model:** Single LINE Bot serving multiple merchants
+**Service Model:** One merchant per LINE Bot / LINE Official Account
 
 ```
 ┌─────────────────┐    ┌──────────────┐    ┌─────────────┐
-│ Customer        │───▶│ Your LINE Bot│───▶│ Your API    │
-│ (sends slip)    │    │ (single bot) │    │             │
+│ Customer        │───▶│ Merchant Bot │───▶│ Your API    │
+│ (sends slip)    │    │ Merchant Bot │    │             │
 └─────────────────┘    └──────────────┘    └─────────────┘
                                               │
                                               ▼
@@ -43,11 +43,12 @@
 ```
 
 **Key Points:**
-- **One LINE Bot** (yours) serves all merchants
-- **No per-merchant LINE Bot setup** needed
+- **Each merchant uses their own LINE Bot / LINE Official Account**
+- **Each merchant configures their own LINE channel ID, channel secret, and access token**
+- **SlipSure generates a unique webhook URL per merchant**
 - **Bank validation** is the core feature (verifies genuine transactions)
 - **Simple merchant profiles** (shop name, contact info)
-- **Customer flow**: Send slip → Select merchant → Get verification
+- **Customer flow**: Send slip to merchant bot → SlipSure verifies → Get verification
 
 **MVP Features:**
 - ✅ Slip verification with bank validation
@@ -66,7 +67,7 @@
 **Future Features:**
 - 🔧 Custom webhooks
 - 🔧 White-label branding
-- 🔧 Per-merchant LINE Bots
+- 🔧 Shared SlipSure LINE Bot marketplace/discovery flow
 
 ---
 
@@ -822,42 +823,9 @@ Get current quota status.
 
 ## 3. Slip Verification Engine
 
-### POST `/slips/upload`
-Upload slip image for verification. *(multipart/form-data)*
+Slip verification is started from LINE only. Customers send a slip image to the merchant's LINE Bot, LINE calls `POST /line/webhook/:ref_id`, and the backend downloads the image and runs verification internally.
 
-**Request:** `file`: image file (jpg/png)
-
-**Response 202:**
-```json
-{
-  "success": true,
-  "message": "Slip received and queued for verification.",
-  "data": {
-    "slip_id": "slip-uuid",
-    "status": "processing",
-    "estimated_seconds": 3
-  }
-}
-```
-
----
-
-### POST `/slips/scan`
-Submit raw QR data from scanner.
-
-**Request:**
-```json
-{ "qr_raw_data": "00020101021..." }
-```
-**Response 202:**
-```json
-{
-  "success": true,
-  "data": { "slip_id": "slip-uuid", "status": "processing" }
-}
-```
-
----
+The `/slips/*` endpoints are dashboard support endpoints for viewing results and stats. They are not part of the normal customer verification flow.
 
 ### GET `/slips/:slip_id`
 Get verification result for a slip.
@@ -902,12 +870,38 @@ Get verification result for a slip.
 
 ---
 
-### POST `/slips/:slip_id/reprocess`
-Manually trigger re-verification.
+### GET `/slips`
+List merchant slips for dashboard history.
 
-**Response 202:**
+**Query Params:** `page`, `limit`
+
+**Response 200:**
 ```json
-{ "success": true, "message": "Slip queued for reprocessing.", "data": { "slip_id": "slip-uuid", "status": "processing" } }
+{
+  "success": true,
+  "data": {
+    "slips": [],
+    "pagination": { "page": 1, "limit": 20, "total": 0 }
+  }
+}
+```
+
+---
+
+### GET `/slips/stats`
+Get merchant slip verification stats for dashboard overview.
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": {
+    "total_slips": 0,
+    "verified_slips": 0,
+    "failed_slips": 0,
+    "success_rate": 0
+  }
+}
 ```
 
 ---
@@ -978,58 +972,6 @@ Get single transaction detail.
 
 ---
 
-### POST `/transactions/:id/retry`
-Retry verification on a failed transaction.
-
-**Response 202:**
-```json
-{ "success": true, "message": "Retry queued.", "data": { "transaction_id": "txn-uuid", "status": "pending" } }
-```
-
----
-
-### PUT `/transactions/:id/confirm`
-Admin manual confirmation for duplicate prevention and workflow management.
-
-**Request:**
-```json
-{
-  "confirmed": true,
-  "admin_id": "admin-uuid",
-  "note": "Goods sent, customer confirmed in chat"
-}
-```
-
-**Response 200:**
-```json
-{
-  "success": true,
-  "message": "Transaction confirmed and marked as processed.",
-  "data": {
-    "transaction_id": "txn-uuid",
-    "confirmed_at": "2025-05-18T10:45:00Z",
-    "confirmed_by": "admin-uuid",
-    "status": "completed"
-  }
-}
-```
-
----
-
-### POST `/transactions/:id/manual-recheck`
-Admin manually recheck and override status.
-
-**Request:**
-```json
-{ "status": "success", "note": "Verified by ops team" }
-```
-**Response 200:**
-```json
-{ "success": true, "message": "Transaction status updated manually." }
-```
-
----
-
 ### GET `/transactions/export`
 Export transactions as CSV/Excel.
 
@@ -1041,14 +983,83 @@ Export transactions as CSV/Excel.
 
 ## 5. LINE Bot & Notification
 
-### POST `/line/webhook`
+Merchants connect their own LINE Bot / LINE Official Account by saving LINE Messaging API credentials. SlipSure generates a merchant-specific webhook URL that the merchant enters in the LINE Developers console.
+
+### GET `/merchants/me/line-webhook`
+Get the current merchant LINE webhook configuration.
+
+**Response 200:**
+```json
+{
+  "config": {
+    "is_configured": true,
+    "line_channel_id": "2000000000",
+    "webhook_reference_id": "A1b2",
+    "webhook_url": "https://api.yourdomain.com/v1/line/webhook/A1b2"
+  }
+}
+```
+
+---
+
+### PUT `/merchants/me/line-webhook`
+Create or update the merchant LINE webhook configuration.
+
+**Request:**
+```json
+{
+  "line_channel_id": "2000000000",
+  "line_channel_secret": "line-channel-secret",
+  "line_access_token": "line-access-token"
+}
+```
+
+**Response 200:**
+```json
+{
+  "message": "LINE webhook configuration updated successfully",
+  "config": {
+    "is_configured": true,
+    "webhook_reference_id": "A1b2",
+    "webhook_url": "https://api.yourdomain.com/v1/line/webhook/A1b2"
+  }
+}
+```
+
+---
+
+### DELETE `/merchants/me/line-webhook`
+Remove the merchant LINE webhook configuration.
+
+**Response 200:**
+```json
+{ "message": "LINE webhook configuration deleted successfully" }
+```
+
+---
+
+### GET `/merchants/me/webhook-url`
+Return the generated LINE webhook URL for the merchant.
+
+**Response 200:**
+```json
+{
+  "webhook_url": "https://api.yourdomain.com/v1/line/webhook/A1b2",
+  "webhook_reference_id": "A1b2"
+}
+```
+
+---
+
+### POST `/line/webhook/:ref_id`
 Receive LINE messaging API events. *(LINE Platform → Server)*
 
 **Architecture:**
-- **Single LINE Bot** serves all merchants
-- Customers send slips to **your main LINE Bot**
-- Your API identifies the target merchant from customer selection
-- Processed results are returned to the customer
+- **One merchant = one LINE Bot / LINE Official Account**
+- Each merchant has their own LINE channel ID, channel secret, and access token
+- SlipSure generates a unique webhook URL for each merchant
+- Customers send slips directly to the merchant's LINE Bot
+- Processed results are returned in that merchant LINE chat
 
 **Request (from LINE):**
 ```json
@@ -1070,28 +1081,17 @@ Receive LINE messaging API events. *(LINE Platform → Server)*
 ```
 
 **Implementation Notes:**
-- Use your existing LINE Messaging API configuration
-- Customer flow: Send slip → Select merchant → Get verification result
+- Use the merchant's saved LINE Messaging API configuration
+- Customer flow: Send slip to merchant bot → SlipSure verifies → Get verification result
 - Merchant flow: See verified transactions in dashboard
-- No per-merchant LINE Bot setup needed
 
 ---
 
-### POST `/notifications/:id/retry`
-Retry failed notification delivery.
-
-**Response 200:**
-```json
-{ "success": true, "message": "Notification retry queued." }
-```
-
----
-
-## 5.1 Webhook Management (Future Feature)
+## 5.1 Custom Webhook Management (Future Feature)
 
 **NOT IMPLEMENTED IN MVP**
 
-Webhook management will be available in future versions, allowing merchants to:
+Custom webhook management will be available in future versions, allowing merchants to:
 - Register custom webhook URLs for real-time notifications
 - Configure event types (slip.verified, slip.failed, slip.duplicate)
 - Test webhook delivery
@@ -1214,7 +1214,7 @@ Custom branding will be available in future versions, allowing merchants to:
 - Set brand colors and themes
 - Configure white-label options
 
-**For MVP:** All merchants use the default SlipSure branding with your main LINE Bot.
+**For MVP:** Merchants use their own LINE Bot with default SlipSure result messages.
 
 ---
 
@@ -1323,7 +1323,7 @@ Suspend a subscription.
 ### GET `/admin/payments`
 List payment logs.
 
-**Query Params:** `status=pending|success|failed`, `page`, `limit`
+**Query Params:** `status=pending|success|failed|refunded`, `page`, `limit` (maximum 100)
 
 **Response 200:**
 ```json

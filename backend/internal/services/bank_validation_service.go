@@ -13,9 +13,9 @@ import (
 
 // BankValidationService handles bank API validation
 type BankValidationService struct {
-	mockMode   bool
-	apiKey     string
-	apiURL     string
+	mockMode bool
+	apiKey   string
+	apiURL   string
 }
 
 // NewBankValidationService creates a new bank validation service
@@ -43,6 +43,14 @@ func (s *BankValidationService) ValidateTransaction(emvData *models.EMVCoData, m
 func (s *BankValidationService) mockValidateTransaction(emvData *models.EMVCoData, merchantID uuid.UUID) (*models.Transaction, error) {
 	// Simulate API delay
 	time.Sleep(time.Duration(200+rand.Intn(300)) * time.Millisecond)
+
+	if emvData.ReferenceNumber == "" {
+		return nil, fmt.Errorf("mock bank validation failed: missing transaction reference")
+	}
+
+	if emvData.TransactionAmount <= 0 {
+		return nil, fmt.Errorf("mock bank validation failed: missing transaction amount")
+	}
 
 	// Generate mock transaction data
 	now := time.Now()
@@ -76,23 +84,6 @@ func (s *BankValidationService) mockValidateTransaction(emvData *models.EMVCoDat
 		IsDuplicate:     false,
 		CreatedAt:       now,
 		UpdatedAt:       now,
-	}
-
-	// Validate QR data format (more lenient for testing)
-	if emvData.ReferenceNumber == "" {
-		// Generate reference from raw QR data if missing
-		if len(emvData.QRRawData) > 10 {
-			emvData.ReferenceNumber = emvData.QRRawData[:20]
-		} else {
-			emvData.ReferenceNumber = fmt.Sprintf("REF%d", time.Now().Unix())
-		}
-		log.Printf("Generated reference number: %s", emvData.ReferenceNumber)
-	}
-
-	if emvData.TransactionAmount <= 0 {
-		// Set default amount for testing if missing
-		emvData.TransactionAmount = 1500.00
-		log.Printf("Set default transaction amount: 1500.00 THB")
 	}
 
 	// Update transaction with validated data
