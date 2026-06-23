@@ -411,6 +411,14 @@ class ApiClient {
   async getSlipStats(): Promise<ApiResponse<SlipStatsResponse>> {
     return this.request('/v1/slips/stats');
   }
+
+  async uploadSlip(file: File): Promise<ApiResponse<{ slip_id: string; status: SlipStatus; estimated_seconds: number }>> {
+    return this.requestWithFile('/v1/slips/upload', file);
+  }
+
+  async reprocessSlip(slipId: string): Promise<ApiResponse<{ slip_id: string; status: SlipStatus }>> {
+    return this.request(`/v1/slips/${slipId}/reprocess`, { method: 'POST' });
+  }
 }
 
 // Export singleton instance

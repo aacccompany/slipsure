@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Bell, Menu } from 'lucide-react';
+import { Search, Bell, Menu } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
 
@@ -29,7 +29,7 @@ export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
     ? user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
     : 'U';
 
-  const planLabel = subscription?.plan?.name || 'Free';
+  const planLabel = subscription?.plan?.name || subscription?.plan_id || 'Free';
 
   return (
     <header
@@ -37,28 +37,46 @@ export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
       style={{ background: '#fff', borderBottom: '1px solid var(--border)' }}
     >
       {/* Left */}
-      <div className="flex items-center gap-3">
-        <button onClick={onMenuClick} className="md:hidden p-1.5 transition-colors"
-          style={{ color: 'var(--text-muted)' }}>
+      <div className="flex items-center gap-3 md:w-80">
+        <button
+          onClick={onMenuClick}
+          className="md:hidden p-1.5 transition-colors rounded"
+          style={{ color: 'var(--text-muted)' }}
+        >
           <Menu className="w-5 h-5" />
         </button>
-        <span className="font-mono text-[10px] uppercase tracking-widest hidden md:block" style={{ color: 'var(--border-strong)' }}>
-          Dashboard
-        </span>
+
+        <div className="relative hidden md:block w-full">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'var(--text-muted)' }} />
+          <input
+            type="text"
+            placeholder="Search logs, transaction ref..."
+            className="w-full pl-9 pr-4 py-1.5 text-sm focus:outline-none transition-colors"
+            style={{
+              background: 'var(--bg-subtle)',
+              border: '1px solid var(--border)',
+              color: 'var(--navy)',
+            }}
+            onFocus={(e) => (e.target.style.borderColor = 'var(--blue)')}
+            onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
+          />
+        </div>
       </div>
 
       {/* Right */}
       <div className="flex items-center gap-4">
-        <button className="relative transition-colors" style={{ color: 'var(--text-muted)' }}
+        <button
+          className="transition-colors"
+          style={{ color: 'var(--text-muted)' }}
           onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--navy)')}
-          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}>
+          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+        >
           <Bell className="w-4 h-4" />
         </button>
 
         <div className="h-4 w-px" style={{ background: 'var(--border)' }} />
 
         <div className="flex items-center gap-2.5">
-          {/* Avatar */}
           <div
             className="w-7 h-7 flex items-center justify-center text-white text-[11px] font-bold font-mono"
             style={{ background: 'var(--navy)' }}

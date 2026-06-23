@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { LucideIcon } from 'lucide-react';
 
 interface StatCardProps {
@@ -11,17 +11,30 @@ interface StatCardProps {
 
 export const StatCard: React.FC<StatCardProps> = ({ title, value, change, isPositive, icon: Icon }) => {
   return (
-    <div className="bg-white border border-zinc-200 rounded-2xl p-5">
+    <div
+      className="bg-white p-5 transition-colors hover:bg-[var(--bg-subtle)]"
+      style={{ border: '1px solid var(--border)' }}
+    >
       <div className="flex items-center justify-between mb-4">
-        <Icon className="w-4 h-4 text-zinc-400" />
+        <Icon className="w-4 h-4" style={{ color: 'var(--blue)' }} />
         {change && (
-          <span className={`font-mono text-[10px] uppercase tracking-widest ${isPositive ? 'text-blue-700' : 'text-rose-400'}`}>
-            {isPositive ? '+' : ''}{change}
+          <span
+            className="font-mono text-[10px] uppercase tracking-widest"
+            style={{ color: isPositive ? 'var(--blue)' : '#EF4444' }}
+          >
+            {change}
           </span>
         )}
       </div>
-      <p className="font-mono text-[10px] text-zinc-400 uppercase tracking-widest mb-1">{title}</p>
-      <h3 className="text-2xl font-bold text-zinc-900 tracking-tight">{value}</h3>
+      <p className="font-mono text-[9px] uppercase tracking-widest mb-1.5" style={{ color: 'var(--text-muted)' }}>
+        {title}
+      </p>
+      <h3
+        className="font-bold tracking-tight"
+        style={{ fontSize: '1.6rem', color: 'var(--navy)', lineHeight: 1, letterSpacing: '-0.02em' }}
+      >
+        {value}
+      </h3>
     </div>
   );
 };
