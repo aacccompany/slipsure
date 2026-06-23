@@ -3,20 +3,32 @@
 import React from 'react';
 
 export const Marquee = () => {
-  const items = [
-    'KASIKORNBANK', 'SCB', 'BANGKOK BANK', 'KRUNGTHAI', 'TTB', 'GSB', 'UOB', 'CIMB',
-  ];
+  const banks = ['KASIKORNBANK', 'SCB', 'KRUNGTHAI', 'BANGKOK BANK', 'TTB', 'GSB', 'UOB', 'CIMB', 'BAY'];
 
   return (
-    <div className="border-b border-zinc-200 bg-zinc-50 overflow-hidden py-3">
+    <div
+      className="relative overflow-hidden py-4"
+      style={{ background: 'var(--navy)', borderTop: '1px solid rgba(0,82,255,0.2)', borderBottom: '1px solid rgba(0,82,255,0.2)' }}
+    >
       <div className="flex animate-marquee whitespace-nowrap">
-        {[...items, ...items].map((item, i) => (
-          <div key={i} className="flex items-center gap-6 mx-8">
-            <span className="font-mono text-[11px] text-zinc-400 tracking-[0.2em] uppercase">{item}</span>
-            <span className="font-mono text-zinc-300 text-xs">/</span>
+        {[...banks, ...banks].map((bank, i) => (
+          <div key={i} className="flex items-center mx-8 gap-6">
+            <span
+              className="font-mono text-[10px] tracking-[0.25em] uppercase"
+              style={{ color: 'rgba(248,250,252,0.4)' }}
+            >
+              {bank}
+            </span>
+            <span style={{ color: 'var(--blue)', fontSize: 7, opacity: 0.5 }}>◆</span>
           </div>
         ))}
       </div>
+
+      {/* Fade edges */}
+      <div className="absolute inset-y-0 left-0 w-16 pointer-events-none"
+        style={{ background: 'linear-gradient(to right, var(--navy), transparent)' }} />
+      <div className="absolute inset-y-0 right-0 w-16 pointer-events-none"
+        style={{ background: 'linear-gradient(to left, var(--navy), transparent)' }} />
     </div>
   );
 };

@@ -2,99 +2,113 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { XCircle, ArrowLeft, ArrowRight, RotateCcw, MessageSquare } from 'lucide-react';
+import { ArrowLeft, RotateCcw, ArrowRight, MessageSquare } from 'lucide-react';
 
 export default function CancelPage() {
   return (
-    <div className="min-h-screen bg-white pt-20">
-      {/* Header bar */}
-      <div className="border-b border-zinc-200 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
+    <div className="min-h-screen pt-20" style={{ background: 'var(--bg)' }}>
+      <div className="thai-pattern fixed inset-0 pointer-events-none" />
+
+      {/* Top bar */}
+      <div className="relative" style={{ borderBottom: '1px solid var(--border)', background: '#fff' }}>
+        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <Link
-              href="/dashboard/subscription"
-              className="flex items-center gap-1.5 text-zinc-400 hover:text-zinc-900 transition-colors text-sm"
-            >
+            <Link href="/dashboard/subscription"
+              className="flex items-center gap-1.5 text-sm transition-colors"
+              style={{ color: 'var(--text-muted)' }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--navy)')}
+              onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}>
               <ArrowLeft className="w-3.5 h-3.5" />
               Back to Plans
             </Link>
-            <div className="h-4 w-px bg-zinc-200" />
+            <div className="h-4 w-px" style={{ background: 'var(--border)' }} />
             <div className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-              <span className="font-mono text-[11px] text-red-500 uppercase tracking-widest">PAYMENT CANCELLED</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+              <span className="font-mono text-[11px] uppercase tracking-widest text-rose-500">
+                Payment Cancelled
+              </span>
             </div>
           </div>
-          <span className="font-mono text-[10px] text-zinc-400">FLOWSLIP / CHECKOUT / CANCEL</span>
+          <span className="font-mono text-[10px]" style={{ color: 'var(--border-strong)' }}>
+            FLOWSLIP / CHECKOUT / CANCEL
+          </span>
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto px-6 py-16">
+      <div className="relative max-w-2xl mx-auto px-6 py-16">
         {/* Main card */}
-        <div className="border border-red-200 p-12 mb-8">
-          {/* Icon */}
-          <div className="flex items-center justify-center w-16 h-16 border border-red-200 bg-red-50 mb-8">
-            <XCircle className="w-8 h-8 text-red-500" />
-          </div>
+        <div className="bg-white mb-8" style={{ border: '1px solid #FECACA' }}>
+          {/* Red top */}
+          <div className="h-1 bg-rose-400" />
 
-          <p className="font-mono text-[11px] text-red-400 uppercase tracking-widest mb-3">/ PAYMENT NOT COMPLETED</p>
-          <h1 className="text-3xl font-black text-zinc-900 tracking-tight mb-4">Payment Cancelled</h1>
-          <p className="text-sm text-zinc-500 mb-10">
-            Your payment was not completed. No charge has been made to your account. You can return to
-            the plans page and try again anytime.
-          </p>
+          <div className="p-10">
+            {/* Icon */}
+            <div className="w-14 h-14 flex items-center justify-center mb-8"
+              style={{ background: '#FEF2F2', border: '1px solid #FECACA' }}>
+              <span className="text-rose-500" style={{ fontSize: 24 }}>✕</span>
+            </div>
 
-          {/* Status rows */}
-          <div className="border border-zinc-100 divide-y divide-zinc-100 mb-10">
-            {[
-              { label: 'Charge',  value: 'None — your card was not charged' },
-              { label: 'Account', value: 'Unchanged — still on Free plan' },
-              { label: 'Session', value: 'Expired' },
-            ].map(({ label, value }) => (
-              <div key={label} className="flex items-center justify-between px-5 py-3">
-                <span className="font-mono text-[11px] text-zinc-400 uppercase tracking-widest">{label}</span>
-                <span className="text-sm font-medium text-zinc-700">{value}</span>
-              </div>
-            ))}
-          </div>
+            <p className="font-mono text-[11px] uppercase tracking-widest mb-3 text-rose-400">
+              / Payment Not Completed
+            </p>
+            <h1 className="font-display text-4xl font-semibold mb-3" style={{ color: 'var(--navy)' }}>
+              Payment Cancelled
+            </h1>
+            <p className="text-sm leading-relaxed mb-10" style={{ color: 'var(--text-muted)' }}>
+              Your payment was not completed. No charge has been made to your account.
+              You can return to the plans page and try again anytime.
+            </p>
 
-          {/* CTAs */}
-          <div className="flex flex-col gap-3">
-            <Link
-              href="/dashboard/subscription"
-              className="flex items-center justify-center gap-2 w-full py-4 bg-zinc-900 text-white text-sm font-bold hover:bg-black transition-colors"
-            >
-              <RotateCcw className="w-4 h-4" />
-              Try Again
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-            <Link
-              href="/dashboard"
-              className="flex items-center justify-center gap-2 w-full py-3 border border-zinc-200 text-zinc-600 text-sm font-medium hover:border-zinc-300 transition-colors"
-            >
-              Return to Dashboard
-            </Link>
+            {/* Status rows */}
+            <div className="mb-10" style={{ border: '1px solid var(--border)' }}>
+              {[
+                { label: 'Charge',  value: 'None — your card was not charged' },
+                { label: 'Account', value: 'Unchanged — still on Free plan' },
+                { label: 'Session', value: 'Expired' },
+              ].map(({ label, value }) => (
+                <div key={label} className="flex items-center justify-between px-5 py-3"
+                  style={{ borderBottom: '1px solid var(--border)' }}>
+                  <span className="font-mono text-[11px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+                    {label}
+                  </span>
+                  <span className="text-sm font-medium" style={{ color: 'var(--navy)' }}>{value}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <Link href="/dashboard/subscription"
+                className="flex items-center justify-center gap-2 w-full py-4 text-sm font-semibold transition-all hover:opacity-90"
+                style={{ background: 'var(--navy)', color: 'var(--gold-pale)' }}>
+                <RotateCcw className="w-4 h-4" />
+                Try Again
+                <span style={{ color: 'var(--gold)' }}>→</span>
+              </Link>
+              <Link href="/dashboard"
+                className="flex items-center justify-center gap-2 w-full py-3 text-sm font-medium border transition-all hover:opacity-75"
+                style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
+                Return to Dashboard
+              </Link>
+            </div>
           </div>
         </div>
 
         {/* Support */}
-        <div className="border border-zinc-100 p-6">
-          <div className="flex items-start gap-4">
-            <div className="w-8 h-8 border border-zinc-100 flex items-center justify-center shrink-0">
-              <MessageSquare className="w-4 h-4 text-zinc-400" />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-zinc-900 mb-1">Need help?</p>
-              <p className="text-xs text-zinc-500 mb-3">
-                If you experienced issues during checkout or were charged unexpectedly, our support team
-                is ready to help.
-              </p>
-              <a
-                href="mailto:support@flowslip.ai"
-                className="font-mono text-[11px] text-blue-800 uppercase tracking-widest hover:underline"
-              >
-                CONTACT SUPPORT →
-              </a>
-            </div>
+        <div className="p-5 flex items-start gap-4" style={{ background: '#fff', border: '1px solid var(--border)' }}>
+          <div className="w-9 h-9 flex items-center justify-center shrink-0"
+            style={{ background: 'var(--gold-pale)', border: '1px solid var(--border)' }}>
+            <MessageSquare className="w-4 h-4" style={{ color: 'var(--gold)' }} />
+          </div>
+          <div>
+            <p className="text-sm font-semibold mb-1" style={{ color: 'var(--navy)' }}>Need help?</p>
+            <p className="text-xs leading-relaxed mb-3" style={{ color: 'var(--text-muted)' }}>
+              If you experienced issues during checkout or were charged unexpectedly, our support team is ready to help.
+            </p>
+            <a href="mailto:support@flowslip.ai"
+              className="font-mono text-[11px] uppercase tracking-widest hover:underline transition-colors"
+              style={{ color: 'var(--gold)' }}>
+              Contact Support →
+            </a>
           </div>
         </div>
       </div>

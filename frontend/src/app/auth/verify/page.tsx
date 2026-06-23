@@ -20,33 +20,24 @@ function VerifyEmailContent() {
 
   useEffect(() => {
     const emailParam = searchParams.get('email');
-    if (emailParam) {
-      setEmail(decodeURIComponent(emailParam));
-    } else {
-      router.push('/login');
-    }
+    if (emailParam) setEmail(decodeURIComponent(emailParam));
+    else router.push('/login');
   }, [searchParams, router]);
 
-  // Countdown timer
   useEffect(() => {
     if (countdown > 0 && !canResend) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
       return () => clearTimeout(timer);
-    } else if (countdown === 0) {
-      setCanResend(true);
-    }
+    } else if (countdown === 0) setCanResend(true);
   }, [countdown, canResend]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !otp) return;
-
-    setIsLoading(true);
-    setError('');
-
+    setIsLoading(true); setError('');
     try {
       await verifyOTP(email, otp);
-      toast.success('Email verified successfully!');
+      toast.success('Email verified!');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Verification failed');
       setIsLoading(false);
@@ -54,108 +45,110 @@ function VerifyEmailContent() {
   };
 
   const handleResend = async () => {
-    setIsLoading(true);
-    setError('');
-    setCountdown(60);
-    setCanResend(false);
-
+    setIsLoading(true); setError(''); setCountdown(60); setCanResend(false);
     try {
       const { api } = await import('@/lib/api-client');
       await api.resendOTP(email);
-      toast.success('New code sent to your email!');
+      toast.success('New code sent!');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to resend code');
+      setError(err instanceof Error ? err.message : 'Failed to resend');
       setCanResend(true);
-    } finally {
-      setIsLoading(false);
-    }
+    } finally { setIsLoading(false); }
   };
 
-  const inputClass = "w-full px-4 py-3 border border-zinc-200 bg-white text-sm text-zinc-900 focus:outline-none focus:border-zinc-900 transition-colors placeholder:text-zinc-400 rounded-lg";
-  const labelClass = "block font-mono text-[10px] text-zinc-400 uppercase tracking-widest mb-2";
-
   return (
-    <div className="min-h-screen bg-zinc-50 flex items-center justify-center p-6">
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen flex items-center justify-center p-6" style={{ background: 'var(--bg)' }}>
+      <div className="thai-pattern fixed inset-0 pointer-events-none" />
 
-        {/* Header */}
+      <div className="relative w-full max-w-sm">
+        <Link href="/login"
+          className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest mb-8 transition-colors"
+          style={{ color: 'var(--text-muted)' }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--gold)')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}>
+          ← Back to Login
+        </Link>
+
         <div className="mb-8">
-          <Link href="/login" className="font-mono text-sm font-bold text-zinc-900 tracking-tight block mb-6">
-            ← FLOWSLIP
-          </Link>
-          <h1 className="text-2xl font-black text-zinc-900 tracking-tight">Verify Email</h1>
-          <p className="font-mono text-[11px] text-zinc-400 uppercase tracking-widest mt-1">
-            <span className="text-blue-700">● </span>CHECK YOUR INBOX
-          </p>
-        </div>
-
-        {/* Card */}
-        <div className="bg-white border border-zinc-200 rounded-2xl overflow-hidden">
-          <div className="p-8 space-y-5">
-            <div className="text-center py-4">
-              <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <p className="text-sm text-zinc-600">
-                We've sent a 6-digit code to <span className="font-medium">{email}</span>
-              </p>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div>
-                <label className={labelClass}>Verification Code</label>
-                <input
-                  type="text"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  placeholder="000000"
-                  className={`${inputClass} text-center tracking-[0.5em] font-mono text-lg`}
-                  maxLength={6}
-                  required
-                />
-              </div>
-
-              {error && (
-                <div className="flex items-center gap-2 text-rose-500 bg-rose-50 border border-rose-200 px-4 py-3">
-                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                  <p className="text-xs">{error}</p>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={isLoading || otp.length !== 6}
-                className="w-full bg-blue-800 text-white py-3 text-sm font-medium hover:bg-blue-900 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
-              >
-                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Verify Email →'}
-              </button>
-
-              <div className="text-center">
-                <button
-                  type="button"
-                  onClick={handleResend}
-                  disabled={!canResend || isLoading}
-                  className="font-mono text-[10px] text-zinc-400 uppercase tracking-widest hover:text-zinc-900 disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  {canResend ? 'Resend Code' : `Resend in ${countdown}s`}
-                </button>
-              </div>
-            </form>
-
-            <div className="pt-4 border-t border-zinc-100">
-              <p className="text-xs text-zinc-500 text-center">
-                Wrong email?{' '}
-                <Link href="/login" className="text-zinc-900 hover:underline font-medium">
-                  Change email address
-                </Link>
-              </p>
-            </div>
+          <h1 className="font-display text-4xl font-semibold mb-1" style={{ color: 'var(--navy)' }}>
+            Verify Email
+          </h1>
+          <div className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: 'var(--gold)' }} />
+            <span className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--gold)' }}>
+              Check Your Inbox
+            </span>
           </div>
         </div>
 
-        <p className="font-mono text-[10px] text-zinc-400 uppercase tracking-widest text-center mt-6">
+        <div className="bg-white p-8 space-y-6" style={{ border: '1px solid var(--border)' }}>
+          {/* Email icon + message */}
+          <div className="flex flex-col items-center gap-3 py-2">
+            <div
+              className="w-14 h-14 flex items-center justify-center"
+              style={{ background: 'var(--gold-pale)', border: '1px solid var(--gold)' }}
+            >
+              <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--gold)' }}>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <p className="text-sm text-center leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+              We sent a 6-digit code to<br />
+              <span className="font-semibold" style={{ color: 'var(--navy)' }}>{email}</span>
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className="block font-mono text-[10px] uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>
+                Verification Code
+              </label>
+              <input
+                type="text" value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="000000" maxLength={6} required
+                className="w-full px-4 py-4 border text-center tracking-[0.5em] font-mono text-xl transition-colors focus:outline-none"
+                style={{ borderColor: 'var(--border)', color: 'var(--navy)' }}
+                onFocus={(e) => (e.target.style.borderColor = 'var(--gold)')}
+                onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
+              />
+            </div>
+
+            {error && (
+              <div className="flex items-center gap-2 px-4 py-3" style={{ background: '#FEF2F2', border: '1px solid #FECACA' }}>
+                <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-500" />
+                <p className="text-xs text-rose-600">{error}</p>
+              </div>
+            )}
+
+            <button type="submit" disabled={isLoading || otp.length !== 6}
+              className="w-full py-3 text-sm font-semibold flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-60"
+              style={{ background: 'var(--navy)', color: 'var(--gold-pale)' }}>
+              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Verify Email <span style={{ color: 'var(--gold)' }}>→</span></>}
+            </button>
+
+            <div className="text-center">
+              <button type="button" onClick={handleResend} disabled={!canResend || isLoading}
+                className="font-mono text-[10px] uppercase tracking-widest transition-colors disabled:opacity-40"
+                style={{ color: canResend ? 'var(--gold)' : 'var(--text-muted)' }}>
+                {canResend ? 'Resend Code' : `Resend in ${countdown}s`}
+              </button>
+            </div>
+          </form>
+
+          <div className="pt-2" style={{ borderTop: '1px solid var(--border)' }}>
+            <p className="text-xs text-center" style={{ color: 'var(--text-muted)' }}>
+              Wrong email?{' '}
+              <Link href="/login" className="font-medium transition-colors" style={{ color: 'var(--navy)' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--gold)')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--navy)')}>
+                Change address
+              </Link>
+            </p>
+          </div>
+        </div>
+
+        <p className="font-mono text-[10px] uppercase tracking-widest text-center mt-6" style={{ color: 'var(--text-muted)' }}>
           © 2026 FLOWSLIP
         </p>
       </div>
@@ -166,8 +159,8 @@ function VerifyEmailContent() {
 export default function VerifyEmailPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-zinc-50 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-zinc-400 animate-spin" />
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg)' }}>
+        <Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--gold)' }} />
       </div>
     }>
       <VerifyEmailContent />

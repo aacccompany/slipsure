@@ -1,24 +1,13 @@
 'use client';
 
 import React from 'react';
-import {
-  ScanLine,
-  ShieldCheck,
-  CreditCard,
-  CalendarClock,
-  Loader2,
-  AlertCircle,
-  CheckCircle2,
-  XCircle,
-  ArrowUpRight,
-} from 'lucide-react';
-import { StatCard } from '@/components/dashboard/StatCard';
+import { Loader2, AlertCircle, ArrowUpRight } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
 import Link from 'next/link';
 
 export default function DashboardPage() {
-  const { data: quota, isLoading: quotaLoading } = useQuery({
+  const { data: quota, isLoading } = useQuery({
     queryKey: ['quota'],
     queryFn: () => api.getQuota(),
   });
@@ -28,164 +17,179 @@ export default function DashboardPage() {
     queryFn: () => api.getSlipStats(),
   });
 
-  // Calculate stats from real data
-  const totalUsed = quota?.data?.used ?? 0;
   const stats = slipStatsData?.data;
-  const successRate = stats?.success_rate ?? 0;
   const dailyUsage = stats?.last_7_days ?? [];
-  const maxDailyCount = Math.max(
-    1,
-    ...dailyUsage.map((data) => data.verified + data.failed)
-  );
+  const maxDailyCount = Math.max(1, ...dailyUsage.map((d) => (d.verified ?? 0) + (d.failed ?? 0)));
+  const usedPct = quota?.data ? Math.min((quota.data.used / quota.data.quota_limit) * 100, 100) : 0;
+  const resetDate = quota?.data?.reset_date
+    ? new Date(quota.data.reset_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })
+    : '—';
 
-  if (quotaLoading) {
+  if (isLoading) {
     return (
       <div className="flex h-[80vh] items-center justify-center">
-        <Loader2 className="w-6 h-6 text-zinc-400 animate-spin" />
+        <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'var(--blue)' }} />
       </div>
     );
   }
 
-  const usedPct = quota?.data ? Math.min((quota.data.used / quota.data.quota_limit) * 100, 100) : 0;
-  const resetDate = quota?.data?.reset_date
-    ? new Date(quota.data.reset_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-    : '—';
-
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 md:p-8 space-y-8" style={{ background: 'var(--bg)' }}>
 
-      {/* Page Header */}
-      <div className="flex items-center justify-between border-b border-zinc-200 pb-4">
+      {/* Page header */}
+      <div className="flex items-end justify-between">
         <div>
-          <p className="font-mono text-[11px] text-zinc-400 uppercase tracking-widest mb-1">/ OVERVIEW</p>
-          <h1 className="text-xl font-bold text-zinc-900 tracking-tight">Dashboard</h1>
+          <p className="font-mono text-[10px] uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>
+            / ภาพรวม
+          </p>
+          <h1 className="font-bold tracking-tight" style={{ fontSize: '1.75rem', color: 'var(--navy)', letterSpacing: '-0.02em' }}>
+            Dashboard
+          </h1>
         </div>
-        <button className="bg-blue-800 text-white px-4 py-2 text-sm hover:bg-blue-900 transition-colors flex items-center gap-2">
-          Download Report
-          <ArrowUpRight className="w-3.5 h-3.5" />
-        </button>
+        <Link href="/pricing"
+          className="flex items-center gap-1.5 text-sm font-medium transition-colors"
+          style={{ color: 'var(--blue)' }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--navy)')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--blue)')}>
+          อัพเกรดแผน <ArrowUpRight className="w-3.5 h-3.5" />
+        </Link>
       </div>
 
       {/* Quota blocked warning */}
       {quota?.data?.is_blocked && (
-        <div className="flex items-center gap-3 bg-rose-50 border border-rose-200 px-4 py-3 rounded-lg">
+        <div className="flex items-center gap-3 px-4 py-3" style={{ background: '#FEF2F2', border: '1px solid #FECACA' }}>
           <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
           <p className="text-sm text-rose-700">
-            Your quota has been exhausted. <Link href="/dashboard/subscription" className="underline font-medium">Upgrade your plan</Link> to continue verifying slips.
+            โควต้าหมดแล้ว{' '}
+            <Link href="/pricing" className="underline font-medium">อัพเกรดแผน</Link>
+            {' '}เพื่อใช้งานต่อ
           </p>
         </div>
       )}
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Slips Verified"
-          value={(quota?.data?.used ?? 0).toLocaleString()}
-          change="This month"
-          isPositive={true}
-          icon={ScanLine}
-        />
-        <StatCard
-          title="Quota Remaining"
-          value={(quota?.data?.remaining ?? 0).toLocaleString()}
-          change={`of ${(quota?.data?.quota_limit ?? 0).toLocaleString()}`}
-          isPositive={(quota?.data?.remaining ?? 0) > 0}
-          icon={ShieldCheck}
-        />
-        <StatCard
-          title="Success Rate"
-          value={`${successRate}%`}
-          change={`${stats?.verified ?? 0} of ${((stats?.verified ?? 0) + (stats?.failed ?? 0)).toLocaleString()} completed`}
-          isPositive={successRate >= 80}
-          icon={CheckCircle2}
-        />
-        <StatCard
-          title="Quota Resets"
-          value={resetDate}
-          change="Next reset"
-          isPositive={true}
-          icon={CalendarClock}
-        />
+      {/* 4 stat blocks — editorial, no cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4" style={{ border: '1px solid var(--border)', background: '#fff' }}>
+        {[
+          { label: 'สลิปที่ใช้ไป', value: (quota?.data?.used ?? 0).toLocaleString(), sub: 'เดือนนี้' },
+          { label: 'โควต้าคงเหลือ', value: (quota?.data?.remaining ?? 0).toLocaleString(), sub: `จาก ${(quota?.data?.quota_limit ?? 0).toLocaleString()}` },
+          { label: 'อัตราสำเร็จ', value: `${stats?.success_rate ?? 0}%`, sub: `${stats?.verified ?? 0} สำเร็จ` },
+          { label: 'รีเซ็ตโควต้า', value: resetDate, sub: 'รอบถัดไป' },
+        ].map((s, i) => (
+          <div key={s.label} className="p-6 transition-colors hover:bg-[var(--bg-subtle)]"
+            style={{ borderRight: i < 3 ? '1px solid var(--border)' : 'none' }}>
+            <p className="font-mono text-[9px] uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>
+              {s.label}
+            </p>
+            <p className="font-bold mb-0.5" style={{ fontSize: '1.75rem', color: 'var(--navy)', letterSpacing: '-0.02em', lineHeight: 1 }}>
+              {s.value}
+            </p>
+            <p className="font-mono text-[9px]" style={{ color: 'var(--border-strong)' }}>{s.sub}</p>
+          </div>
+        ))}
       </div>
 
-      {/* Main Grid */}
+      {/* Main grid */}
       <div className="grid lg:grid-cols-12 gap-6">
 
-        {/* Usage Chart */}
-        <div className="lg:col-span-8 bg-white border border-zinc-200 rounded-2xl overflow-hidden">
-          <div className="border-b border-zinc-200 px-6 py-3 flex items-center justify-between">
-            <p className="font-mono text-[11px] text-zinc-500 uppercase tracking-widest">/ USAGE ACTIVITY — LAST 7 DAYS</p>
-            <div className="flex items-center gap-4 font-mono text-[10px] text-zinc-400">
-              <span className="flex items-center gap-1.5"><span className="w-2 h-2 bg-blue-800 inline-block" /> SUCCESS</span>
-              <span className="flex items-center gap-1.5"><span className="w-2 h-2 bg-rose-400 inline-block" /> FAILED</span>
+        {/* Usage chart */}
+        <div className="lg:col-span-8 bg-white" style={{ border: '1px solid var(--border)' }}>
+          <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border)' }}>
+            <p className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+              การใช้งาน 7 วันที่ผ่านมา
+            </p>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 inline-block" style={{ background: 'var(--blue)' }} />
+                <span className="font-mono text-[9px]" style={{ color: 'var(--text-muted)' }}>สำเร็จ</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 inline-block bg-rose-400" />
+                <span className="font-mono text-[9px]" style={{ color: 'var(--text-muted)' }}>ล้มเหลว</span>
+              </div>
             </div>
           </div>
           <div className="p-6">
-            <div className="h-52 flex items-end gap-2">
-              {dailyUsage.map((data, i) => {
-                const successH = (data.verified / maxDailyCount) * 100;
-                const failH = (data.failed / maxDailyCount) * 100;
-                return (
-                  <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
-                    <div className="w-full">
-                      <div
-                        className="w-full bg-blue-50 group-hover:bg-blue-800 transition-colors"
-                        style={{ height: `${Math.max(successH, 4)}px` }}
-                      />
-                      <div
-                        className="w-full bg-rose-100"
-                        style={{ height: `${Math.max(failH, 2)}px` }}
-                      />
+            {dailyUsage.length > 0 ? (
+              <div className="h-40 flex items-end gap-2">
+                {dailyUsage.map((d, i) => {
+                  const verified = d.verified ?? 0;
+                  const failed = d.failed ?? 0;
+                  const total = verified + failed;
+                  const successH = (verified / maxDailyCount) * 100;
+                  const failH = (failed / maxDailyCount) * 100;
+                  return (
+                    <div key={i} className="flex-1 flex flex-col items-center gap-1.5 group">
+                      <div className="w-full relative">
+                        <div className="w-full transition-colors group-hover:opacity-80"
+                          style={{ height: `${Math.max(successH, 4)}px`, background: 'var(--blue-pale)' }}>
+                          <div className="w-full h-full opacity-0 group-hover:opacity-100 transition-opacity"
+                            style={{ background: 'var(--blue)' }} />
+                        </div>
+                        {failH > 0 && (
+                          <div className="w-full bg-rose-100 group-hover:bg-rose-400 transition-colors"
+                            style={{ height: `${Math.max(failH, 2)}px` }} />
+                        )}
+                      </div>
+                      <span className="font-mono text-[8px] uppercase" style={{ color: 'var(--border-strong)' }}>
+                        {d.day ?? String(i + 1)}
+                      </span>
                     </div>
-                    <span className="font-mono text-[9px] text-zinc-400 uppercase">{data.day}</span>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="h-40 flex items-center justify-center">
+                <p className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--border-strong)' }}>
+                  ยังไม่มีข้อมูล
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Side Panel */}
+        {/* Side panels */}
         <div className="lg:col-span-4 space-y-4">
 
-          {/* Gateway Status */}
-          <div className="bg-white border border-zinc-200 rounded-2xl p-6">
-            <p className="font-mono text-[11px] text-zinc-400 uppercase tracking-widest mb-4">/ GATEWAY STATUS</p>
-            <div className="flex items-center gap-3 mb-4">
-              <ShieldCheck className="w-4 h-4 text-zinc-400" />
-              <span className="text-sm font-medium text-zinc-900">Verify Service</span>
-            </div>
-            <p className="text-sm text-zinc-500 mb-6 leading-relaxed">
-              All gateways are operational.
+          {/* Quota bar */}
+          <div className="bg-white p-6" style={{ border: '1px solid var(--border)' }}>
+            <p className="font-mono text-[10px] uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>
+              โควต้าเดือนนี้
             </p>
-            <div className="border-t border-zinc-100 pt-4">
-              {['KBank Gateway', 'SCB Gateway', 'Bangkok Bank'].map((name) => (
-                <div key={name} className="flex items-center justify-between py-1.5">
-                  <span className="font-mono text-[10px] text-zinc-500 uppercase tracking-widest">{name}</span>
-                  <span className="font-mono text-[10px] text-blue-700">● active</span>
-                </div>
-              ))}
+            <div className="flex justify-between font-mono text-[10px] uppercase tracking-widest mb-2"
+              style={{ color: 'var(--border-strong)' }}>
+              <span>ใช้ไป</span>
+              <span>{quota?.data ? `${quota.data.used} / ${quota.data.quota_limit}` : '—'}</span>
             </div>
+            <div className="h-1.5 w-full" style={{ background: 'var(--border)' }}>
+              <div className="h-full transition-all" style={{ width: `${usedPct}%`, background: usedPct > 80 ? '#EF4444' : 'var(--blue)' }} />
+            </div>
+            <p className="font-mono text-[9px] mt-2" style={{ color: 'var(--border-strong)' }}>
+              รีเซ็ต {resetDate}
+            </p>
+            <Link href="/pricing"
+              className="block w-full text-center py-2.5 text-xs font-semibold mt-4 transition-all hover:opacity-90"
+              style={{ background: 'var(--navy)', color: '#fff' }}>
+              อัพเกรดแผน →
+            </Link>
           </div>
 
-          {/* Plan Usage */}
-          <div className="bg-white border border-zinc-200 rounded-2xl p-6">
-            <p className="font-mono text-[11px] text-zinc-400 uppercase tracking-widest mb-4">/ PLAN USAGE</p>
-            <div className="mb-4">
-              <div className="flex justify-between font-mono text-[10px] text-zinc-400 uppercase tracking-widest mb-2">
-                <span>API Credits</span>
-                <span>{quota?.data ? `${quota.data.used} / ${quota.data.quota_limit}` : 'Loading...'}</span>
+          {/* Gateway status */}
+          <div className="bg-white p-6" style={{ border: '1px solid var(--border)' }}>
+            <p className="font-mono text-[10px] uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>
+              สถานะ Gateway
+            </p>
+            {['KBank Gateway', 'SCB Gateway', 'Bangkok Bank'].map((name) => (
+              <div key={name} className="flex items-center justify-between py-2"
+                style={{ borderBottom: '1px solid var(--border)' }}>
+                <span className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+                  {name}
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  <span className="font-mono text-[9px]" style={{ color: 'var(--text-muted)' }}>active</span>
+                </div>
               </div>
-              <div className="w-full h-1.5 bg-zinc-100">
-                <div
-                  className="h-full bg-blue-800"
-                  style={{ width: `${usedPct}%` }}
-                />
-              </div>
-            </div>
-            <Link href="/dashboard/subscription" className="w-full border border-zinc-200 py-2.5 text-xs font-medium text-zinc-600 hover:border-zinc-900 hover:text-zinc-900 transition-colors block text-center">
-              Upgrade Plan
-            </Link>
+            ))}
           </div>
 
         </div>

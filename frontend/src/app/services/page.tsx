@@ -1,90 +1,163 @@
-﻿'use client';
+'use client';
 
 import React from 'react';
-import { ShieldCheck, Zap, Globe, Smartphone, Store, Code, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Store, Globe, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 
 const services = [
   {
-    title: "E-commerce Integration",
-    icon: <Store className="w-8 h-8 text-blue-800" />,
-    description: "ตรวจสอบสลิปอัตโนมัติสำหรับร้านค้าออนไลน์ ช่วยลดภาระการตรวจสอบด้วยมือและป้องกันความผิดพลาด"
+    icon: Store,
+    number: '01',
+    tag: 'E-commerce',
+    title: 'ร้านค้าออนไลน์',
+    desc: 'ตรวจสอบสลิปอัตโนมัติทุกครั้งที่ลูกค้าชำระเงิน ลดภาระตรวจสอบด้วยมือและป้องกันสลิปปลอมได้ 100%',
   },
   {
-    title: "Mobile App SDK",
-    icon: <Smartphone className="w-8 h-8 text-blue-800" />,
-    description: "ชุดพัฒนาซอฟต์แวร์สำหรับ Android และ iOS เพื่อเพิ่มระบบตรวจสอบสลิปภายในแอปของคุณโดยตรง"
+    icon: MessageSquare,
+    number: '02',
+    tag: 'LINE OA',
+    title: 'เชื่อมต่อ LINE OA',
+    desc: 'ลูกค้าส่งสลิปผ่าน LINE แล้วได้ผลยืนยันอัตโนมัติทันที ไม่ต้องเปิดแอปเพิ่ม ตั้งค่าภายใน 5 นาที',
   },
   {
-    title: "Custom Solutions",
-    icon: <Globe className="w-8 h-8 text-blue-800" />,
-    description: "ออกแบบระบบตรวจสอบสลิปให้เข้ากับ Workflow เฉพาะขององค์กรคุณ พร้อมทีมงานให้คำปรึกษา"
-  }
+    icon: Globe,
+    number: '03',
+    tag: 'REST API',
+    title: 'เชื่อมต่อผ่าน API',
+    desc: 'มี REST API พร้อมใช้งาน เชื่อมต่อเข้ากับระบบ POS ระบบหลังร้าน หรือแอปของคุณได้เลยทันที',
+  },
+];
+
+const stats = [
+  { label: 'ธนาคารที่รองรับ', value: '8+' },
+  { label: 'เวลาตรวจสอบ', value: '<1 วิ' },
+  { label: 'ตรวจสลิปซ้ำ', value: '24 ชม.' },
+  { label: 'ยืนยันผ่าน Bank API', value: '100%' },
 ];
 
 export default function ServicesPage() {
   return (
-    <div className="min-h-screen bg-white pt-32 pb-20 px-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="text-center max-w-3xl mx-auto mb-20">
-          <h1 className="text-5xl md:text-6xl font-black text-zinc-900 tracking-tight mb-6 leading-tight">
-            โซลูชันสำหรับ <br/><span className="text-blue-800">ทุกประเภทธุรกิจ</span>
+    <div className="min-h-screen pt-32 pb-24 px-6" style={{ background: 'var(--bg)' }}>
+      <div className="thai-pattern absolute inset-0 pointer-events-none top-0" />
+
+      <div className="relative max-w-7xl mx-auto">
+
+        {/* หัวข้อ */}
+        <div className="text-center max-w-2xl mx-auto mb-20">
+          <div className="flex items-center justify-center gap-3 mb-6">
+            <span className="inline-block w-2.5 h-2.5 rotate-45" style={{ background: 'var(--blue)' }} />
+            <span className="font-mono text-[11px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+              บริการของเรา
+            </span>
+            <span className="inline-block w-2.5 h-2.5 rotate-45" style={{ background: 'var(--blue)' }} />
+          </div>
+          <h1 className="font-display text-5xl md:text-6xl font-semibold mb-5 leading-tight" style={{ color: 'var(--navy)' }}>
+            ใช้งานได้กับ<br />
+            <em style={{ color: 'var(--blue)', fontWeight: '800' }}>ทุกประเภทธุรกิจ</em>
           </h1>
-          <p className="text-zinc-500 font-medium text-lg leading-relaxed">
-            ไม่ว่าคุณจะเป็นร้านค้าขนาดเล็กหรือองค์กรระดับมหาชน เรามีเครื่องมือที่พร้อมตอบโจทย์การเติบโตของคุณ
+          <p className="text-base leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+            ไม่ว่าจะเป็นร้านค้าออนไลน์ ร้านค้าทั่วไป หรือแอปพลิเคชัน
+            FlowSlip พร้อมให้บริการตรวจสอบสลิปในรูปแบบที่เหมาะกับคุณ
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8 mb-32">
-          {services.map((s, i) => (
-            <div key={i} className="group p-10 bg-[#fafafa] border border-zinc-100 rounded-[3rem] hover:bg-white hover:border-blue-50 hover:shadow-2xl hover:shadow-blue-500/5 transition-all duration-500 text-center">
-              <div className="w-20 h-20 bg-white rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-sm group-hover:scale-110 transition-transform">
-                {s.icon}
+        {/* การ์ดบริการ */}
+        <div className="grid md:grid-cols-3 gap-6 mb-24">
+          {services.map((s) => (
+            <div
+              key={s.number}
+              className="group p-8 transition-all duration-300"
+              style={{ background: '#fff', border: '1px solid var(--border)' }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--blue)';
+                (e.currentTarget as HTMLDivElement).style.background = 'var(--bg-subtle)';
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border)';
+                (e.currentTarget as HTMLDivElement).style.background = '#fff';
+              }}
+            >
+              <div className="font-display text-5xl font-semibold mb-6" style={{ color: 'var(--border-strong)' }}>
+                {s.number}
               </div>
-              <h3 className="text-2xl font-bold text-zinc-900 mb-4">{s.title}</h3>
-              <p className="text-sm text-zinc-500 font-medium leading-relaxed">{s.description}</p>
+              <div className="inline-flex p-3 mb-5" style={{ background: 'var(--bg-subtle)' }}>
+                <s.icon className="w-5 h-5" style={{ color: 'var(--navy)' }} />
+              </div>
+              <p className="font-mono text-[10px] uppercase tracking-widest mb-1" style={{ color: 'var(--blue)' }}>
+                {s.tag}
+              </p>
+              <h3 className="font-display text-xl font-semibold mb-3" style={{ color: 'var(--navy)' }}>
+                {s.title}
+              </h3>
+              <p className="text-sm leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+                {s.desc}
+              </p>
+              <div className="mt-5 h-[2px] w-0 group-hover:w-10 transition-all duration-300"
+                style={{ background: 'var(--blue)' }} />
             </div>
           ))}
         </div>
 
-        <div className="bg-zinc-900 rounded-[4rem] p-10 md:p-20 text-white relative overflow-hidden">
-            <div className="relative z-10 grid lg:grid-cols-2 gap-16 items-center">
-                <div className="space-y-8">
-                    <h2 className="text-4xl md:text-5xl font-black tracking-tight leading-tight">
-                        พร้อมที่จะยกระดับ <br/>
-                        <span className="text-blue-700">ความปลอดภัยของธุรกิจ?</span>
-                    </h2>
-                    <p className="text-zinc-400 font-medium text-lg">
-                        ลงชื่อใช้งานวันนี้เพื่อสัมผัสประสบการณ์การตรวจสอบสลิปที่เร็วที่สุดในประเทศไทย
-                    </p>
-                    <div className="flex flex-wrap gap-4">
-                        <Link href="/register" className="bg-blue-800 text-white px-10 py-4 rounded-2xl font-bold hover:bg-blue-900 transition-all shadow-lg shadow-blue-500/20 active:scale-95">
-                            เริ่มใช้งานฟรี
-                        </Link>
-                        <Link href="#" className="bg-zinc-800 text-white px-10 py-4 rounded-2xl font-bold hover:bg-zinc-700 transition-all active:scale-95">
-                            ปรึกษาฝ่ายขาย
-                        </Link>
-                    </div>
-                </div>
-                <div className="grid grid-cols-2 gap-6">
-                    {[
-                        { label: "Active Users", value: "10,000+" },
-                        { label: "Verified Slips", value: "2M+" },
-                        { label: "Uptime", value: "99.99%" },
-                        { label: "API Speed", value: "<1s" }
-                    ].map((stat, i) => (
-                        <div key={i} className="bg-white/5 backdrop-blur-md border border-white/10 p-6 rounded-[2rem]">
-                            <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mb-2">{stat.label}</p>
-                            <p className="text-3xl font-black text-white tracking-tighter">{stat.value}</p>
-                        </div>
-                    ))}
-                </div>
+        {/* CTA Section */}
+        <div className="relative overflow-hidden p-12 md:p-16" style={{ background: 'var(--navy)' }}>
+          <div className="thai-pattern absolute inset-0 pointer-events-none" style={{ opacity: 0.07 }} />
+          <div className="absolute top-6 right-10 w-28 h-28 opacity-[0.07] rotate-45" style={{ background: 'var(--blue)' }} />
+          <div className="absolute bottom-6 left-8 w-16 h-16 opacity-[0.07] rotate-45" style={{ background: 'var(--cyan)' }} />
+
+          <div className="relative grid lg:grid-cols-2 gap-12 items-center">
+            <div className="space-y-6">
+              <div className="flex items-center gap-2">
+                <span className="inline-block w-2.5 h-2.5 rotate-45" style={{ background: 'var(--blue)' }} />
+                <span className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'rgba(0,82,255,0.6)' }}>
+                  เริ่มต้นได้เลย
+                </span>
+              </div>
+              <h2 className="font-display text-4xl md:text-5xl font-semibold leading-tight" style={{ color: 'rgba(248,250,252,0.95)' }}>
+                พร้อมปกป้อง<br />
+                <em style={{ color: 'var(--cyan)', fontWeight: '800' }}>ธุรกิจของคุณ?</em>
+              </h2>
+              <p className="text-base leading-relaxed" style={{ color: 'rgba(248,250,252,0.5)' }}>
+                สมัครฟรีวันนี้ รับโควต้า 50 สลิปต่อเดือน
+                ไม่ต้องใช้บัตรเครดิต ยกเลิกได้ทุกเมื่อ
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <Link
+                  href="/register"
+                  className="inline-flex items-center gap-2 px-7 py-3.5 text-sm font-semibold transition-all hover:opacity-90"
+                  style={{ background: 'var(--blue)', color: '#fff', borderRadius: '2px' }}
+                >
+                  สมัครใช้งานฟรี →
+                </Link>
+                <Link
+                  href="/pricing"
+                  className="inline-flex items-center gap-2 px-7 py-3.5 text-sm font-medium border transition-all hover:opacity-75"
+                  style={{ borderColor: 'rgba(0,82,255,0.35)', color: 'rgba(248,250,252,0.7)', borderRadius: '2px' }}
+                >
+                  ดูแผนราคา
+                </Link>
+              </div>
             </div>
-            
-            {/* Background Decorative */}
-            <div className="absolute top-0 right-0 w-96 h-96 bg-blue-900/10 rounded-full blur-[100px] -mr-48 -mt-48" />
-            <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-900/5 rounded-full blur-[100px] -ml-48 -mb-48" />
+
+            <div className="grid grid-cols-2 gap-4">
+              {stats.map((stat) => (
+                <div
+                  key={stat.label}
+                  className="p-6"
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(0,82,255,0.15)' }}
+                >
+                  <p className="font-mono text-[10px] uppercase tracking-widest mb-2"
+                    style={{ color: 'rgba(248,250,252,0.4)' }}>
+                    {stat.label}
+                  </p>
+                  <p className="font-display text-3xl font-semibold" style={{ color: 'var(--blue)' }}>
+                    {stat.value}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
+
       </div>
     </div>
   );
