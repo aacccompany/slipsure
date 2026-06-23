@@ -207,16 +207,6 @@ export interface Slip {
   transaction?: Transaction;
 }
 
-export interface SlipUploadResponse {
-  slip_id: string;
-  status: SlipStatus;
-  estimated_seconds: number;
-}
-
-export interface ScanRequest {
-  qr_raw_data: string;
-}
-
 export interface Pagination {
   page: number;
   limit: number;

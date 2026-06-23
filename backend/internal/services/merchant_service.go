@@ -308,8 +308,12 @@ func (s *MerchantService) GetQuotaStatus(merchantID uuid.UUID) (*models.QuotaSta
 
 // IncrementUsage increments merchant usage counter
 func (s *MerchantService) IncrementUsage(merchantID uuid.UUID) error {
-	now := time.Now()
-	return s.merchantRepo.UpdateUsageCounter(merchantID, now.Year(), int(now.Month()), 1)
+	subscription, err := s.merchantRepo.FindByMerchantID(merchantID)
+	if err != nil {
+		return err
+	}
+	periodStart, _ := models.QuotaPeriodFor(subscription.StartedAt, time.Now())
+	return s.merchantRepo.UpdateUsageCounter(merchantID, periodStart.Year(), int(periodStart.Month()), 1)
 }
 
 // ProcessWebhookEvent processes Stripe webhook events

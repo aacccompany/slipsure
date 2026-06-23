@@ -45,23 +45,6 @@ const (
 	FailReasonExpiredSlip    FailReason = "EXPIRED_SLIP"
 )
 
-// SlipUploadRequest represents request to upload slip
-type SlipUploadRequest struct {
-	File *string `json:"file"` // Will be multipart file in handler
-}
-
-// ScanRequest represents request to scan QR data
-type ScanRequest struct {
-	QRRawData string `json:"qr_raw_data" binding:"required"`
-}
-
-// SlipUploadResponse represents response after upload
-type SlipUploadResponse struct {
-	SlipID           uuid.UUID  `json:"slip_id"`
-	Status           SlipStatus `json:"status"`
-	EstimatedSeconds int        `json:"estimated_seconds"`
-}
-
 // SlipStatsResponse represents aggregate slip verification stats for a merchant.
 type SlipStatsResponse struct {
 	Total       int              `json:"total"`
@@ -96,9 +79,4 @@ type ValidationInfo struct {
 	Duplicate            bool   `json:"duplicate"`
 	ReceiverAccountMatch bool   `json:"receiver_account_match"`
 	ValidationSource     string `json:"validation_source"` // "bank_api" or "mock"
-}
-
-// ReprocessRequest represents request to reprocess a slip
-type ReprocessRequest struct {
-	ForceVerify bool `json:"force_verify"`
 }

@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
-	"slipsure-backend/database"
 	"slipsure-backend/internal/models"
 	"slipsure-backend/internal/repositories"
 	"slipsure-backend/internal/services"
@@ -216,6 +216,28 @@ func (h *MerchantHandler) HandleStripeWebhook(c *gin.Context) {
 
 		// Activate subscription in database
 		if err := h.activateSubscription(userID, checkoutSessionID, customerID, planID, billingCycle); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"error":   "DATABASE_ERROR",
+				"message": "Failed to activate subscription",
+			})
+			return
+		}
+
+	case "payment_intent.succeeded":
+		userID, checkoutSessionID, customerID, planID, billingCycle, err := h.stripeService.HandlePaymentIntentSucceeded(event)
+		if err != nil {
+			fmt.Printf("Failed to resolve checkout from payment intent: %v\n", err)
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"error":   "WEBHOOK_PROCESSING_ERROR",
+				"message": "Failed to process successful payment",
+			})
+			return
+		}
+
+		if err := h.activateSubscription(userID, checkoutSessionID, customerID, planID, billingCycle); err != nil {
+			fmt.Printf("Failed to activate subscription from payment intent: %v\n", err)
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"success": false,
 				"error":   "DATABASE_ERROR",
@@ -657,63 +679,121 @@ func (h *MerchantHandler) activateSubscription(userID uuid.UUID, checkoutSession
 		expiresAt = time.Now().AddDate(0, 1, 0) // 1 month from now
 	}
 
-	// Get or create merchant profile first
-	merchantResp, err := h.merchantService.GetProfile(userID)
+	// Resolve the merchant by its owner user ID from Stripe metadata.
+	merchant, err := h.merchantRepo.FindByOwnerID(userID)
 	if err != nil {
-		// Create merchant profile if it doesn't exist
 		profileReq := &models.CreateMerchantProfileRequest{
-			ShopName:   "My Shop", // Default shop name
+			ShopName:   "My Shop",
 			StrictMode: true,
 		}
 		_, err = h.merchantService.CreateProfile(userID, profileReq)
 		if err != nil {
 			return fmt.Errorf("failed to create merchant profile: %w", err)
 		}
-		// Get the merchant ID from the newly created profile
-		merchantResp, err = h.merchantService.GetProfile(userID)
+		merchant, err = h.merchantRepo.FindByOwnerID(userID)
 		if err != nil {
 			return fmt.Errorf("failed to get created merchant profile: %w", err)
 		}
 	}
 
-	merchantID := merchantResp.Profile.ID
+	if billingCycle != string(models.BillingCycleMonthly) && billingCycle != string(models.BillingCycleYearly) {
+		return fmt.Errorf("invalid billing cycle %q", billingCycle)
+	}
 
-	// Create subscription record
-	// In payment mode, we store checkout session ID instead of subscription ID
-	query := `
-		INSERT INTO subscriptions (
-			merchant_id, plan_id, status, billing_cycle,
-			stripe_subscription_id, stripe_customer_id,
-			started_at, expires_at, created_at, updated_at
-		)
-		VALUES ($1, $2, 'active', $3,
-			$4, $5, NOW(), $6, NOW(), NOW())
-		ON CONFLICT (merchant_id) DO UPDATE SET
-			plan_id = EXCLUDED.plan_id,
-			status = EXCLUDED.status,
-			billing_cycle = EXCLUDED.billing_cycle,
-			stripe_subscription_id = EXCLUDED.stripe_subscription_id,
-			stripe_customer_id = EXCLUDED.stripe_customer_id,
-			started_at = EXCLUDED.started_at,
-			expires_at = EXCLUDED.expires_at,
-			updated_at = NOW()
-	`
+	stripeSubscriptionID := checkoutSessionID
+	stripeCustomerID := customerID
+	startedAt := time.Now()
+	existingSubscription, existingErr := h.merchantRepo.FindByMerchantID(merchant.ID)
+	isNewCheckout := existingErr != nil || existingSubscription == nil || existingSubscription.StripeSubscriptionID == nil || *existingSubscription.StripeSubscriptionID != checkoutSessionID
+	if isNewCheckout {
+		periodStart, _ := models.QuotaPeriodFor(startedAt, startedAt)
+		if err := h.merchantRepo.ResetUsageCounter(merchant.ID, periodStart.Year(), int(periodStart.Month())); err != nil {
+			return fmt.Errorf("failed to reset quota usage: %w", err)
+		}
+	}
 
-	_, err = database.DB.Exec(query,
-		merchantID.String(),
-		planID,
-		billingCycle,
-		checkoutSessionID, // Store checkout session ID in stripe_subscription_id field
-		customerID,
-		expiresAt,
-	)
+	subscription := &models.Subscription{
+		MerchantID:           merchant.ID,
+		PlanID:               planID,
+		Status:               models.SubscriptionStatusActive,
+		BillingCycle:         models.BillingCycle(billingCycle),
+		StripeSubscriptionID: &stripeSubscriptionID,
+		StripeCustomerID:     &stripeCustomerID,
+		StartedAt:            startedAt,
+		ExpiresAt:            &expiresAt,
+		AutoRenew:            true,
+	}
 
-	if err != nil {
+	if err := h.merchantRepo.CreateSubscription(subscription); err != nil {
 		return fmt.Errorf("failed to create subscription: %w", err)
 	}
 
-	fmt.Printf("Subscription created for merchant %s, plan %s (%s), expires %s\n", merchantID, planID, billingCycle, expiresAt)
+	amount, currency, err := h.stripeService.GetCheckoutSessionPayment(checkoutSessionID)
+	if err != nil {
+		return fmt.Errorf("failed to get successful payment details: %w", err)
+	}
+	paidAt := time.Now()
+	payment := &models.PaymentLog{
+		MerchantID:         merchant.ID,
+		SubscriptionID:     &subscription.ID,
+		Amount:             amount,
+		Currency:           currency,
+		Gateway:            "stripe",
+		GatewayReferenceID: checkoutSessionID,
+		Status:             "success",
+		PaidAt:             &paidAt,
+	}
+	if err := h.merchantRepo.CreatePaymentLog(payment); err != nil {
+		return fmt.Errorf("failed to record subscription payment: %w", err)
+	}
+
+	fmt.Printf("Subscription created for merchant %s, plan %s (%s), expires %s\n", merchant.ID, planID, billingCycle, expiresAt)
 	return nil
+}
+
+// GetAdminPayments returns subscription payment history for administrators.
+func (h *MerchantHandler) GetAdminPayments(c *gin.Context) {
+	page := 1
+	limit := 20
+	if value, err := strconv.Atoi(c.DefaultQuery("page", "1")); err == nil && value > 0 {
+		page = value
+	}
+	if value, err := strconv.Atoi(c.DefaultQuery("limit", "20")); err == nil && value > 0 && value <= 100 {
+		limit = value
+	}
+
+	status := c.Query("status")
+	validStatuses := map[string]bool{"": true, "pending": true, "success": true, "failed": true, "refunded": true}
+	if !validStatuses[status] {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "INVALID_STATUS",
+			"message": "Status must be pending, success, failed, or refunded",
+		})
+		return
+	}
+
+	payments, total, err := h.merchantRepo.ListPaymentLogs(status, limit, (page-1)*limit)
+	if err != nil {
+		log.Printf("Failed to list admin payments: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "DATABASE_ERROR",
+			"message": "Failed to retrieve payment history",
+		})
+		return
+	}
+
+	totalPages := 0
+	if total > 0 {
+		totalPages = (total + limit - 1) / limit
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data": models.PaymentLogListResponse{
+			Items: payments, Page: page, Limit: limit, Total: total, TotalPages: totalPages,
+		},
+	})
 }
 
 func (h *MerchantHandler) deactivateSubscription(customerID string) error {

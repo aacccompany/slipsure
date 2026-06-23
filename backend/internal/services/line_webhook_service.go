@@ -14,6 +14,7 @@ import (
 	"log"
 	"math/big"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -30,6 +31,8 @@ type LINEWebhookService struct {
 	baseURL                 string
 	lineUserIDs             map[uuid.UUID]string // Track LINE user IDs by slip ID for notifications
 	lineUserIDsMutex        sync.RWMutex         // Protect lineUserIDs map from concurrent access
+	processedLineMessages   map[string]time.Time
+	processedMessagesMutex  sync.Mutex
 }
 
 // NewLINEWebhookService creates a new LINE webhook service
@@ -40,6 +43,7 @@ func NewLINEWebhookService(merchantRepo repositories.MerchantRepository, cryptoS
 		slipVerificationService: slipVerificationService,
 		baseURL:                 baseURL,
 		lineUserIDs:             make(map[uuid.UUID]string),
+		processedLineMessages:   make(map[string]time.Time),
 	}
 
 	// Register verification callback if slip service is available
@@ -131,16 +135,29 @@ func (s *LINEWebhookService) TestLINEWebhook(merchantID uuid.UUID) (*models.LINE
 		}, nil
 	}
 
-	// Test API access by making a simple call to LINE API
 	startTime := time.Now()
+	_, accessToken, err := s.decryptMerchantCredentials(&models.MerchantProfile{ID: merchantID})
+	if err != nil {
+		return &models.LINEWebhookTestResponse{
+			WebhookStatus:       "active",
+			ConnectionStatus:    "disconnected",
+			SignatureValidation: "skipped",
+			APIAccess:           "credentials_error",
+			TestedAt:            time.Now(),
+			ResponseTimeMs:      time.Since(startTime).Milliseconds(),
+		}, nil
+	}
 
-	// Test bot info endpoint
-	testResult := s.testLINEAPIAccess()
+	testResult := s.testLINEAPIAccess(accessToken)
 	responseTime := time.Since(startTime).Milliseconds()
+	connectionStatus := "connected"
+	if testResult != "working" {
+		connectionStatus = "disconnected"
+	}
 
 	return &models.LINEWebhookTestResponse{
 		WebhookStatus:       "active",
-		ConnectionStatus:    "connected",
+		ConnectionStatus:    connectionStatus,
 		SignatureValidation: "passed",
 		APIAccess:           testResult,
 		TestedAt:            time.Now(),
@@ -181,6 +198,24 @@ func (s *LINEWebhookService) ProcessWebhook(webhookRefID string, signature strin
 	var webhookEvent LINEWebhookEvent
 	if err := json.Unmarshal(body, &webhookEvent); err != nil {
 		return fmt.Errorf("failed to parse webhook: %w", err)
+	}
+
+	if webhookEvent.Destination != "" {
+		botInfo, err := s.getLINEBotInfo(accessToken)
+		if err != nil {
+			log.Printf("LINE access token validation failed for merchant %s: %v", merchant.ID, err)
+			return nil
+		}
+		if botInfo.UserID != "" && botInfo.UserID != webhookEvent.Destination {
+			log.Printf(
+				"LINE access token does not match webhook destination for merchant %s: webhook_destination=%s token_bot_user_id=%s basic_id=%s",
+				merchant.ID,
+				webhookEvent.Destination,
+				botInfo.UserID,
+				botInfo.BasicID,
+			)
+			return nil
+		}
 	}
 
 	// Process each event
@@ -285,13 +320,143 @@ func (s *LINEWebhookService) processEvent(merchant *models.MerchantProfile, even
 }
 
 func (s *LINEWebhookService) processMessageEvent(merchant *models.MerchantProfile, event LINEEvent, accessToken string) error {
+	if event.Message == nil {
+		log.Printf("LINE message event missing message payload for merchant %s", merchant.ID)
+		return nil
+	}
+
 	if event.Message.Type == "image" {
-		return s.processImageMessage(merchant, event, accessToken)
+		return s.processLineImageMessage(merchant, event, accessToken)
 	} else if event.Message.Type == "text" {
 		return s.processTextMessage(merchant, event)
 	}
 
 	return nil
+}
+
+func (s *LINEWebhookService) processLineImageMessage(merchant *models.MerchantProfile, event LINEEvent, accessToken string) error {
+	if event.Message.ID == "" {
+		return errors.New("image message ID is missing")
+	}
+
+	isRedelivery := event.DeliveryContext != nil && event.DeliveryContext.IsRedelivery
+	log.Printf(
+		"Processing LINE image message for merchant %s: message_id=%s source_type=%s user_id=%s redelivery=%t",
+		merchant.ID,
+		event.Message.ID,
+		event.Source.Type,
+		event.Source.UserID,
+		isRedelivery,
+	)
+
+	if !s.markLineMessageProcessing(merchant.ID, event.Message.ID) {
+		log.Printf("Skipping duplicate LINE image message for merchant %s: message_id=%s", merchant.ID, event.Message.ID)
+		return nil
+	}
+
+	imageData, contentType, err := s.GetMessageContent(event.Message.ID, accessToken)
+	if err != nil {
+		log.Printf("Failed to download image from LINE for merchant %s message %s: %v", merchant.ID, event.Message.ID, err)
+		if event.Source.UserID != "" {
+			errorMsg := "Cannot download the slip image from LINE. Please send the slip again."
+			if pushErr := s.PushMessage(event.Source.UserID, []LINEMessage{BuildTextMessage(errorMsg)}, accessToken); pushErr != nil {
+				log.Printf("Failed to send LINE download error push: %v", pushErr)
+			}
+		}
+		return nil
+	}
+
+	log.Printf("Successfully downloaded image from LINE for merchant %s: %d bytes, content-type: %s", merchant.ID, len(imageData), contentType)
+
+	receiptMsg := "Received your slip. Verifying now..."
+	if s.canUseReplyToken(event) {
+		if err := s.ReplyMessage(event.ReplyToken, []LINEMessage{BuildTextMessage(receiptMsg)}, accessToken); err != nil {
+			log.Printf("Failed to send receipt reply, falling back to push: %v", err)
+			if event.Source.UserID != "" {
+				if pushErr := s.PushMessage(event.Source.UserID, []LINEMessage{BuildTextMessage(receiptMsg)}, accessToken); pushErr != nil {
+					log.Printf("Failed to send receipt push fallback: %v", pushErr)
+				}
+			}
+		}
+	} else if event.Source.UserID != "" {
+		if err := s.PushMessage(event.Source.UserID, []LINEMessage{BuildTextMessage(receiptMsg)}, accessToken); err != nil {
+			log.Printf("Failed to send receipt push for redelivered/dummy reply token: %v", err)
+		}
+	}
+
+	go s.verifyDownloadedLineImage(merchant, event.Source.UserID, imageData, contentType, accessToken)
+	return nil
+}
+
+func (s *LINEWebhookService) verifyDownloadedLineImage(merchant *models.MerchantProfile, lineUserID string, imageData []byte, contentType string, accessToken string) {
+	if s.slipVerificationService == nil {
+		log.Printf("Slip verification service not available for merchant %s", merchant.ID)
+		return
+	}
+
+	ctx := context.Background()
+	slip, err := s.slipVerificationService.UploadAndVerify(ctx, merchant.ID, imageData, contentType)
+	if err != nil {
+		log.Printf("Slip verification failed for merchant %s: %v", merchant.ID, err)
+
+		errorMsg := "Cannot verify this slip."
+		if err.Error() == "merchant must have an active subscription to verify slips" {
+			errorMsg = "This merchant does not have an active SlipSure subscription. Please contact the shop."
+		} else {
+			errorMsg = fmt.Sprintf("Cannot verify this slip: %s", err.Error())
+		}
+
+		if lineUserID != "" {
+			if pushErr := s.PushMessage(lineUserID, []LINEMessage{BuildTextMessage(errorMsg)}, accessToken); pushErr != nil {
+				log.Printf("Failed to send error push: %v", pushErr)
+			}
+		}
+		return
+	}
+
+	if lineUserID != "" {
+		s.lineUserIDsMutex.Lock()
+		s.lineUserIDs[slip.ID] = lineUserID
+		s.lineUserIDsMutex.Unlock()
+	}
+
+	log.Printf("Slip verification started for merchant %s, slip ID: %s, status: %s, LINE user: %s",
+		merchant.ID, slip.ID, slip.Status, lineUserID)
+}
+
+func (s *LINEWebhookService) canUseReplyToken(event LINEEvent) bool {
+	if event.DeliveryContext != nil && event.DeliveryContext.IsRedelivery {
+		return false
+	}
+
+	token := strings.TrimSpace(event.ReplyToken)
+	if token == "" || strings.Trim(token, "0") == "" {
+		return false
+	}
+
+	return true
+}
+
+func (s *LINEWebhookService) markLineMessageProcessing(merchantID uuid.UUID, messageID string) bool {
+	const ttl = 30 * time.Minute
+	now := time.Now()
+	key := merchantID.String() + ":" + messageID
+
+	s.processedMessagesMutex.Lock()
+	defer s.processedMessagesMutex.Unlock()
+
+	if expiresAt, exists := s.processedLineMessages[key]; exists && expiresAt.After(now) {
+		return false
+	}
+
+	for existingKey, expiresAt := range s.processedLineMessages {
+		if expiresAt.Before(now) {
+			delete(s.processedLineMessages, existingKey)
+		}
+	}
+
+	s.processedLineMessages[key] = now.Add(ttl)
+	return true
 }
 
 func (s *LINEWebhookService) processImageMessage(merchant *models.MerchantProfile, event LINEEvent, accessToken string) error {
@@ -368,8 +533,43 @@ func (s *LINEWebhookService) processUnfollowEvent(merchant *models.MerchantProfi
 	return nil
 }
 
-func (s *LINEWebhookService) testLINEAPIAccess() string {
+func (s *LINEWebhookService) testLINEAPIAccess(accessToken string) string {
+	if _, err := s.getLINEBotInfo(accessToken); err != nil {
+		log.Printf("LINE API access test failed: %v", err)
+		if strings.Contains(err.Error(), "status 401") || strings.Contains(err.Error(), "status 403") {
+			return "invalid_access_token"
+		}
+		return "line_api_error"
+	}
+
 	return "working"
+}
+
+func (s *LINEWebhookService) getLINEBotInfo(accessToken string) (*LINEBotInfo, error) {
+	req, err := http.NewRequest("GET", "https://api.line.me/v2/bot/info", nil)
+	if err != nil {
+		return nil, fmt.Errorf("create bot info request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("call bot info: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("bot info status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var botInfo LINEBotInfo
+	if err := json.NewDecoder(resp.Body).Decode(&botInfo); err != nil {
+		return nil, fmt.Errorf("decode bot info: %w", err)
+	}
+
+	return &botInfo, nil
 }
 
 // ReplyMessage sends a reply message to a user using merchant's LINE credentials

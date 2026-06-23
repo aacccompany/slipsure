@@ -197,6 +197,12 @@ func main() {
 		v1.GET("/plans", merchantHandler.GetPlans)
 		v1.POST("/checkout/webhook", merchantHandler.HandleStripeWebhook)
 
+		admin := v1.Group("/admin")
+		admin.Use(middleware.AuthMiddleware(), middleware.RequireRole("admin"))
+		{
+			admin.GET("/payments", merchantHandler.GetAdminPayments)
+		}
+
 		// Checkout routes (protected only - email verification disabled for testing)
 		checkout := v1.Group("/checkout")
 		checkout.Use(middleware.AuthMiddleware())
@@ -240,11 +246,8 @@ func main() {
 		slips.Use(middleware.AuthMiddleware())
 		// slips.Use(middleware.EmailVerificationMiddleware(userRepo)) // Temporarily disabled for testing
 		{
-			slips.POST("/upload", slipHandler.UploadSlip)
-			slips.POST("/scan", slipHandler.ScanQRData)
 			slips.GET("/stats", slipHandler.GetSlipStats)
 			slips.GET("/:slip_id", slipHandler.GetSlip)
-			slips.POST("/:slip_id/reprocess", slipHandler.ReprocessSlip)
 			slips.GET("", slipHandler.ListSlips)
 		}
 

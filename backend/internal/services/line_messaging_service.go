@@ -15,8 +15,8 @@ type LINEMessagingService struct {
 	channelID       string
 	channelSecret   string
 	accessToken     string
-	apiEndpoint     string  // For sending messages: https://api.line.me/v2/bot
-	dataAPIEndpoint string  // For downloading content: https://api-data.line.me/v2/bot
+	apiEndpoint     string // For sending messages: https://api.line.me/v2/bot
+	dataAPIEndpoint string // For downloading content: https://api-data.line.me/v2/bot
 }
 
 // NewLINEMessagingService creates a new LINE messaging service
@@ -33,8 +33,8 @@ func NewLINEMessagingService() (*LINEMessagingService, error) {
 		channelID:       channelID,
 		channelSecret:   channelSecret,
 		accessToken:     accessToken,
-		apiEndpoint:     "https://api.line.me/v2/bot",       // For messaging
-		dataAPIEndpoint: "https://api-data.line.me/v2/bot",   // For content download
+		apiEndpoint:     "https://api.line.me/v2/bot",      // For messaging
+		dataAPIEndpoint: "https://api-data.line.me/v2/bot", // For content download
 	}, nil
 }
 
@@ -210,12 +210,13 @@ type LINEWebhookEvent struct {
 }
 
 type LINEEvent struct {
-	Type       string            `json:"type"`
-	ReplyToken string            `json:"replyToken"`
-	Timestamp  int64             `json:"timestamp"`
-	Source     LINEEventSource   `json:"source"`
-	Message    *LINEMessageEvent `json:"message,omitempty"`
-	Postback   *LINEPostback     `json:"postback,omitempty"`
+	Type            string               `json:"type"`
+	ReplyToken      string               `json:"replyToken"`
+	Timestamp       int64                `json:"timestamp"`
+	Source          LINEEventSource      `json:"source"`
+	Message         *LINEMessageEvent    `json:"message,omitempty"`
+	Postback        *LINEPostback        `json:"postback,omitempty"`
+	DeliveryContext *LINEDeliveryContext `json:"deliveryContext,omitempty"`
 }
 
 type LINEEventSource struct {
@@ -229,6 +230,16 @@ type LINEMessageEvent struct {
 	CreatedAt int64  `json:"createdAt,omitempty"`
 }
 
+type LINEDeliveryContext struct {
+	IsRedelivery bool `json:"isRedelivery"`
+}
+
 type LINEPostback struct {
 	Data string `json:"data"`
+}
+
+type LINEBotInfo struct {
+	UserID      string `json:"userId"`
+	BasicID     string `json:"basicId"`
+	DisplayName string `json:"displayName"`
 }

@@ -16,6 +16,7 @@ type UserRepository interface {
 	FindByEmail(email string) (*models.User, error)
 	FindByLineUserID(lineUserID string) (*models.User, error)
 	Update(user *models.User) error
+	UpdatePassword(userID uuid.UUID, passwordHash string) error
 	UpdateEmailVerification(userID uuid.UUID, verified bool) error
 	EmailExists(email string) (bool, error)
 	LinkLineAccount(userID uuid.UUID, lineUserID string) error
@@ -177,6 +178,27 @@ func (r *userRepository) Update(user *models.User) error {
 	}
 
 	result, err := r.db.Exec(query, user.ID, user.Name, user.Email, phone, merchantID, lineUserID, user.LineLinked, user.EmailVerified)
+	if err != nil {
+		return err
+	}
+
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return errors.New("user not found")
+	}
+
+	return nil
+}
+
+// UpdatePassword updates only the user's password hash.
+func (r *userRepository) UpdatePassword(userID uuid.UUID, passwordHash string) error {
+	query := `
+		UPDATE users
+		SET password_hash = $2, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $1
+	`
+
+	result, err := r.db.Exec(query, userID, passwordHash)
 	if err != nil {
 		return err
 	}

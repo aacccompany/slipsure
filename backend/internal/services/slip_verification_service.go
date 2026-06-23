@@ -70,6 +70,10 @@ func (s *SlipVerificationService) UploadAndVerify(ctx context.Context, merchantI
 			quotaStatus.Used, quotaStatus.QuotaLimit, quotaStatus.ResetDate.Format("2006-01-02"))
 	}
 
+	if err := s.incrementVerificationUsage(subscription, merchantID); err != nil {
+		return nil, fmt.Errorf("failed to record quota usage: %w", err)
+	}
+
 	// Create slip record
 	slip := &models.Slip{
 		ID:         uuid.New(),
@@ -110,36 +114,6 @@ func (s *SlipVerificationService) UploadAndVerify(ctx context.Context, merchantI
 	slip.QRRawData = qrData
 
 	// Save slip to database
-	err = s.slipRepo.Create(slip)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create slip record: %w", err)
-	}
-
-	// Start async verification
-	go s.verifySlipAsync(slip)
-
-	return slip, nil
-}
-
-// ScanQRData processes raw QR data and starts verification
-func (s *SlipVerificationService) ScanQRData(merchantID uuid.UUID, qrData string) (*models.Slip, error) {
-	// Validate QR data
-	err := s.qrScanner.ValidateQRData(qrData)
-	if err != nil {
-		return nil, fmt.Errorf("invalid QR data: %w", err)
-	}
-
-	// Create slip record
-	slip := &models.Slip{
-		ID:         uuid.New(),
-		MerchantID: merchantID,
-		QRRawData:  qrData,
-		Status:     models.SlipStatusPending,
-		CreatedAt:  time.Now(),
-		UpdatedAt:  time.Now(),
-	}
-
-	// Save to database
 	err = s.slipRepo.Create(slip)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create slip record: %w", err)
@@ -212,10 +186,6 @@ func (s *SlipVerificationService) verifySlipAsync(slip *models.Slip) {
 	if transaction.Status == models.TransactionStatusSuccess {
 		slip.Status = models.SlipStatusVerified
 		s.slipRepo.UpdateWithTransaction(slip, transaction)
-
-		// Increment usage counter
-		now := time.Now()
-		_ = s.usageRepo.IncrementUsage(slip.MerchantID, now.Year(), int(now.Month()))
 	} else {
 		slip.Status = models.SlipStatusFailed
 		s.slipRepo.UpdateWithTransaction(slip, transaction)
@@ -227,6 +197,11 @@ func (s *SlipVerificationService) verifySlipAsync(slip *models.Slip) {
 		slip.Transaction = transaction
 		s.verificationCallback(slip, slip.MerchantID)
 	}
+}
+
+func (s *SlipVerificationService) incrementVerificationUsage(subscription *models.Subscription, merchantID uuid.UUID) error {
+	periodStart, _ := models.QuotaPeriodFor(subscription.StartedAt, time.Now())
+	return s.usageRepo.IncrementUsage(merchantID, periodStart.Year(), int(periodStart.Month()))
 }
 
 // GetSlip retrieves a slip by ID
@@ -271,34 +246,6 @@ func (s *SlipVerificationService) GetSlipStats(merchantID uuid.UUID) (*models.Sl
 	stats.Last7Days = dailyStats
 
 	return stats, nil
-}
-
-// ReprocessSlip reprocesses a failed slip
-func (s *SlipVerificationService) ReprocessSlip(slipID uuid.UUID, forceVerify bool) error {
-	slip, err := s.slipRepo.FindByID(slipID)
-	if err != nil {
-		return err
-	}
-
-	if slip.Status == models.SlipStatusProcessing {
-		return fmt.Errorf("slip is already being processed")
-	}
-
-	// Reset status
-	slip.Status = models.SlipStatusPending
-	slip.ProcessingStartedAt = nil
-	slip.ProcessingCompletedAt = nil
-	slip.FailReason = nil
-
-	err = s.slipRepo.UpdateStatus(slip.ID, models.SlipStatusPending)
-	if err != nil {
-		return err
-	}
-
-	// Start verification again
-	go s.verifySlipAsync(slip)
-
-	return nil
 }
 
 // markAsFailed marks a slip as failed with a reason

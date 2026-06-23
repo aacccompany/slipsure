@@ -257,6 +257,9 @@ CREATE INDEX idx_subscriptions_expires_at ON subscriptions(expires_at);
 CREATE INDEX idx_payment_logs_merchant_id ON payment_logs(merchant_id);
 CREATE INDEX idx_payment_logs_status ON payment_logs(status);
 CREATE INDEX idx_payment_logs_created_at ON payment_logs(created_at);
+CREATE UNIQUE INDEX idx_payment_logs_gateway_reference
+    ON payment_logs(gateway, gateway_reference_id)
+    WHERE gateway_reference_id IS NOT NULL;
 
 -- Slips
 CREATE INDEX idx_slips_merchant_id ON slips(merchant_id);

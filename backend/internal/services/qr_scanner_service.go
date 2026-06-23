@@ -359,17 +359,6 @@ func (s *QRScannerService) parseThaiPromptPay(qrData string) (*models.EMVCoData,
 		}
 	}
 
-	if strings.Contains(qrData, "REF") && data.ReferenceNumber == "" {
-		timestamp := time.Now().Format("20060102150405")
-		data.ReferenceNumber = "REF" + timestamp + "1234567890"
-		log.Printf("Generated mock reference number: %s", data.ReferenceNumber)
-	}
-
-	if data.TransactionAmount <= 0 {
-		data.TransactionAmount = 1500.00
-		log.Printf("Using default mock amount: 1500.00 THB")
-	}
-
 	if strings.Contains(qrData, "=") || strings.Contains(qrData, ":") {
 		pairs := strings.Split(qrData, "&")
 		for _, pair := range pairs {
@@ -540,7 +529,7 @@ func (s *QRScannerService) parseThaiBankFormat(qrData string) (*models.EMVCoData
 
 		// Extract suffix if available
 		if refIDEnd+4 <= len(qrData) {
-			suffix := qrData[refIDEnd:refIDEnd+4]
+			suffix := qrData[refIDEnd : refIDEnd+4]
 			fmt.Printf("Suffix: %s\n", suffix)
 
 			// Extract serial if available

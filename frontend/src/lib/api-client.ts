@@ -22,10 +22,8 @@ import type {
   QuotaStatus,
   Slip,
   SlipStatus,
-  SlipUploadResponse,
   SlipListResponse,
   SlipStatsResponse,
-  ScanRequest,
   LINEWebhookConfig,
   UpdateLINEWebhookRequest,
   LINEWebhookTestResponse,
@@ -401,26 +399,8 @@ class ApiClient {
   }
 
   // Slips
-  async uploadSlip(file: File): Promise<ApiResponse<SlipUploadResponse>> {
-    return this.requestWithFile<SlipUploadResponse>('/v1/slips/upload', file);
-  }
-
-  async scanQR(data: ScanRequest): Promise<ApiResponse<any>> {
-    return this.request('/v1/slips/scan', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
-
   async getSlip(slipId: string): Promise<ApiResponse<{ slip: Slip }>> {
     return this.request(`/v1/slips/${slipId}`);
-  }
-
-  async reprocessSlip(slipId: string, data: { force_verify: boolean }): Promise<ApiResponse<{ slip_id: string; status: SlipStatus }>> {
-    return this.request(`/v1/slips/${slipId}/reprocess`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
   }
 
   async getSlips(params?: { page?: number; limit?: number; status?: SlipStatus }): Promise<ApiResponse<SlipListResponse>> {
