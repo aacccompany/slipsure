@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -6,7 +6,6 @@ import { DashboardSidebar } from '@/components/dashboard/Sidebar';
 import { DashboardHeader } from '@/components/dashboard/Header';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
-import { tokenManager } from '@/lib/api-client';
 
 export default function DashboardLayout({
   children,
@@ -18,7 +17,6 @@ export default function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    // Check authentication on client side
     if (!authLoading && !user) {
       router.push('/login');
     }
@@ -44,7 +42,9 @@ export default function DashboardLayout({
       <div className="flex-1 flex flex-col min-w-0">
         <DashboardHeader onMenuClick={() => setSidebarOpen(true)} />
         <main className="flex-1 overflow-y-auto">
-          {children}
+          <div className="max-w-6xl mx-auto w-full">
+            {children}
+          </div>
         </main>
       </div>
     </div>
