@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/csv"
 	"errors"
 	"fmt"
 	"log"
@@ -668,6 +669,169 @@ func (h *MerchantHandler) GetQuota(c *gin.Context) {
 	})
 }
 
+// GetMerchantAnalyticsDashboard handles GET /merchants/me/analytics/dashboard.
+func (h *MerchantHandler) GetMerchantAnalyticsDashboard(c *gin.Context) {
+	merchantID, err := getMerchantID(c, h.merchantRepo)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"success": false,
+			"error":   "UNAUTHORIZED",
+			"message": "Merchant profile not found",
+		})
+		return
+	}
+
+	dashboard, err := h.merchantRepo.GetMerchantAnalyticsDashboard(merchantID)
+	if err != nil {
+		log.Printf("Failed to load merchant analytics dashboard for %s: %v", merchantID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "DATABASE_ERROR",
+			"message": "Failed to retrieve merchant analytics",
+		})
+		return
+	}
+
+	if quota, err := h.merchantService.GetQuotaStatus(merchantID); err == nil {
+		dashboard.RemainingQuota = quota.Remaining
+		dashboard.ThisMonthScans = quota.Used
+		dashboard.QuotaLimit = quota.QuotaLimit
+		dashboard.QuotaResetDate = quota.ResetDate.Format("2006-01-02")
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    dashboard,
+	})
+}
+
+// GetMerchantAnalyticsUsage handles GET /merchants/me/analytics/usage.
+func (h *MerchantHandler) GetMerchantAnalyticsUsage(c *gin.Context) {
+	merchantID, err := getMerchantID(c, h.merchantRepo)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"success": false,
+			"error":   "UNAUTHORIZED",
+			"message": "Merchant profile not found",
+		})
+		return
+	}
+
+	days := 7
+	switch c.DefaultQuery("period", "7d") {
+	case "30d":
+		days = 30
+	case "90d":
+		days = 90
+	}
+
+	usage, err := h.merchantRepo.GetMerchantAnalyticsUsage(merchantID, days)
+	if err != nil {
+		log.Printf("Failed to load merchant analytics usage for %s: %v", merchantID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "DATABASE_ERROR",
+			"message": "Failed to retrieve merchant usage analytics",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    usage,
+	})
+}
+
+// ExportMerchantAnalytics handles GET /merchants/me/analytics/export.
+func (h *MerchantHandler) ExportMerchantAnalytics(c *gin.Context) {
+	merchantID, err := getMerchantID(c, h.merchantRepo)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"success": false,
+			"error":   "UNAUTHORIZED",
+			"message": "Merchant profile not found",
+		})
+		return
+	}
+
+	if format := c.DefaultQuery("format", "csv"); format != "csv" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "VALIDATION_ERROR",
+			"message": "Only csv export is supported",
+		})
+		return
+	}
+
+	now := time.Now()
+	startDate := now.AddDate(0, 0, -29)
+	endDate := now
+
+	if value := c.Query("start_date"); value != "" {
+		parsed, err := time.Parse("2006-01-02", value)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "VALIDATION_ERROR",
+				"message": "start_date must be YYYY-MM-DD",
+			})
+			return
+		}
+		startDate = parsed
+	}
+
+	if value := c.Query("end_date"); value != "" {
+		parsed, err := time.Parse("2006-01-02", value)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "VALIDATION_ERROR",
+				"message": "end_date must be YYYY-MM-DD",
+			})
+			return
+		}
+		endDate = parsed
+	}
+
+	if endDate.Before(startDate) {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "VALIDATION_ERROR",
+			"message": "end_date must be after start_date",
+		})
+		return
+	}
+
+	rows, err := h.merchantRepo.ListMerchantAnalyticsExport(merchantID, startDate, endDate)
+	if err != nil {
+		log.Printf("Failed to export merchant analytics for %s: %v", merchantID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "DATABASE_ERROR",
+			"message": "Failed to export merchant analytics",
+		})
+		return
+	}
+
+	filename := fmt.Sprintf("merchant-analytics-%s-%s.csv", startDate.Format("20060102"), endDate.Format("20060102"))
+	c.Header("Content-Type", "text/csv")
+	c.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+
+	writer := csv.NewWriter(c.Writer)
+	defer writer.Flush()
+
+	_ = writer.Write([]string{"date", "scans", "verified", "failed", "revenue"})
+	for _, row := range rows {
+		_ = writer.Write([]string{
+			row.Date,
+			strconv.Itoa(row.Scans),
+			strconv.Itoa(row.Verified),
+			strconv.Itoa(row.Failed),
+			fmt.Sprintf("%.2f", row.Revenue),
+		})
+	}
+}
+
 // Helper functions for webhook processing
 
 func (h *MerchantHandler) activateSubscription(userID uuid.UUID, checkoutSessionID, customerID, planID, billingCycle string) error {
@@ -792,6 +956,91 @@ func (h *MerchantHandler) GetAdminPayments(c *gin.Context) {
 		"success": true,
 		"data": models.PaymentLogListResponse{
 			Items: payments, Page: page, Limit: limit, Total: total, TotalPages: totalPages,
+		},
+	})
+}
+
+// GetAdminMerchantDetail returns full merchant detail for administrators.
+func (h *MerchantHandler) GetAdminMerchantDetail(c *gin.Context) {
+	merchantID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "VALIDATION_ERROR",
+			"message": "Invalid merchant ID",
+		})
+		return
+	}
+
+	merchant, err := h.merchantRepo.FindByID(merchantID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"success": false,
+			"error":   "NOT_FOUND",
+			"message": "Merchant not found",
+		})
+		return
+	}
+
+	var subscription *models.Subscription
+	var usage models.AdminMerchantUsage
+	if sub, err := h.merchantRepo.FindByMerchantID(merchantID); err == nil {
+		subscription = sub
+		periodStart, resetDate := models.QuotaPeriodFor(sub.StartedAt, time.Now())
+		quota := 0
+		remaining := 0
+		if sub.Plan != nil {
+			quota = sub.Plan.QuotaPerMonth
+			remaining = sub.RemainingQuota
+		}
+		usage, err = h.merchantRepo.GetAdminMerchantUsage(merchantID, periodStart, quota, remaining, resetDate)
+		if err != nil {
+			log.Printf("Failed to load admin merchant usage for %s: %v", merchantID, err)
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"error":   "DATABASE_ERROR",
+				"message": "Failed to retrieve merchant usage",
+			})
+			return
+		}
+	} else {
+		now := time.Now()
+		usage, err = h.merchantRepo.GetAdminMerchantUsage(merchantID, now, 0, 0, now)
+		if err != nil {
+			log.Printf("Failed to load admin merchant usage for %s: %v", merchantID, err)
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"error":   "DATABASE_ERROR",
+				"message": "Failed to retrieve merchant usage",
+			})
+			return
+		}
+	}
+
+	lineConfig, _ := h.merchantRepo.GetLINEWebhookConfig(merchantID)
+	lineConnected := lineConfig != nil && lineConfig.IsConfigured
+
+	payments, err := h.merchantRepo.ListPaymentLogsByMerchant(merchantID, 10)
+	if err != nil {
+		log.Printf("Failed to load admin merchant payments for %s: %v", merchantID, err)
+		payments = []models.PaymentLog{}
+	}
+
+	users, err := h.userRepo.FindByMerchantID(merchantID)
+	if err != nil {
+		users = []*models.User{}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data": models.AdminMerchantDetailResponse{
+			Merchant:      merchant,
+			Subscription:  subscription,
+			Usage:         usage,
+			LineConnected: lineConnected,
+			LineWebhook:   lineConfig,
+			Payments:      payments,
+			Users:         users,
 		},
 	})
 }

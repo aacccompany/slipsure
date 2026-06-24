@@ -186,11 +186,14 @@ export interface Transaction {
   sender_account: string;
   receiver_bank: string;
   receiver_account: string;
+  transfer_at?: string;
   transaction_time?: string;
   transaction_date?: string;
   status: TransactionStatus;
   is_duplicate: boolean;
   fail_reason?: string;
+  recheck_count?: number;
+  slip?: Pick<Slip, 'id' | 'image_url'>;
 }
 
 export interface Slip {
@@ -219,6 +222,11 @@ export interface SlipListResponse {
   pagination: Pagination;
 }
 
+export interface TransactionListResponse {
+  items: Transaction[];
+  pagination: Pagination;
+}
+
 export interface DailySlipStats {
   day: string;
   verified: number;
@@ -233,6 +241,42 @@ export interface SlipStatsResponse {
   processing: number;
   success_rate: number;
   last_7_days: DailySlipStats[];
+}
+
+// Merchant Analytics Types
+export interface MerchantAnalyticsDashboard {
+  total_scans: number;
+  success_rate: number;
+  remaining_quota: number;
+  today_scans: number;
+  this_month_scans: number;
+  daily_revenue: number;
+  pending_confirmations: number;
+  completed_today: number;
+  quota_limit: number;
+  quota_reset_date: string;
+  lifetime_revenue: number;
+  lifetime_transactions: number;
+  failed_scans: number;
+  verified_scans: number;
+}
+
+export interface MerchantUsagePoint {
+  date: string;
+  count: number;
+  verified: number;
+  failed: number;
+}
+
+export interface MerchantFailedScanReason {
+  reason: string;
+  count: number;
+}
+
+export interface MerchantAnalyticsUsage {
+  usage_per_day: MerchantUsagePoint[];
+  peak_time: string;
+  failed_scan_reasons: MerchantFailedScanReason[];
 }
 
 // LINE Webhook Types

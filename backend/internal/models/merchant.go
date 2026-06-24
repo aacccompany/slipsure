@@ -95,6 +95,81 @@ type PaymentLogListResponse struct {
 	TotalPages int          `json:"total_pages"`
 }
 
+// AdminMerchantUsage summarizes merchant activity for backoffice.
+type AdminMerchantUsage struct {
+	ThisMonth          int     `json:"this_month"`
+	Lifetime           int     `json:"lifetime"`
+	Quota              int     `json:"quota"`
+	Remaining          int     `json:"remaining"`
+	VerifiedSlips      int     `json:"verified_slips"`
+	FailedSlips        int     `json:"failed_slips"`
+	TotalSlips         int     `json:"total_slips"`
+	TotalTransactions  int     `json:"total_transactions"`
+	TotalAmount        float64 `json:"total_amount"`
+	DuplicateSlips     int     `json:"duplicate_slips"`
+	CurrentPeriodStart string  `json:"current_period_start"`
+	NextReset          string  `json:"next_reset"`
+}
+
+// AdminMerchantDetailResponse represents full merchant detail for backoffice.
+type AdminMerchantDetailResponse struct {
+	Merchant      *MerchantProfile   `json:"merchant"`
+	Subscription  *Subscription      `json:"subscription,omitempty"`
+	Usage         AdminMerchantUsage `json:"usage"`
+	LineConnected bool               `json:"line_connected"`
+	LineWebhook   *LINEWebhookConfig `json:"line_webhook,omitempty"`
+	Payments      []PaymentLog       `json:"payments"`
+	Users         []*User            `json:"users"`
+}
+
+// MerchantAnalyticsDashboard summarizes merchant verification activity.
+type MerchantAnalyticsDashboard struct {
+	TotalScans           int     `json:"total_scans"`
+	SuccessRate          float64 `json:"success_rate"`
+	RemainingQuota       int     `json:"remaining_quota"`
+	TodayScans           int     `json:"today_scans"`
+	ThisMonthScans       int     `json:"this_month_scans"`
+	DailyRevenue         float64 `json:"daily_revenue"`
+	PendingConfirmations int     `json:"pending_confirmations"`
+	CompletedToday       int     `json:"completed_today"`
+	QuotaLimit           int     `json:"quota_limit"`
+	QuotaResetDate       string  `json:"quota_reset_date"`
+	LifetimeRevenue      float64 `json:"lifetime_revenue"`
+	LifetimeTransactions int     `json:"lifetime_transactions"`
+	FailedScans          int     `json:"failed_scans"`
+	VerifiedScans        int     `json:"verified_scans"`
+}
+
+// MerchantUsagePoint represents verification volume for one date.
+type MerchantUsagePoint struct {
+	Date     string `json:"date"`
+	Count    int    `json:"count"`
+	Verified int    `json:"verified"`
+	Failed   int    `json:"failed"`
+}
+
+// MerchantFailedScanReason summarizes failed verification reasons.
+type MerchantFailedScanReason struct {
+	Reason string `json:"reason"`
+	Count  int    `json:"count"`
+}
+
+// MerchantAnalyticsUsage provides chart-friendly merchant usage breakdowns.
+type MerchantAnalyticsUsage struct {
+	UsagePerDay       []MerchantUsagePoint       `json:"usage_per_day"`
+	PeakTime          string                     `json:"peak_time"`
+	FailedScanReasons []MerchantFailedScanReason `json:"failed_scan_reasons"`
+}
+
+// MerchantAnalyticsExportRow represents one CSV export row.
+type MerchantAnalyticsExportRow struct {
+	Date     string  `json:"date"`
+	Scans    int     `json:"scans"`
+	Verified int     `json:"verified"`
+	Failed   int     `json:"failed"`
+	Revenue  float64 `json:"revenue"`
+}
+
 // MerchantProfile represents merchant shop profile
 type MerchantProfile struct {
 	ID            uuid.UUID      `json:"id,omitempty"`          // Hide ID in responses

@@ -27,6 +27,11 @@ type MerchantRepository interface {
 	CancelSubscription(merchantID uuid.UUID, reason string) error
 	CreatePaymentLog(payment *models.PaymentLog) error
 	ListPaymentLogs(status string, limit, offset int) ([]models.PaymentLog, int, error)
+	ListPaymentLogsByMerchant(merchantID uuid.UUID, limit int) ([]models.PaymentLog, error)
+	GetAdminMerchantUsage(merchantID uuid.UUID, periodStart time.Time, quota int, remaining int, resetDate time.Time) (models.AdminMerchantUsage, error)
+	GetMerchantAnalyticsDashboard(merchantID uuid.UUID) (models.MerchantAnalyticsDashboard, error)
+	GetMerchantAnalyticsUsage(merchantID uuid.UUID, days int) (models.MerchantAnalyticsUsage, error)
+	ListMerchantAnalyticsExport(merchantID uuid.UUID, startDate, endDate time.Time) ([]models.MerchantAnalyticsExportRow, error)
 
 	// Plan operations
 	GetAllPlans() ([]models.SubscriptionPlan, error)
@@ -359,6 +364,300 @@ func (r *merchantRepository) ListPaymentLogs(status string, limit, offset int) (
 	}
 
 	return payments, total, nil
+}
+
+// ListPaymentLogsByMerchant retrieves recent payment history for one merchant.
+func (r *merchantRepository) ListPaymentLogsByMerchant(merchantID uuid.UUID, limit int) ([]models.PaymentLog, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 10
+	}
+
+	query := `
+		SELECT p.id, p.merchant_id, COALESCE(m.shop_name, '') AS merchant_name,
+		       p.subscription_id, p.amount, p.currency, p.gateway,
+		       p.gateway_reference_id, p.status, p.paid_at, p.created_at
+		FROM payment_logs p
+		LEFT JOIN merchants m ON m.id = p.merchant_id
+		WHERE p.merchant_id = $1
+		ORDER BY p.created_at DESC
+		LIMIT $2
+	`
+
+	rows, err := r.db.Query(query, merchantID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	payments := make([]models.PaymentLog, 0)
+	for rows.Next() {
+		var payment models.PaymentLog
+		if err := rows.Scan(
+			&payment.ID,
+			&payment.MerchantID,
+			&payment.MerchantName,
+			&payment.SubscriptionID,
+			&payment.Amount,
+			&payment.Currency,
+			&payment.Gateway,
+			&payment.GatewayReferenceID,
+			&payment.Status,
+			&payment.PaidAt,
+			&payment.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		payments = append(payments, payment)
+	}
+
+	return payments, rows.Err()
+}
+
+// GetAdminMerchantUsage summarizes lifetime and current-period merchant usage.
+func (r *merchantRepository) GetAdminMerchantUsage(merchantID uuid.UUID, periodStart time.Time, quota int, remaining int, resetDate time.Time) (models.AdminMerchantUsage, error) {
+	query := `
+		SELECT
+			COALESCE((SELECT SUM(scan_count)::int FROM usage_counters WHERE merchant_id = $1), 0) AS lifetime_usage,
+			COALESCE((SELECT COUNT(*)::int FROM slips WHERE merchant_id = $1), 0) AS total_slips,
+			COALESCE((SELECT COUNT(*)::int FROM slips WHERE merchant_id = $1 AND status = 'verified'), 0) AS verified_slips,
+			COALESCE((SELECT COUNT(*)::int FROM slips WHERE merchant_id = $1 AND status = 'failed'), 0) AS failed_slips,
+			COALESCE((SELECT COUNT(*)::int FROM slips WHERE merchant_id = $1 AND fail_reason = 'DUPLICATE_SLIP'), 0) AS duplicate_slips,
+			COALESCE((SELECT COUNT(*)::int FROM transactions WHERE merchant_id = $1), 0) AS total_transactions,
+			COALESCE((SELECT SUM(amount)::float8 FROM transactions WHERE merchant_id = $1 AND status = 'success'), 0) AS total_amount
+	`
+
+	var usage models.AdminMerchantUsage
+	if err := r.db.QueryRow(query, merchantID).Scan(
+		&usage.Lifetime,
+		&usage.TotalSlips,
+		&usage.VerifiedSlips,
+		&usage.FailedSlips,
+		&usage.DuplicateSlips,
+		&usage.TotalTransactions,
+		&usage.TotalAmount,
+	); err != nil {
+		return usage, err
+	}
+
+	usage.ThisMonth = r.getUsageForPeriod(merchantID, periodStart)
+	usage.Quota = quota
+	usage.Remaining = remaining
+	usage.CurrentPeriodStart = periodStart.Format("2006-01-02")
+	usage.NextReset = resetDate.Format("2006-01-02")
+
+	return usage, nil
+}
+
+// GetMerchantAnalyticsDashboard returns KPI data for the merchant dashboard.
+func (r *merchantRepository) GetMerchantAnalyticsDashboard(merchantID uuid.UUID) (models.MerchantAnalyticsDashboard, error) {
+	query := `
+		SELECT
+			COALESCE((SELECT SUM(scan_count)::int FROM usage_counters WHERE merchant_id = $1), 0) AS total_scans,
+			COUNT(s.id) FILTER (WHERE s.created_at::date = CURRENT_DATE)::int AS today_scans,
+			COUNT(s.id) FILTER (WHERE s.status = 'verified')::int AS verified_scans,
+			COUNT(s.id) FILTER (WHERE s.status = 'failed')::int AS failed_scans,
+			COUNT(s.id) FILTER (WHERE s.status IN ('pending', 'processing'))::int AS pending_confirmations,
+			COUNT(s.id) FILTER (
+				WHERE s.status IN ('verified', 'failed') AND s.created_at::date = CURRENT_DATE
+			)::int AS completed_today,
+			COALESCE((
+				SELECT SUM(amount)::float8
+				FROM transactions
+				WHERE merchant_id = $1 AND status = 'success' AND created_at::date = CURRENT_DATE
+			), 0) AS daily_revenue,
+			COALESCE((
+				SELECT SUM(amount)::float8
+				FROM transactions
+				WHERE merchant_id = $1 AND status = 'success'
+			), 0) AS lifetime_revenue,
+			COALESCE((
+				SELECT COUNT(*)::int
+				FROM transactions
+				WHERE merchant_id = $1 AND status = 'success'
+			), 0) AS lifetime_transactions
+		FROM slips s
+		WHERE s.merchant_id = $1
+	`
+
+	var dashboard models.MerchantAnalyticsDashboard
+	if err := r.db.QueryRow(query, merchantID).Scan(
+		&dashboard.TotalScans,
+		&dashboard.TodayScans,
+		&dashboard.VerifiedScans,
+		&dashboard.FailedScans,
+		&dashboard.PendingConfirmations,
+		&dashboard.CompletedToday,
+		&dashboard.DailyRevenue,
+		&dashboard.LifetimeRevenue,
+		&dashboard.LifetimeTransactions,
+	); err != nil {
+		return dashboard, fmt.Errorf("failed to get merchant analytics dashboard: %w", err)
+	}
+
+	completed := dashboard.VerifiedScans + dashboard.FailedScans
+	if completed > 0 {
+		dashboard.SuccessRate = float64(dashboard.VerifiedScans) / float64(completed) * 100
+	}
+
+	return dashboard, nil
+}
+
+// GetMerchantAnalyticsUsage returns daily usage, peak time, and failure reason breakdowns.
+func (r *merchantRepository) GetMerchantAnalyticsUsage(merchantID uuid.UUID, days int) (models.MerchantAnalyticsUsage, error) {
+	if days != 30 && days != 90 {
+		days = 7
+	}
+
+	usage := models.MerchantAnalyticsUsage{
+		UsagePerDay:       make([]models.MerchantUsagePoint, 0, days),
+		FailedScanReasons: make([]models.MerchantFailedScanReason, 0),
+	}
+
+	dailyQuery := `
+		WITH dates AS (
+			SELECT generate_series(
+				CURRENT_DATE - (($2::int - 1) * INTERVAL '1 day'),
+				CURRENT_DATE,
+				INTERVAL '1 day'
+			)::date AS day
+		)
+		SELECT
+			TO_CHAR(dates.day, 'YYYY-MM-DD') AS date,
+			COUNT(s.id)::int AS count,
+			COUNT(s.id) FILTER (WHERE s.status = 'verified')::int AS verified,
+			COUNT(s.id) FILTER (WHERE s.status = 'failed')::int AS failed
+		FROM dates
+		LEFT JOIN slips s
+			ON s.merchant_id = $1
+			AND s.created_at::date = dates.day
+		GROUP BY dates.day
+		ORDER BY dates.day ASC
+	`
+
+	rows, err := r.db.Query(dailyQuery, merchantID, days)
+	if err != nil {
+		return usage, fmt.Errorf("failed to get merchant daily usage: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var point models.MerchantUsagePoint
+		if err := rows.Scan(&point.Date, &point.Count, &point.Verified, &point.Failed); err != nil {
+			return usage, err
+		}
+		usage.UsagePerDay = append(usage.UsagePerDay, point)
+	}
+	if err := rows.Err(); err != nil {
+		return usage, err
+	}
+
+	peakQuery := `
+		SELECT
+			(FLOOR(EXTRACT(HOUR FROM created_at) / 2) * 2)::int AS start_hour,
+			COUNT(*)::int AS scan_count
+		FROM slips
+		WHERE merchant_id = $1
+			AND created_at >= CURRENT_DATE - (($2::int - 1) * INTERVAL '1 day')
+		GROUP BY start_hour
+		ORDER BY scan_count DESC, start_hour ASC
+		LIMIT 1
+	`
+
+	var startHour int
+	var peakCount int
+	if err := r.db.QueryRow(peakQuery, merchantID, days).Scan(&startHour, &peakCount); err == nil && peakCount > 0 {
+		usage.PeakTime = fmt.Sprintf("%02d:00-%02d:00", startHour, (startHour+2)%24)
+	} else {
+		usage.PeakTime = "N/A"
+	}
+
+	reasonQuery := `
+		SELECT COALESCE(fail_reason::text, 'UNKNOWN') AS reason, COUNT(*)::int AS count
+		FROM slips
+		WHERE merchant_id = $1
+			AND status = 'failed'
+			AND created_at >= CURRENT_DATE - (($2::int - 1) * INTERVAL '1 day')
+		GROUP BY reason
+		ORDER BY count DESC, reason ASC
+	`
+
+	reasonRows, err := r.db.Query(reasonQuery, merchantID, days)
+	if err != nil {
+		return usage, fmt.Errorf("failed to get merchant failed scan reasons: %w", err)
+	}
+	defer reasonRows.Close()
+
+	for reasonRows.Next() {
+		var reason models.MerchantFailedScanReason
+		if err := reasonRows.Scan(&reason.Reason, &reason.Count); err != nil {
+			return usage, err
+		}
+		usage.FailedScanReasons = append(usage.FailedScanReasons, reason)
+	}
+	if err := reasonRows.Err(); err != nil {
+		return usage, err
+	}
+
+	return usage, nil
+}
+
+// ListMerchantAnalyticsExport returns daily analytics rows for CSV export.
+func (r *merchantRepository) ListMerchantAnalyticsExport(merchantID uuid.UUID, startDate, endDate time.Time) ([]models.MerchantAnalyticsExportRow, error) {
+	query := `
+		WITH dates AS (
+			SELECT generate_series($2::date, $3::date, INTERVAL '1 day')::date AS day
+		),
+		slip_daily AS (
+			SELECT
+				created_at::date AS day,
+				COUNT(*)::int AS scans,
+				COUNT(*) FILTER (WHERE status = 'verified')::int AS verified,
+				COUNT(*) FILTER (WHERE status = 'failed')::int AS failed
+			FROM slips
+			WHERE merchant_id = $1
+				AND created_at::date BETWEEN $2::date AND $3::date
+			GROUP BY created_at::date
+		),
+		transaction_daily AS (
+			SELECT
+				created_at::date AS day,
+				COALESCE(SUM(amount) FILTER (WHERE status = 'success'), 0)::float8 AS revenue
+			FROM transactions
+			WHERE merchant_id = $1
+				AND created_at::date BETWEEN $2::date AND $3::date
+			GROUP BY created_at::date
+		)
+		SELECT
+			TO_CHAR(dates.day, 'YYYY-MM-DD') AS date,
+			COALESCE(slip_daily.scans, 0) AS scans,
+			COALESCE(slip_daily.verified, 0) AS verified,
+			COALESCE(slip_daily.failed, 0) AS failed,
+			COALESCE(transaction_daily.revenue, 0) AS revenue
+		FROM dates
+		LEFT JOIN slip_daily ON slip_daily.day = dates.day
+		LEFT JOIN transaction_daily ON transaction_daily.day = dates.day
+		ORDER BY dates.day ASC
+	`
+
+	rows, err := r.db.Query(query, merchantID, startDate, endDate)
+	if err != nil {
+		return nil, fmt.Errorf("failed to export merchant analytics: %w", err)
+	}
+	defer rows.Close()
+
+	exportRows := make([]models.MerchantAnalyticsExportRow, 0)
+	for rows.Next() {
+		var row models.MerchantAnalyticsExportRow
+		if err := rows.Scan(&row.Date, &row.Scans, &row.Verified, &row.Failed, &row.Revenue); err != nil {
+			return nil, err
+		}
+		exportRows = append(exportRows, row)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return exportRows, nil
 }
 
 // FindByMerchantID retrieves subscription by merchant ID

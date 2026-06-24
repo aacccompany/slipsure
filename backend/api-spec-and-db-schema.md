@@ -975,7 +975,7 @@ Get single transaction detail.
 ### GET `/transactions/export`
 Export transactions as CSV/Excel.
 
-**Query Params:** Same filters as list + `format=csv|excel`
+**Query Params:** Same filters as list + `format=csv`
 
 **Response 200:** File download (application/octet-stream)
 
@@ -1255,7 +1255,7 @@ List all merchants.
 ---
 
 ### GET `/admin/merchants/:id`
-Get full merchant detail.
+Get full merchant detail for backoffice, including current-period quota, lifetime usage since first activation, slip/transaction summary, LINE connection status, recent payments, and merchant users.
 
 **Response 200:**
 ```json
@@ -1294,71 +1294,6 @@ List all subscriptions with status filter.
 }
 ```
 
----
-
-### POST `/admin/subscriptions/:id/activate`
-Force activate a subscription.
-
-**Response 200:**
-```json
-{ "success": true, "message": "Subscription activated." }
-```
-
----
-
-### POST `/admin/subscriptions/:id/suspend`
-Suspend a subscription.
-
-**Request:**
-```json
-{ "reason": "Payment overdue" }
-```
-**Response 200:**
-```json
-{ "success": true, "message": "Subscription suspended." }
-```
-
----
-
-### GET `/admin/payments`
-List payment logs.
-
-**Query Params:** `status=pending|success|failed|refunded`, `page`, `limit` (maximum 100)
-
-**Response 200:**
-```json
-{
-  "success": true,
-  "data": {
-    "items": [
-      {
-        "id": "pay-uuid",
-        "merchant_name": "ร้านดอกไม้",
-        "amount": 799,
-        "gateway": "promptpay",
-        "status": "pending",
-        "created_at": "2025-05-08T10:00:00Z"
-      }
-    ]
-  }
-}
-```
-
----
-
-### POST `/admin/payments/:id/approve`
-Manually approve a payment.
-
-**Request:**
-```json
-{ "note": "Confirmed via bank statement" }
-```
-**Response 200:**
-```json
-{ "success": true, "message": "Payment approved and subscription activated." }
-```
-
----
 
 ### GET `/admin/monitoring/usage`
 Platform-wide usage overview.
@@ -1407,7 +1342,7 @@ System and error logs.
 ## 7. Merchant Analytics
 
 ### GET `/merchants/me/analytics/dashboard`
-Merchant dashboard summary.
+Merchant dashboard summary. Scans are verification attempts accepted through the LINE flow; quota usage is based on the current subscription period.
 
 **Response 200:**
 ```json
@@ -1421,7 +1356,13 @@ Merchant dashboard summary.
     "this_month_scans": 342,
     "daily_revenue": 45000.00,
     "pending_confirmations": 5,
-    "completed_today": 23
+    "completed_today": 23,
+    "quota_limit": 2000,
+    "quota_reset_date": "2025-06-18",
+    "lifetime_revenue": 182500.00,
+    "lifetime_transactions": 451,
+    "failed_scans": 9,
+    "verified_scans": 333
   }
 }
 ```
@@ -1456,9 +1397,9 @@ Usage analytics breakdown.
 ### GET `/merchants/me/analytics/export`
 Export merchant report.
 
-**Query Params:** `format=csv|excel`, `start_date`, `end_date`
+**Query Params:** `format=csv`, `start_date`, `end_date`
 
-**Response 200:** File download
+**Response 200:** CSV file download with `date, scans, verified, failed, revenue`.
 
 ---
 

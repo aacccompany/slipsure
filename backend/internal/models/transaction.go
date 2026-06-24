@@ -48,6 +48,16 @@ type TransactionListResponse struct {
 	Pagination Pagination    `json:"pagination"`
 }
 
+// TransactionFilters represents merchant transaction list filters.
+type TransactionFilters struct {
+	Status    *TransactionStatus
+	StartDate *time.Time
+	EndDate   *time.Time
+	Search    string
+	Limit     int
+	Offset    int
+}
+
 // TransactionDetailResponse represents single transaction detail
 type TransactionDetailResponse struct {
 	Transaction Transaction `json:"transaction"`

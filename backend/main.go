@@ -127,6 +127,7 @@ func main() {
 	usageCounterRepo := repositories.NewUsageCounterRepository(database.DB)
 	slipVerificationService := services.NewSlipVerificationService(slipRepo, transactionRepo, usageCounterRepo, merchantRepo, storageService)
 	slipHandler := handlers.NewSlipHandler(slipVerificationService, userRepo, merchantRepo)
+	transactionHandler := handlers.NewTransactionHandler(transactionRepo, slipRepo, merchantRepo)
 
 	// Initialize services with dependency injection
 	authService := services.NewAuthServiceWithOTP(userRepo, merchantRepo, otpService, lineOAuth)
@@ -201,6 +202,7 @@ func main() {
 		admin.Use(middleware.AuthMiddleware(), middleware.RequireRole("admin"))
 		{
 			admin.GET("/payments", merchantHandler.GetAdminPayments)
+			admin.GET("/merchants/:id", merchantHandler.GetAdminMerchantDetail)
 		}
 
 		// Checkout routes (protected only - email verification disabled for testing)
@@ -232,6 +234,11 @@ func main() {
 
 			// Quota management
 			merchants.GET("/quota", merchantHandler.GetQuota)
+
+			// Analytics
+			merchants.GET("/analytics/dashboard", merchantHandler.GetMerchantAnalyticsDashboard)
+			merchants.GET("/analytics/usage", merchantHandler.GetMerchantAnalyticsUsage)
+			merchants.GET("/analytics/export", merchantHandler.ExportMerchantAnalytics)
 		}
 
 		// Alternative protected routes (removed duplicate /me endpoint)
@@ -249,6 +256,16 @@ func main() {
 			slips.GET("/stats", slipHandler.GetSlipStats)
 			slips.GET("/:slip_id", slipHandler.GetSlip)
 			slips.GET("", slipHandler.ListSlips)
+		}
+
+		// Transaction history routes (protected - email verification disabled for testing)
+		transactions := v1.Group("/transactions")
+		transactions.Use(middleware.AuthMiddleware())
+		// transactions.Use(middleware.EmailVerificationMiddleware(userRepo)) // Temporarily disabled for testing
+		{
+			transactions.GET("/export", transactionHandler.ExportTransactions)
+			transactions.GET("/:id", transactionHandler.GetTransaction)
+			transactions.GET("", transactionHandler.ListTransactions)
 		}
 
 		// LINE webhook configuration routes (protected - email verification disabled for testing)

@@ -14,6 +14,15 @@ if (
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'alleventpictures.sgp1.digitaloceanspaces.com',
+        pathname: '/slips/**',
+      },
+    ],
+  },
 };
 
 export default nextConfig;

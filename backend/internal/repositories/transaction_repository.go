@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -20,6 +21,8 @@ type TransactionRepository interface {
 	FindBySlipID(slipID uuid.UUID) (*models.Transaction, error)
 	FindByReferenceNo(referenceNo string) (*models.Transaction, error)
 	FindByMerchantID(merchantID uuid.UUID, limit, offset int) ([]*models.Transaction, error)
+	ListByMerchant(merchantID uuid.UUID, filters models.TransactionFilters) ([]*models.Transaction, error)
+	CountByMerchant(merchantID uuid.UUID, filters models.TransactionFilters) (int, error)
 	UpdateStatus(id uuid.UUID, status models.TransactionStatus) error
 	IncrementRecheckCount(id uuid.UUID) error
 	CheckDuplicate(merchantID uuid.UUID, referenceNo string, amount float64, withinHours int) (*models.Transaction, error)
@@ -160,19 +163,27 @@ func (r *transactionRepository) FindByReferenceNo(referenceNo string) (*models.T
 
 // FindByMerchantID retrieves transactions for a merchant with pagination
 func (r *transactionRepository) FindByMerchantID(merchantID uuid.UUID, limit, offset int) ([]*models.Transaction, error) {
-	query := `
+	return r.ListByMerchant(merchantID, models.TransactionFilters{Limit: limit, Offset: offset})
+}
+
+// ListByMerchant retrieves filtered transactions for a merchant with pagination.
+func (r *transactionRepository) ListByMerchant(merchantID uuid.UUID, filters models.TransactionFilters) ([]*models.Transaction, error) {
+	where, args := buildTransactionFilterWhere(merchantID, filters)
+	args = append(args, filters.Limit, filters.Offset)
+
+	query := fmt.Sprintf(`
 		SELECT id, slip_id, merchant_id, reference_no, amount,
 			sender_bank, sender_account, receiver_bank, receiver_account,
 			transfer_at, transaction_date, transaction_time,
 			status, is_duplicate, fail_reason, recheck_count, last_rechecked_at,
 			created_at, updated_at
 		FROM transactions
-		WHERE merchant_id = $1
+		%s
 		ORDER BY created_at DESC
-		LIMIT $2 OFFSET $3
-	`
+		LIMIT $%d OFFSET $%d
+	`, where, len(args)-1, len(args))
 
-	rows, err := r.db.Query(query, merchantID, limit, offset)
+	rows, err := r.db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -196,6 +207,55 @@ func (r *transactionRepository) FindByMerchantID(merchantID uuid.UUID, limit, of
 	}
 
 	return transactions, nil
+}
+
+// CountByMerchant counts filtered transactions for a merchant.
+func (r *transactionRepository) CountByMerchant(merchantID uuid.UUID, filters models.TransactionFilters) (int, error) {
+	where, args := buildTransactionFilterWhere(merchantID, filters)
+	query := fmt.Sprintf(`SELECT COUNT(*) FROM transactions %s`, where)
+
+	var total int
+	if err := r.db.QueryRow(query, args...).Scan(&total); err != nil {
+		return 0, fmt.Errorf("failed to count transactions: %w", err)
+	}
+
+	return total, nil
+}
+
+func buildTransactionFilterWhere(merchantID uuid.UUID, filters models.TransactionFilters) (string, []interface{}) {
+	conditions := []string{"merchant_id = $1"}
+	args := []interface{}{merchantID}
+
+	if filters.Status != nil {
+		args = append(args, *filters.Status)
+		conditions = append(conditions, fmt.Sprintf("status = $%d", len(args)))
+	}
+
+	if filters.StartDate != nil {
+		args = append(args, *filters.StartDate)
+		conditions = append(conditions, fmt.Sprintf("created_at >= $%d", len(args)))
+	}
+
+	if filters.EndDate != nil {
+		endExclusive := filters.EndDate.AddDate(0, 0, 1)
+		args = append(args, endExclusive)
+		conditions = append(conditions, fmt.Sprintf("created_at < $%d", len(args)))
+	}
+
+	if strings.TrimSpace(filters.Search) != "" {
+		args = append(args, "%"+strings.TrimSpace(filters.Search)+"%")
+		searchParam := len(args)
+		conditions = append(conditions, fmt.Sprintf(`(
+			reference_no ILIKE $%d
+			OR sender_bank ILIKE $%d
+			OR sender_account ILIKE $%d
+			OR receiver_bank ILIKE $%d
+			OR receiver_account ILIKE $%d
+			OR amount::text ILIKE $%d
+		)`, searchParam, searchParam, searchParam, searchParam, searchParam, searchParam))
+	}
+
+	return "WHERE " + strings.Join(conditions, " AND "), args
 }
 
 // UpdateStatus updates the status of a transaction

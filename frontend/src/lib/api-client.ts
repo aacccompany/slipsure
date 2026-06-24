@@ -20,10 +20,14 @@ import type {
   CheckoutRequest,
   CheckoutResponse,
   QuotaStatus,
+  Transaction,
+  TransactionListResponse,
   Slip,
   SlipStatus,
   SlipListResponse,
   SlipStatsResponse,
+  MerchantAnalyticsDashboard,
+  MerchantAnalyticsUsage,
   LINEWebhookConfig,
   UpdateLINEWebhookRequest,
   LINEWebhookTestResponse,
@@ -327,6 +331,34 @@ class ApiClient {
     return this.request('/v1/merchants/me/quota');
   }
 
+  // Merchant Analytics
+  async getMerchantAnalyticsDashboard(): Promise<ApiResponse<MerchantAnalyticsDashboard>> {
+    return this.request('/v1/merchants/me/analytics/dashboard');
+  }
+
+  async getMerchantAnalyticsUsage(params?: { period?: '7d' | '30d' | '90d' }): Promise<ApiResponse<MerchantAnalyticsUsage>> {
+    const queryString = new URLSearchParams(params as any).toString();
+    return this.request(`/v1/merchants/me/analytics/usage${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async exportMerchantAnalytics(params?: {
+    format?: 'csv';
+    start_date?: string;
+    end_date?: string;
+  }): Promise<Blob> {
+    const queryString = new URLSearchParams({ format: 'csv', ...(params as any) }).toString();
+    const token = this.getAuthHeader();
+    const response = await fetch(`${this.baseURL}/v1/merchants/me/analytics/export?${queryString}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to export merchant analytics');
+    }
+
+    return response.blob();
+  }
+
   // LINE Webhook Configuration
   async getLINEWebhookConfig(): Promise<ApiResponse<{ config: LINEWebhookConfig }>> {
     const response = await this.request<{ config: LINEWebhookConfig } | LINEWebhookConfig>('/v1/merchants/me/line-webhook') as ApiResponse<{ config: LINEWebhookConfig } | LINEWebhookConfig> & {
@@ -410,6 +442,43 @@ class ApiClient {
 
   async getSlipStats(): Promise<ApiResponse<SlipStatsResponse>> {
     return this.request('/v1/slips/stats');
+  }
+
+  // Transactions
+  async getTransactions(params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    start_date?: string;
+    end_date?: string;
+    search?: string;
+  }): Promise<ApiResponse<TransactionListResponse>> {
+    const queryString = new URLSearchParams(params as any).toString();
+    return this.request(`/v1/transactions${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getTransaction(transactionId: string): Promise<ApiResponse<Transaction>> {
+    return this.request(`/v1/transactions/${transactionId}`);
+  }
+
+  async exportTransactions(params?: {
+    status?: string;
+    start_date?: string;
+    end_date?: string;
+    search?: string;
+    format?: 'csv';
+  }): Promise<Blob> {
+    const queryString = new URLSearchParams({ format: 'csv', ...(params as any) }).toString();
+    const token = this.getAuthHeader();
+    const response = await fetch(`${this.baseURL}/v1/transactions/export?${queryString}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to export transactions');
+    }
+
+    return response.blob();
   }
 }
 
