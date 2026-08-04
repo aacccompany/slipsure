@@ -9,6 +9,7 @@ import { StatCard } from '@/components/dashboard/StatCard';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
 import Link from 'next/link';
+import { toast } from 'sonner';
 
 export default function DashboardPage() {
   const { data: quota, isLoading: quotaLoading } = useQuery({
@@ -17,14 +18,35 @@ export default function DashboardPage() {
   });
 
   const { data: slipStatsData } = useQuery({
-    queryKey: ['slip-stats'],
-    queryFn: () => api.getSlipStats(),
+    queryKey: ['merchant-analytics-dashboard'],
+    queryFn: () => api.getMerchantAnalyticsDashboard(),
+  });
+
+  const { data: usageData } = useQuery({
+    queryKey: ['merchant-analytics-usage', '7d'],
+    queryFn: () => api.getMerchantAnalyticsUsage({ period: '7d' }),
   });
 
   const stats = slipStatsData?.data;
-  const successRate = stats?.success_rate ?? 0;
-  const dailyUsage = stats?.last_7_days ?? [];
+  const successRate = Math.round(stats?.success_rate ?? 0);
+  const dailyUsage = usageData?.data?.usage_per_day ?? [];
   const maxDailyCount = Math.max(1, ...dailyUsage.map((d) => d.verified + d.failed));
+
+  const downloadReport = async () => {
+    try {
+      const blob = await api.exportMerchantAnalytics({ format: 'csv' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `merchant-analytics-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to download report');
+    }
+  };
 
   if (quotaLoading) {
     return (
@@ -53,6 +75,7 @@ export default function DashboardPage() {
           </h1>
         </div>
         <button
+          onClick={downloadReport}
           className="flex items-center gap-2 text-sm font-medium transition-all hover:opacity-80 px-4 py-2"
           style={{ background: 'var(--navy)', color: '#fff' }}
         >
@@ -77,7 +100,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Slips Verified"
-          value={(quota?.data?.used ?? 0).toLocaleString()}
+          value={(stats?.verified_scans ?? 0).toLocaleString()}
           change="This month"
           isPositive={true}
           icon={ScanLine}
@@ -92,7 +115,7 @@ export default function DashboardPage() {
         <StatCard
           title="Success Rate"
           value={`${successRate}%`}
-          change={`${stats?.verified ?? 0} verified`}
+          change={`${stats?.verified_scans ?? 0} verified`}
           isPositive={successRate >= 80}
           icon={CheckCircle2}
         />
@@ -148,7 +171,7 @@ export default function DashboardPage() {
                       )}
                     </div>
                     <span className="font-mono text-[9px] uppercase" style={{ color: 'var(--border-strong)' }}>
-                      {data.day}
+                  {new Date(data.date).toLocaleDateString('en-US', { weekday: 'short' })}
                     </span>
                   </div>
                 );

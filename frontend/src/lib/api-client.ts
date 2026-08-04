@@ -16,7 +16,7 @@ import type {
   MerchantProfile,
   MerchantSettings,
   SubscriptionPlan,
-  Subscription,
+  SubscriptionResponse,
   CheckoutRequest,
   CheckoutResponse,
   QuotaStatus,
@@ -28,9 +28,15 @@ import type {
   SlipStatsResponse,
   MerchantAnalyticsDashboard,
   MerchantAnalyticsUsage,
+  AdminUserListResponse,
+  AdminMerchantListResponse,
+  AdminMerchantDetail,
+  AdminAnalyticsDashboard,
+  AdminRevenueAnalytics,
+  AdminMerchantPerformanceAnalytics,
+  PaymentLog,
   LINEWebhookConfig,
   UpdateLINEWebhookRequest,
-  LINEWebhookTestResponse,
   HealthStatus,
 } from '@/types/api';
 
@@ -42,6 +48,17 @@ const normalizeApiBaseUrl = (url: string) => {
 const API_BASE_URL = normalizeApiBaseUrl(
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
 );
+
+const toQueryString = (params?: Record<string, unknown>) => {
+  const query = new URLSearchParams();
+
+  Object.entries(params ?? {}).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') return;
+    query.set(key, String(value));
+  });
+
+  return query.toString();
+};
 
 class ApiClient {
   private baseURL: string;
@@ -78,7 +95,7 @@ class ApiClient {
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(data.error || data.message || 'Request failed');
+        throw new Error(data.message || data.error || 'Request failed');
       }
 
       return data;
@@ -115,7 +132,7 @@ class ApiClient {
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(data.error || data.message || 'Upload failed');
+        throw new Error(data.message || data.error || 'Upload failed');
       }
 
       return data;
@@ -315,7 +332,7 @@ class ApiClient {
   }
 
   // Subscription
-  async getSubscription(): Promise<ApiResponse<{ subscription: Subscription }>> {
+  async getSubscription(): Promise<ApiResponse<SubscriptionResponse>> {
     return this.request('/v1/merchants/me/subscription');
   }
 
@@ -337,7 +354,7 @@ class ApiClient {
   }
 
   async getMerchantAnalyticsUsage(params?: { period?: '7d' | '30d' | '90d' }): Promise<ApiResponse<MerchantAnalyticsUsage>> {
-    const queryString = new URLSearchParams(params as any).toString();
+    const queryString = toQueryString(params);
     return this.request(`/v1/merchants/me/analytics/usage${queryString ? `?${queryString}` : ''}`);
   }
 
@@ -346,7 +363,7 @@ class ApiClient {
     start_date?: string;
     end_date?: string;
   }): Promise<Blob> {
-    const queryString = new URLSearchParams({ format: 'csv', ...(params as any) }).toString();
+    const queryString = toQueryString({ format: 'csv', ...(params as Record<string, unknown> | undefined) });
     const token = this.getAuthHeader();
     const response = await fetch(`${this.baseURL}/v1/merchants/me/analytics/export?${queryString}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : undefined,
@@ -392,24 +409,6 @@ class ApiClient {
     });
   }
 
-  async testLINEWebhook(): Promise<ApiResponse<{ result: LINEWebhookTestResponse }>> {
-    const response = await this.request<{ result: LINEWebhookTestResponse }>('/v1/merchants/me/test', {
-      method: 'POST',
-    }) as ApiResponse<{ result: LINEWebhookTestResponse }> & {
-      result?: LINEWebhookTestResponse;
-    };
-
-    if (response.result) {
-      return {
-        ...response,
-        success: response.success ?? true,
-        data: { result: response.result },
-      };
-    }
-
-    return response;
-  }
-
   async getWebhookURL(): Promise<ApiResponse<{ webhook_url: string; webhook_reference_id: string }>> {
     const response = await this.request<{ webhook_url: string; webhook_reference_id: string }>('/v1/merchants/me/webhook-url') as ApiResponse<{ webhook_url: string; webhook_reference_id: string }> & {
       webhook_url?: string;
@@ -436,7 +435,7 @@ class ApiClient {
   }
 
   async getSlips(params?: { page?: number; limit?: number; status?: SlipStatus }): Promise<ApiResponse<SlipListResponse>> {
-    const queryString = new URLSearchParams(params as any).toString();
+    const queryString = toQueryString(params);
     return this.request(`/v1/slips${queryString ? `?${queryString}` : ''}`);
   }
 
@@ -453,7 +452,7 @@ class ApiClient {
     end_date?: string;
     search?: string;
   }): Promise<ApiResponse<TransactionListResponse>> {
-    const queryString = new URLSearchParams(params as any).toString();
+    const queryString = toQueryString(params);
     return this.request(`/v1/transactions${queryString ? `?${queryString}` : ''}`);
   }
 
@@ -468,7 +467,7 @@ class ApiClient {
     search?: string;
     format?: 'csv';
   }): Promise<Blob> {
-    const queryString = new URLSearchParams({ format: 'csv', ...(params as any) }).toString();
+    const queryString = toQueryString({ format: 'csv', ...(params as Record<string, unknown> | undefined) });
     const token = this.getAuthHeader();
     const response = await fetch(`${this.baseURL}/v1/transactions/export?${queryString}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : undefined,
@@ -479,6 +478,68 @@ class ApiClient {
     }
 
     return response.blob();
+  }
+
+  // Admin Backoffice
+  async getAdminUsers(params?: {
+    page?: number;
+    limit?: number;
+    role?: string;
+    search?: string;
+  }): Promise<ApiResponse<AdminUserListResponse>> {
+    const queryString = toQueryString(params);
+    return this.request(`/v1/admin/users${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getAdminMerchants(params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    search?: string;
+  }): Promise<ApiResponse<AdminMerchantListResponse>> {
+    const queryString = toQueryString(params);
+    return this.request(`/v1/admin/merchants${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getAdminMerchantDetail(merchantId: string): Promise<ApiResponse<AdminMerchantDetail>> {
+    return this.request(`/v1/admin/merchants/${merchantId}`);
+  }
+
+  async getAdminMerchantTransactions(
+    merchantId: string,
+    params?: {
+      page?: number;
+      limit?: number;
+      status?: string;
+      start_date?: string;
+      end_date?: string;
+      search?: string;
+    }
+  ): Promise<ApiResponse<TransactionListResponse>> {
+    const queryString = toQueryString(params);
+    return this.request(`/v1/admin/merchants/${merchantId}/transactions${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getAdminPayments(params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+  }): Promise<ApiResponse<{ items: PaymentLog[]; page: number; limit: number; total: number; total_pages: number }>> {
+    const queryString = toQueryString(params);
+    return this.request(`/v1/admin/payments${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getAdminAnalyticsDashboard(): Promise<ApiResponse<AdminAnalyticsDashboard>> {
+    return this.request('/v1/admin/analytics/dashboard');
+  }
+
+  async getAdminRevenueAnalytics(params?: { period?: 'monthly' | 'yearly' }): Promise<ApiResponse<AdminRevenueAnalytics>> {
+    const queryString = toQueryString(params);
+    return this.request(`/v1/admin/analytics/revenue${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getAdminMerchantPerformance(): Promise<ApiResponse<AdminMerchantPerformanceAnalytics>> {
+    return this.request('/v1/admin/analytics/merchants/performance');
   }
 }
 

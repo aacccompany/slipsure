@@ -5,6 +5,7 @@ import { Check, Crown, Zap, Shield, ArrowRight, CreditCard, Clock, History, Load
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
 import { toast } from 'sonner';
+import { FreePlanConfirmModal } from '@/components/subscription/FreePlanConfirmModal';
 import type { SubscriptionPlan, Subscription, QuotaStatus } from '@/types/api';
 
 export default function SubscriptionPage() {
@@ -27,6 +28,7 @@ export default function SubscriptionPage() {
   });
 
   const [isCancelling, setIsCancelling] = useState(false);
+  const [freeConfirmOpen, setFreeConfirmOpen] = useState(false);
 
   const cancelMutation = useMutation({
     mutationFn: (data: { cancel_immediately: boolean; reason: string }) =>
@@ -44,6 +46,7 @@ export default function SubscriptionPage() {
     mutationFn: (data: { plan_id: string; billing_cycle: 'monthly' | 'yearly' }) =>
       api.createCheckout(data),
     onSuccess: (response) => {
+      setFreeConfirmOpen(false);
       if (response.data?.checkout_url) {
         window.location.href = response.data.checkout_url;
         return;
@@ -53,16 +56,33 @@ export default function SubscriptionPage() {
       queryClient.invalidateQueries({ queryKey: ['quota'] });
     },
     onError: (error) => {
+      setFreeConfirmOpen(false);
       toast.error(error instanceof Error ? error.message : 'Failed to create checkout session');
+      queryClient.invalidateQueries({ queryKey: ['subscription'] });
     },
   });
 
   const subscription = subscriptionData?.data?.subscription;
+  const freePlanUsed = subscriptionData?.data?.free_plan_used ?? false;
   const plans = plansData?.data?.plans || [];
+  const visiblePlans = plans.filter((plan) => !(plan.id === 'plan-free' && freePlanUsed));
   const quota = quotaData?.data;
 
   const handleUpgrade = (planId: string, billingCycle: 'monthly' | 'yearly' = 'monthly') => {
+    if (planId === 'plan-free' && freePlanUsed && subscription?.plan_id !== 'plan-free') {
+      toast.error('Free plan can only be used once per account.');
+      return;
+    }
+    if (planId === 'plan-free') {
+      setFreeConfirmOpen(true);
+      return;
+    }
     checkoutMutation.mutate({ plan_id: planId, billing_cycle: billingCycle });
+  };
+
+  const handleConfirmFreePlan = () => {
+    setFreeConfirmOpen(false);
+    checkoutMutation.mutate({ plan_id: 'plan-free', billing_cycle: 'monthly' });
   };
 
   const handleCancel = () => {
@@ -85,6 +105,13 @@ export default function SubscriptionPage() {
 
   return (
     <div className="p-8 space-y-10 max-w-6xl">
+      <FreePlanConfirmModal
+        open={freeConfirmOpen}
+        isLoading={checkoutMutation.isPending}
+        onCancel={() => setFreeConfirmOpen(false)}
+        onConfirm={handleConfirmFreePlan}
+      />
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-black text-zinc-900 tracking-tight mb-2">Subscription</h1>
@@ -176,9 +203,13 @@ export default function SubscriptionPage() {
 
       {/* Plans Selection */}
       <div className="grid lg:grid-cols-3 gap-8">
-        {plans.map((plan) => {
+        {visiblePlans.map((plan) => {
           const isCurrentPlan = plan.id === subscription?.plan_id;
           const isSelectedForHighlight = plan.is_popular && !isCurrentPlan;
+          const isFreeUnavailable = plan.id === 'plan-free' && freePlanUsed && !isCurrentPlan;
+          const yearlySavings = plan.price_yearly > 0
+            ? Math.round(((plan.price_monthly * 12 - plan.price_yearly) / (plan.price_monthly * 12)) * 100)
+            : 0;
 
           return (
             <div
@@ -254,6 +285,13 @@ export default function SubscriptionPage() {
                 <button className="w-full py-4 rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2 bg-blue-100 text-blue-800 cursor-default">
                   Current Plan
                 </button>
+              ) : isFreeUnavailable ? (
+                <button
+                  disabled
+                  className="w-full py-4 rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2 bg-zinc-200 text-zinc-500 cursor-not-allowed"
+                >
+                  Used Already
+                </button>
               ) : (
                 <div className="space-y-3">
                   <button
@@ -283,7 +321,7 @@ export default function SubscriptionPage() {
                         : 'border-zinc-200 text-zinc-600 hover:border-zinc-900'
                     }`}
                   >
-                    Yearly (Save {Math.round(((plan.price_yearly - plan.price_monthly * 12) / plan.price_yearly) * 100)}%)
+                    {plan.price_yearly > 0 ? `Yearly (Save ${yearlySavings}%)` : 'Yearly'}
                   </button>
                 </div>
               )}

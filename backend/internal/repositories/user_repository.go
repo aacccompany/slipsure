@@ -3,6 +3,8 @@ package repositories
 import (
 	"database/sql"
 	"errors"
+	"fmt"
+	"strings"
 
 	"slipsure-backend/internal/models"
 
@@ -21,6 +23,7 @@ type UserRepository interface {
 	EmailExists(email string) (bool, error)
 	LinkLineAccount(userID uuid.UUID, lineUserID string) error
 	FindByMerchantID(merchantID uuid.UUID) ([]*models.User, error)
+	ListAdminUsers(search string, role string, limit int, offset int) ([]models.AdminUserListItem, int, error)
 }
 
 // userRepository implements UserRepository interface
@@ -274,7 +277,8 @@ func (r *userRepository) FindByMerchantID(merchantID uuid.UUID) ([]*models.User,
 		SELECT u.id, u.name, u.email, u.phone, u.password_hash, u.role, u.merchant_id,
 			   u.line_user_id, u.line_linked, u.email_verified, u.created_at, u.updated_at
 		FROM users u
-		WHERE u.merchant_id = $1
+		LEFT JOIN merchants m ON m.id = $1
+		WHERE u.merchant_id = $1 OR u.id = m.owner_id
 		ORDER BY u.created_at DESC
 	`
 
@@ -309,4 +313,103 @@ func (r *userRepository) FindByMerchantID(merchantID uuid.UUID) ([]*models.User,
 	}
 
 	return users, nil
+}
+
+// ListAdminUsers retrieves users with their merchant relation for backoffice.
+func (r *userRepository) ListAdminUsers(search string, role string, limit int, offset int) ([]models.AdminUserListItem, int, error) {
+	where, args := buildAdminUserWhere(search, role)
+
+	countQuery := fmt.Sprintf(`
+		SELECT COUNT(*)
+		FROM users u
+		LEFT JOIN merchants owned ON owned.owner_id = u.id
+		LEFT JOIN merchants linked ON linked.id = u.merchant_id
+		%s
+	`, where)
+
+	var total int
+	if err := r.db.QueryRow(countQuery, args...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	limitPosition := len(args) + 1
+	offsetPosition := len(args) + 2
+	query := fmt.Sprintf(`
+		SELECT
+			u.id, u.name, u.email, u.phone, u.role,
+			COALESCE(linked.id, owned.id)::text AS merchant_id,
+			COALESCE(linked.shop_name, owned.shop_name, '') AS merchant_name,
+			u.line_linked, u.email_verified, u.created_at
+		FROM users u
+		LEFT JOIN merchants owned ON owned.owner_id = u.id
+		LEFT JOIN merchants linked ON linked.id = u.merchant_id
+		%s
+		ORDER BY u.created_at DESC
+		LIMIT $%d OFFSET $%d
+	`, where, limitPosition, offsetPosition)
+
+	args = append(args, limit, offset)
+	rows, err := r.db.Query(query, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	users := make([]models.AdminUserListItem, 0)
+	for rows.Next() {
+		var item models.AdminUserListItem
+		var merchantID sql.NullString
+		if err := rows.Scan(
+			&item.ID,
+			&item.Name,
+			&item.Email,
+			&item.Phone,
+			&item.Role,
+			&merchantID,
+			&item.MerchantName,
+			&item.LineLinked,
+			&item.EmailVerified,
+			&item.CreatedAt,
+		); err != nil {
+			return nil, 0, err
+		}
+		if merchantID.Valid {
+			parsedMerchantID, err := uuid.Parse(merchantID.String)
+			if err != nil {
+				return nil, 0, err
+			}
+			item.MerchantID = &parsedMerchantID
+		}
+		users = append(users, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+
+	return users, total, nil
+}
+
+func buildAdminUserWhere(search string, role string) (string, []interface{}) {
+	conditions := make([]string, 0)
+	args := make([]interface{}, 0)
+
+	if trimmed := strings.TrimSpace(search); trimmed != "" {
+		args = append(args, "%"+trimmed+"%")
+		param := len(args)
+		conditions = append(conditions, fmt.Sprintf(`(
+			u.name ILIKE $%d OR u.email ILIKE $%d OR
+			owned.shop_name ILIKE $%d OR linked.shop_name ILIKE $%d
+		)`, param, param, param, param))
+	}
+
+	if role != "" {
+		args = append(args, role)
+		conditions = append(conditions, fmt.Sprintf("u.role = $%d", len(args)))
+	}
+
+	if len(conditions) == 0 {
+		return "", args
+	}
+
+	return "WHERE " + strings.Join(conditions, " AND "), args
 }

@@ -6,12 +6,14 @@ import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
 import { toast } from 'sonner';
+import { FreePlanConfirmModal } from '@/components/subscription/FreePlanConfirmModal';
 import type { BillingCycle } from '@/types/api';
 
 export default function MerchantSubscriptionPage() {
   const queryClient = useQueryClient();
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
+  const [freeConfirmOpen, setFreeConfirmOpen] = useState(false);
 
   // Fetch current subscription
   const { data: subscriptionData, isLoading } = useQuery({
@@ -33,6 +35,7 @@ export default function MerchantSubscriptionPage() {
   const checkoutMutation = useMutation({
     mutationFn: (data: { plan_id: string; billing_cycle: BillingCycle }) => api.createCheckout(data),
     onSuccess: (response) => {
+      setFreeConfirmOpen(false);
       if (response.data?.checkout_url) {
         window.location.href = response.data.checkout_url;
         return;
@@ -43,12 +46,16 @@ export default function MerchantSubscriptionPage() {
       queryClient.invalidateQueries({ queryKey: ['quota'] });
     },
     onError: (error) => {
+      setFreeConfirmOpen(false);
       toast.error(error instanceof Error ? error.message : 'Failed to create checkout session');
+      queryClient.invalidateQueries({ queryKey: ['subscription'] });
     },
   });
 
   const subscription = subscriptionData?.data?.subscription;
+  const freePlanUsed = subscriptionData?.data?.free_plan_used ?? false;
   const plans = plansData?.data?.plans?.filter((plan) => plan.is_active) ?? [];
+  const visiblePlans = plans.filter((plan) => !(plan.id === 'plan-free' && freePlanUsed));
   const currentPlan = plans.find((plan) => plan.id === subscription?.plan_id)
     ?? subscription?.plan
     ?? plans.find((plan) => plan.price_monthly === 0);
@@ -56,9 +63,22 @@ export default function MerchantSubscriptionPage() {
   const quota = quotaData?.data;
 
   const handleUpgrade = () => {
+    if (selectedPlanId === 'plan-free' && freePlanUsed && currentPlanId !== 'plan-free') {
+      toast.error('Free plan can only be used once per account.');
+      return;
+    }
+    if (selectedPlanId === 'plan-free') {
+      setFreeConfirmOpen(true);
+      return;
+    }
     if (selectedPlanId && selectedPlanId !== currentPlanId) {
       checkoutMutation.mutate({ plan_id: selectedPlanId, billing_cycle: billingCycle });
     }
+  };
+
+  const handleConfirmFreePlan = () => {
+    setFreeConfirmOpen(false);
+    checkoutMutation.mutate({ plan_id: 'plan-free', billing_cycle: 'monthly' });
   };
 
   if (isLoading || plansLoading) {
@@ -71,6 +91,13 @@ export default function MerchantSubscriptionPage() {
 
   return (
     <div className="p-8 space-y-8 max-w-6xl">
+      <FreePlanConfirmModal
+        open={freeConfirmOpen}
+        isLoading={checkoutMutation.isPending}
+        onCancel={() => setFreeConfirmOpen(false)}
+        onConfirm={handleConfirmFreePlan}
+      />
+
       <div className="mb-8">
         <Link
           href="/dashboard/merchant"
@@ -170,10 +197,11 @@ export default function MerchantSubscriptionPage() {
           </div>
         </div>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {plans.map((plan) => {
+          {visiblePlans.map((plan) => {
             const isCurrent = plan.id === currentPlanId;
             const isSelected = selectedPlanId === plan.id;
             const price = billingCycle === 'monthly' ? plan.price_monthly : plan.price_yearly;
+            const isFreeUnavailable = plan.id === 'plan-free' && freePlanUsed && !isCurrent;
 
             return (
               <div
@@ -184,7 +212,7 @@ export default function MerchantSubscriptionPage() {
                     : isSelected
                       ? 'border-amber-400'
                       : 'border-zinc-200 hover:border-zinc-300'
-                }`}
+                } ${isFreeUnavailable ? 'opacity-60' : ''}`}
               >
                 {isCurrent && (
                   <div className="flex items-center gap-1 text-xs font-bold text-blue-800 mb-3">
@@ -224,6 +252,13 @@ export default function MerchantSubscriptionPage() {
                     className="w-full py-3 bg-blue-800 text-white rounded-xl font-medium opacity-50 cursor-not-allowed"
                   >
                     Current Plan
+                  </button>
+                ) : isFreeUnavailable ? (
+                  <button
+                    disabled
+                    className="w-full py-3 bg-zinc-200 text-zinc-500 rounded-xl font-medium cursor-not-allowed"
+                  >
+                    Used Already
                   </button>
                 ) : (
                   <button

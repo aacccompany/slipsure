@@ -23,6 +23,7 @@ type MerchantHandler struct {
 	stripeService   *services.StripeService
 	userRepo        repositories.UserRepository
 	merchantRepo    repositories.MerchantRepository
+	transactionRepo repositories.TransactionRepository
 }
 
 // Helper function to get merchant ID by querying merchants by owner_id from user ID in JWT
@@ -53,12 +54,13 @@ func getMerchantID(c *gin.Context, merchantRepo repositories.MerchantRepository)
 }
 
 // NewMerchantHandler creates a new merchant handler instance
-func NewMerchantHandler(merchantService *services.MerchantService, stripeService *services.StripeService, userRepo repositories.UserRepository, merchantRepo repositories.MerchantRepository) *MerchantHandler {
+func NewMerchantHandler(merchantService *services.MerchantService, stripeService *services.StripeService, userRepo repositories.UserRepository, merchantRepo repositories.MerchantRepository, transactionRepo repositories.TransactionRepository) *MerchantHandler {
 	return &MerchantHandler{
 		merchantService: merchantService,
 		stripeService:   stripeService,
 		userRepo:        userRepo,
 		merchantRepo:    merchantRepo,
+		transactionRepo: transactionRepo,
 	}
 }
 
@@ -133,6 +135,15 @@ func (h *MerchantHandler) CreateCheckout(c *gin.Context) {
 	if err != nil {
 		// Log the actual error for debugging
 		fmt.Printf("Checkout creation failed: %v\n", err)
+
+		if errors.Is(err, services.ErrFreePlanAlreadyUsed) {
+			c.JSON(http.StatusConflict, gin.H{
+				"success": false,
+				"error":   "FREE_PLAN_ALREADY_USED",
+				"message": "Free plan can only be used once per account.",
+			})
+			return
+		}
 
 		// Return more specific error message
 		errorMessage := "Failed to create checkout session"
@@ -320,7 +331,7 @@ func (h *MerchantHandler) GetSubscription(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
-		"data":    subscription.Subscription,
+		"data":    subscription,
 	})
 }
 
@@ -960,6 +971,206 @@ func (h *MerchantHandler) GetAdminPayments(c *gin.Context) {
 	})
 }
 
+// GetAdminUsers returns all platform users with merchant association for administrators.
+func (h *MerchantHandler) GetAdminUsers(c *gin.Context) {
+	page, limit := readPagination(c, 20)
+	role := c.Query("role")
+	if role != "" && role != string(models.RoleMerchant) && role != string(models.RoleAdmin) {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "INVALID_ROLE",
+			"message": "Role must be merchant or admin",
+		})
+		return
+	}
+
+	users, total, err := h.userRepo.ListAdminUsers(c.Query("search"), role, limit, (page-1)*limit)
+	if err != nil {
+		log.Printf("Failed to list admin users: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "DATABASE_ERROR",
+			"message": "Failed to retrieve users",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data": models.AdminUserListResponse{
+			Items:      users,
+			Pagination: buildPagination(page, limit, total),
+		},
+	})
+}
+
+// GetAdminMerchants returns all merchants with subscription and usage summary.
+func (h *MerchantHandler) GetAdminMerchants(c *gin.Context) {
+	page, limit := readPagination(c, 20)
+	status := c.Query("status")
+	validStatuses := map[string]bool{
+		"": true, "active": true, "inactive": true, "trial": true,
+		"pending": true, "suspended": true, "cancelled": true, "expired": true,
+	}
+	if !validStatuses[status] {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "INVALID_STATUS",
+			"message": "Status must be active, inactive, trial, pending, suspended, cancelled, or expired",
+		})
+		return
+	}
+
+	merchants, total, err := h.merchantRepo.ListAdminMerchants(status, c.Query("search"), limit, (page-1)*limit)
+	if err != nil {
+		log.Printf("Failed to list admin merchants: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "DATABASE_ERROR",
+			"message": "Failed to retrieve merchants",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data": models.AdminMerchantListResponse{
+			Items:      merchants,
+			Pagination: buildPagination(page, limit, total),
+		},
+	})
+}
+
+// GetAdminMerchantTransactions returns transaction logs for one merchant.
+func (h *MerchantHandler) GetAdminMerchantTransactions(c *gin.Context) {
+	merchantID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "VALIDATION_ERROR",
+			"message": "Invalid merchant ID",
+		})
+		return
+	}
+
+	if _, err := h.merchantRepo.FindByID(merchantID); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"success": false,
+			"error":   "NOT_FOUND",
+			"message": "Merchant not found",
+		})
+		return
+	}
+
+	page, limit := readPagination(c, 20)
+	filters, ok := readAdminTransactionFilters(c, limit, (page-1)*limit)
+	if !ok {
+		return
+	}
+
+	transactions, err := h.transactionRepo.ListByMerchant(merchantID, filters)
+	if err != nil {
+		log.Printf("Failed to list admin merchant transactions for %s: %v", merchantID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "DATABASE_ERROR",
+			"message": "Failed to retrieve merchant transactions",
+		})
+		return
+	}
+
+	total, err := h.transactionRepo.CountByMerchant(merchantID, filters)
+	if err != nil {
+		log.Printf("Failed to count admin merchant transactions for %s: %v", merchantID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "DATABASE_ERROR",
+			"message": "Failed to count merchant transactions",
+		})
+		return
+	}
+
+	items := make([]models.Transaction, 0, len(transactions))
+	for _, transaction := range transactions {
+		items = append(items, *transaction)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data": models.TransactionListResponse{
+			Items:      items,
+			Pagination: buildPagination(page, limit, total),
+		},
+	})
+}
+
+// GetAdminAnalyticsDashboard returns platform-level KPI analytics.
+func (h *MerchantHandler) GetAdminAnalyticsDashboard(c *gin.Context) {
+	dashboard, err := h.merchantRepo.GetAdminAnalyticsDashboard()
+	if err != nil {
+		log.Printf("Failed to load admin analytics dashboard: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "DATABASE_ERROR",
+			"message": "Failed to retrieve admin analytics dashboard",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    dashboard,
+	})
+}
+
+// GetAdminRevenueAnalytics returns revenue analytics for administrators.
+func (h *MerchantHandler) GetAdminRevenueAnalytics(c *gin.Context) {
+	period := c.DefaultQuery("period", "monthly")
+	if period != "monthly" && period != "yearly" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "VALIDATION_ERROR",
+			"message": "Period must be monthly or yearly",
+		})
+		return
+	}
+
+	revenue, err := h.merchantRepo.GetAdminRevenueAnalytics(period)
+	if err != nil {
+		log.Printf("Failed to load admin revenue analytics: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "DATABASE_ERROR",
+			"message": "Failed to retrieve admin revenue analytics",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    revenue,
+	})
+}
+
+// GetAdminMerchantPerformance returns merchant usage analytics for administrators.
+func (h *MerchantHandler) GetAdminMerchantPerformance(c *gin.Context) {
+	performance, err := h.merchantRepo.GetAdminMerchantPerformance()
+	if err != nil {
+		log.Printf("Failed to load admin merchant performance: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "DATABASE_ERROR",
+			"message": "Failed to retrieve admin merchant performance",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    performance,
+	})
+}
+
 // GetAdminMerchantDetail returns full merchant detail for administrators.
 func (h *MerchantHandler) GetAdminMerchantDetail(c *gin.Context) {
 	merchantID, err := uuid.Parse(c.Param("id"))
@@ -1026,6 +1237,17 @@ func (h *MerchantHandler) GetAdminMerchantDetail(c *gin.Context) {
 		payments = []models.PaymentLog{}
 	}
 
+	billing, err := h.merchantRepo.GetAdminMerchantBillingSummary(merchantID)
+	if err != nil {
+		log.Printf("Failed to load admin merchant billing for %s: %v", merchantID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "DATABASE_ERROR",
+			"message": "Failed to retrieve merchant billing summary",
+		})
+		return
+	}
+
 	users, err := h.userRepo.FindByMerchantID(merchantID)
 	if err != nil {
 		users = []*models.User{}
@@ -1037,12 +1259,60 @@ func (h *MerchantHandler) GetAdminMerchantDetail(c *gin.Context) {
 			Merchant:      merchant,
 			Subscription:  subscription,
 			Usage:         usage,
+			Billing:       billing,
 			LineConnected: lineConnected,
 			LineWebhook:   lineConfig,
 			Payments:      payments,
 			Users:         users,
 		},
 	})
+}
+
+func buildPagination(page int, limit int, total int) models.Pagination {
+	totalPages := 0
+	if total > 0 {
+		totalPages = (total + limit - 1) / limit
+	}
+
+	return models.Pagination{
+		Page:       page,
+		Limit:      limit,
+		Total:      total,
+		TotalPages: totalPages,
+	}
+}
+
+func readAdminTransactionFilters(c *gin.Context, limit int, offset int) (models.TransactionFilters, bool) {
+	filters := models.TransactionFilters{Limit: limit, Offset: offset, Search: c.Query("search")}
+
+	if status := c.Query("status"); status != "" {
+		transactionStatus := models.TransactionStatus(status)
+		if !isValidTransactionStatus(transactionStatus) {
+			c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "VALIDATION_ERROR", "message": "Invalid transaction status"})
+			return filters, false
+		}
+		filters.Status = &transactionStatus
+	}
+
+	if startDate := c.Query("start_date"); startDate != "" {
+		parsed, err := time.Parse("2006-01-02", startDate)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "VALIDATION_ERROR", "message": "Invalid start_date. Use YYYY-MM-DD"})
+			return filters, false
+		}
+		filters.StartDate = &parsed
+	}
+
+	if endDate := c.Query("end_date"); endDate != "" {
+		parsed, err := time.Parse("2006-01-02", endDate)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "VALIDATION_ERROR", "message": "Invalid end_date. Use YYYY-MM-DD"})
+			return filters, false
+		}
+		filters.EndDate = &parsed
+	}
+
+	return filters, true
 }
 
 func (h *MerchantHandler) deactivateSubscription(customerID string) error {

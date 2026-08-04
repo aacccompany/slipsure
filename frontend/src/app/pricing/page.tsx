@@ -3,9 +3,10 @@
 import React, { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api, tokenManager } from '@/lib/api-client';
+import { FreePlanConfirmModal } from '@/components/subscription/FreePlanConfirmModal';
 import type { BillingCycle } from '@/types/api';
 
 const featureLabels: Record<string, string> = {
@@ -23,16 +24,26 @@ const featureLabels: Record<string, string> = {
 };
 
 export default function PricingPage() {
+  const queryClient = useQueryClient();
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
+  const [freeConfirmOpen, setFreeConfirmOpen] = useState(false);
 
   const { data: plansData, isLoading } = useQuery({
     queryKey: ['plans'],
     queryFn: () => api.getPlans(),
   });
 
+  const isAuthenticated = tokenManager.isAuthenticated();
+  const { data: subscriptionData } = useQuery({
+    queryKey: ['subscription'],
+    queryFn: () => api.getSubscription(),
+    enabled: isAuthenticated,
+  });
+
   const checkoutMutation = useMutation({
     mutationFn: (data: { plan_id: string; billing_cycle: BillingCycle }) => api.createCheckout(data),
     onSuccess: (response) => {
+      setFreeConfirmOpen(false);
       if (response.data?.checkout_url) {
         window.location.href = response.data.checkout_url;
       } else {
@@ -41,21 +52,38 @@ export default function PricingPage() {
       }
     },
     onError: (error) => {
+      setFreeConfirmOpen(false);
       toast.error(error instanceof Error ? error.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
+      queryClient.invalidateQueries({ queryKey: ['subscription'] });
     },
   });
 
   const plans = plansData?.data?.plans?.filter((p) => p.is_active) ?? [];
+  const freePlanUsed = subscriptionData?.data?.free_plan_used ?? false;
+  const currentPlanId = subscriptionData?.data?.subscription?.plan_id;
+  const visiblePlans = plans.filter((plan) => !(plan.id === 'plan-free' && freePlanUsed));
 
   const handlePlanClick = (planId: string, price: number) => {
-    if (!tokenManager.isAuthenticated()) { window.location.href = '/register'; return; }
-    if (price === 0) { window.location.href = '/dashboard'; return; }
+    if (!isAuthenticated) { window.location.href = '/register'; return; }
+    if (planId === 'plan-free' && freePlanUsed) { return; }
+    if (planId === 'plan-free') { setFreeConfirmOpen(true); return; }
     checkoutMutation.mutate({ plan_id: planId, billing_cycle: billingCycle });
+  };
+
+  const activateFreePlan = () => {
+    setFreeConfirmOpen(false);
+    checkoutMutation.mutate({ plan_id: 'plan-free', billing_cycle: 'monthly' });
   };
 
   return (
     <div className="min-h-screen pt-32 pb-24 px-6" style={{ background: 'var(--bg)' }}>
       <div className="thai-pattern absolute inset-0 pointer-events-none top-0" />
+      <FreePlanConfirmModal
+        open={freeConfirmOpen}
+        isLoading={checkoutMutation.isPending}
+        onCancel={() => setFreeConfirmOpen(false)}
+        onConfirm={activateFreePlan}
+      />
 
       <div className="relative max-w-7xl mx-auto">
 
@@ -112,9 +140,11 @@ export default function PricingPage() {
           </div>
         ) : (
           <div className="grid lg:grid-cols-3 gap-6 items-stretch">
-            {plans.map((plan) => {
+            {visiblePlans.map((plan) => {
               const price = billingCycle === 'monthly' ? plan.price_monthly : plan.price_yearly;
               const isPopular = plan.is_popular;
+              const isCurrent = plan.id === currentPlanId;
+              const isFreeUnavailable = plan.id === 'plan-free' && freePlanUsed && !isCurrent;
 
               return (
                 <div
@@ -190,15 +220,19 @@ export default function PricingPage() {
                     {/* ปุ่ม */}
                     <button
                       onClick={() => handlePlanClick(plan.id, price)}
-                      disabled={checkoutMutation.isPending}
+                      disabled={checkoutMutation.isPending || isCurrent || isFreeUnavailable}
                       className="w-full py-3.5 text-sm font-semibold flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-60 active:scale-95"
                       style={{
-                        background: isPopular ? 'var(--blue)' : 'var(--navy)',
+                        background: isCurrent || isFreeUnavailable ? 'var(--border-strong)' : isPopular ? 'var(--blue)' : 'var(--navy)',
                         color: '#fff',
                       }}
                     >
                       {checkoutMutation.isPending ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : isCurrent ? (
+                        'Current Plan'
+                      ) : isFreeUnavailable ? (
+                        'Used Already'
                       ) : (
                         <>{price === 0 ? 'เริ่มใช้งานฟรี' : 'เลือกแผนนี้'} →</>
                       )}

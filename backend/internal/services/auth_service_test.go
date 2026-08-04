@@ -82,6 +82,10 @@ func (r *fakeUserRepository) FindByMerchantID(merchantID uuid.UUID) ([]*models.U
 	return nil, nil
 }
 
+func (r *fakeUserRepository) ListAdminUsers(search string, role string, limit int, offset int) ([]models.AdminUserListItem, int, error) {
+	return nil, 0, nil
+}
+
 type fakeOTPService struct {
 	valid bool
 }

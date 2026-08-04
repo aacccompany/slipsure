@@ -11,6 +11,9 @@ import (
 	"github.com/google/uuid"
 )
 
+// ErrFreePlanAlreadyUsed is returned when a merchant tries to activate Free more than once.
+var ErrFreePlanAlreadyUsed = errors.New("free plan can only be used once per account")
+
 // MerchantService handles merchant business logic
 type MerchantService struct {
 	merchantRepo  repositories.MerchantRepository
@@ -97,6 +100,14 @@ func (s *MerchantService) activateFreePlan(userID uuid.UUID, planID string, bill
 
 	merchantID := merchant.ID
 
+	usedFreePlan, err := s.merchantRepo.HasUsedFreePlan(merchantID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check free plan eligibility: %w", err)
+	}
+	if usedFreePlan {
+		return nil, ErrFreePlanAlreadyUsed
+	}
+
 	// Calculate subscription expiration (free plans never expire, but set a far future date)
 	expiresAt := time.Now().AddDate(100, 0, 0) // 100 years from now
 
@@ -123,6 +134,10 @@ func (s *MerchantService) activateFreePlan(userID uuid.UUID, planID string, bill
 		return nil, fmt.Errorf("failed to create free plan subscription: %w", err)
 	}
 
+	if err := s.merchantRepo.MarkFreePlanUsed(merchantID); err != nil {
+		return nil, fmt.Errorf("failed to mark free plan as used: %w", err)
+	}
+
 	fmt.Printf("Free plan activated for merchant %s, plan %s (%s)\n", merchantID, planID, billingCycle)
 
 	// Return a response indicating free plan activation
@@ -139,13 +154,22 @@ func (s *MerchantService) activateFreePlan(userID uuid.UUID, planID string, bill
 
 // GetSubscription retrieves current merchant subscription
 func (s *MerchantService) GetSubscription(merchantID uuid.UUID) (*models.SubscriptionResponse, error) {
+	freePlanUsed, usedErr := s.merchantRepo.HasUsedFreePlan(merchantID)
+	if usedErr != nil {
+		return nil, usedErr
+	}
+
 	subscription, err := s.merchantRepo.FindByMerchantID(merchantID)
 	if err != nil {
-		return nil, err
+		return &models.SubscriptionResponse{
+			Subscription: nil,
+			FreePlanUsed: freePlanUsed,
+		}, nil
 	}
 
 	return &models.SubscriptionResponse{
 		Subscription: subscription,
+		FreePlanUsed: freePlanUsed,
 	}, nil
 }
 

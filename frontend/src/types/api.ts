@@ -152,6 +152,12 @@ export interface Subscription {
   remaining_quota?: number;
 }
 
+export interface SubscriptionResponse {
+  subscription: Subscription | null;
+  free_plan_used: boolean;
+  message?: string;
+}
+
 export interface CheckoutRequest {
   plan_id: string;
   billing_cycle: BillingCycle;
@@ -193,6 +199,8 @@ export interface Transaction {
   is_duplicate: boolean;
   fail_reason?: string;
   recheck_count?: number;
+  created_at: string;
+  updated_at: string;
   slip?: Pick<Slip, 'id' | 'image_url'>;
 }
 
@@ -215,6 +223,145 @@ export interface Pagination {
   limit: number;
   total: number;
   total_pages: number;
+}
+
+// Admin Backoffice Types
+export interface AdminUserListItem {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  role: UserRole;
+  merchant_id?: string;
+  merchant_name?: string;
+  line_linked: boolean;
+  email_verified: boolean;
+  created_at: string;
+}
+
+export interface AdminMerchantListItem {
+  id: string;
+  shop_name: string;
+  owner_email: string;
+  owner_name: string;
+  is_active: boolean;
+  subscription_status: string;
+  plan: string;
+  total_scans: number;
+  total_transactions: number;
+  line_connected: boolean;
+  created_at: string;
+}
+
+export interface PaymentLog {
+  id: string;
+  merchant_id: string;
+  merchant_name: string;
+  subscription_id?: string;
+  amount: number;
+  currency: string;
+  gateway: string;
+  gateway_reference_id: string;
+  status: string;
+  paid_at?: string;
+  created_at: string;
+}
+
+export interface AdminMerchantUsage {
+  this_month: number;
+  lifetime: number;
+  quota: number;
+  remaining: number;
+  verified_slips: number;
+  failed_slips: number;
+  total_slips: number;
+  total_transactions: number;
+  total_amount: number;
+  duplicate_slips: number;
+  current_period_start: string;
+  next_reset: string;
+}
+
+export interface AdminMerchantPlanRevenue {
+  plan_id: string;
+  plan: string;
+  activations: number;
+  revenue: number;
+}
+
+export interface AdminMerchantBillingSummary {
+  plan_activations: number;
+  paid_activations: number;
+  successful_payments: number;
+  failed_payments: number;
+  total_revenue: number;
+  free_plan_used: boolean;
+  last_paid_at?: string;
+  revenue_by_plan: AdminMerchantPlanRevenue[];
+}
+
+export interface AdminMerchantDetail {
+  merchant: MerchantProfile;
+  subscription?: Subscription;
+  usage: AdminMerchantUsage;
+  billing: AdminMerchantBillingSummary;
+  line_connected: boolean;
+  line_webhook?: LINEWebhookConfig;
+  payments: PaymentLog[];
+  users: User[];
+}
+
+export interface AdminAnalyticsDashboard {
+  total_transactions: number;
+  successful_transactions: number;
+  failed_transactions: number;
+  active_merchants: number;
+  total_merchants: number;
+  total_users: number;
+  connected_bots: number;
+  total_scans: number;
+  total_revenue: number;
+  today_transactions: number;
+  today_revenue: number;
+  system_error_rate: number;
+}
+
+export interface AdminRevenueByPlan {
+  plan: string;
+  revenue: number;
+}
+
+export interface AdminRevenueAnalytics {
+  revenue_by_plan: AdminRevenueByPlan[];
+  mrr: number;
+  growth_percent: number;
+  churn_rate: number;
+  renewal_rate: number;
+}
+
+export interface AdminMerchantPerformanceItem {
+  merchant_id: string;
+  shop_name: string;
+  scans: number;
+  quota: number;
+  quota_percent: number;
+  last_scan?: string;
+}
+
+export interface AdminMerchantPerformanceAnalytics {
+  usage_per_merchant: AdminMerchantPerformanceItem[];
+  top_active: AdminMerchantPerformanceItem[];
+  low_usage: AdminMerchantPerformanceItem[];
+}
+
+export interface AdminUserListResponse {
+  items: AdminUserListItem[];
+  pagination: Pagination;
+}
+
+export interface AdminMerchantListResponse {
+  items: AdminMerchantListItem[];
+  pagination: Pagination;
 }
 
 export interface SlipListResponse {
@@ -294,15 +441,6 @@ export interface UpdateLINEWebhookRequest {
   line_channel_id: string;
   line_channel_secret: string;
   line_access_token: string;
-}
-
-export interface LINEWebhookTestResponse {
-  webhook_status: string;
-  connection_status: string;
-  signature_validation: string;
-  api_access: string;
-  tested_at: string;
-  response_time_ms: number;
 }
 
 // Health Check

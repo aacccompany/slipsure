@@ -14,14 +14,14 @@ import (
 // LINEWebhookConfigHandler handles LINE webhook configuration operations
 type LINEWebhookConfigHandler struct {
 	webhookService *services.LINEWebhookService
-	merchantRepo repositories.MerchantRepository
+	merchantRepo   repositories.MerchantRepository
 }
 
 // NewLINEWebhookConfigHandler creates a new LINE webhook config handler
 func NewLINEWebhookConfigHandler(webhookService *services.LINEWebhookService, merchantRepo repositories.MerchantRepository) *LINEWebhookConfigHandler {
 	return &LINEWebhookConfigHandler{
 		webhookService: webhookService,
-		merchantRepo: merchantRepo,
+		merchantRepo:   merchantRepo,
 	}
 }
 
@@ -86,7 +86,11 @@ func (h *LINEWebhookConfigHandler) UpdateConfig(c *gin.Context) {
 
 	err = h.webhookService.UpdateLINEWebhookConfig(merchant.ID, &request)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update LINE webhook config"})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "INVALID_LINE_CONFIG",
+			"message": err.Error(),
+		})
 		return
 	}
 
@@ -128,37 +132,6 @@ func (h *LINEWebhookConfigHandler) DeleteConfig(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "LINE webhook configuration deleted successfully"})
-}
-
-// TestWebhook tests LINE webhook connectivity
-func (h *LINEWebhookConfigHandler) TestWebhook(c *gin.Context) {
-	// Get user ID from JWT context (set by AuthMiddleware)
-	userIDStr, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
-		return
-	}
-
-	userID, err := uuid.Parse(userIDStr.(string))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
-		return
-	}
-
-	// Find merchant by user ID
-	merchant, err := h.merchantRepo.FindByOwnerID(userID)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Merchant profile not found"})
-		return
-	}
-
-	result, err := h.webhookService.TestLINEWebhook(merchant.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to test LINE webhook"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"result": result})
 }
 
 // ProcessWebhook processes incoming LINE webhook (multi-merchant endpoint)

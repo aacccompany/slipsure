@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -19,6 +20,9 @@ type MerchantRepository interface {
 	FindByOwnerID(ownerID uuid.UUID) (*models.MerchantProfile, error)
 	UpdateMerchant(merchant *models.MerchantProfile) error
 	UpdateLogo(merchantID uuid.UUID, logoURL string) error
+	HasUsedFreePlan(merchantID uuid.UUID) (bool, error)
+	MarkFreePlanUsed(merchantID uuid.UUID) error
+	ListAdminMerchants(status string, search string, limit int, offset int) ([]models.AdminMerchantListItem, int, error)
 
 	// Subscription operations
 	CreateSubscription(subscription *models.Subscription) error
@@ -29,6 +33,10 @@ type MerchantRepository interface {
 	ListPaymentLogs(status string, limit, offset int) ([]models.PaymentLog, int, error)
 	ListPaymentLogsByMerchant(merchantID uuid.UUID, limit int) ([]models.PaymentLog, error)
 	GetAdminMerchantUsage(merchantID uuid.UUID, periodStart time.Time, quota int, remaining int, resetDate time.Time) (models.AdminMerchantUsage, error)
+	GetAdminMerchantBillingSummary(merchantID uuid.UUID) (models.AdminMerchantBillingSummary, error)
+	GetAdminAnalyticsDashboard() (models.AdminAnalyticsDashboard, error)
+	GetAdminRevenueAnalytics(period string) (models.AdminRevenueAnalytics, error)
+	GetAdminMerchantPerformance() (models.AdminMerchantPerformanceAnalytics, error)
 	GetMerchantAnalyticsDashboard(merchantID uuid.UUID) (models.MerchantAnalyticsDashboard, error)
 	GetMerchantAnalyticsUsage(merchantID uuid.UUID, days int) (models.MerchantAnalyticsUsage, error)
 	ListMerchantAnalyticsExport(merchantID uuid.UUID, startDate, endDate time.Time) ([]models.MerchantAnalyticsExportRow, error)
@@ -61,6 +69,112 @@ type merchantRepository struct {
 // NewMerchantRepository creates a new merchant repository instance
 func NewMerchantRepository(db *sql.DB) MerchantRepository {
 	return &merchantRepository{db: db}
+}
+
+// ListAdminMerchants retrieves merchant summaries for backoffice.
+func (r *merchantRepository) ListAdminMerchants(status string, search string, limit int, offset int) ([]models.AdminMerchantListItem, int, error) {
+	where, args := buildAdminMerchantWhere(status, search)
+
+	countQuery := fmt.Sprintf(`
+		SELECT COUNT(*)
+		FROM merchants m
+		JOIN users owner ON owner.id = m.owner_id
+		LEFT JOIN subscriptions s ON s.merchant_id = m.id
+		LEFT JOIN subscription_plans p ON p.id = s.plan_id
+		%s
+	`, where)
+
+	var total int
+	if err := r.db.QueryRow(countQuery, args...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	limitPosition := len(args) + 1
+	offsetPosition := len(args) + 2
+	query := fmt.Sprintf(`
+		SELECT
+			m.id,
+			m.shop_name,
+			owner.email,
+			owner.name,
+			m.is_active,
+			COALESCE(s.status::text, 'none') AS subscription_status,
+			COALESCE(p.name, 'No plan') AS plan,
+			COALESCE((SELECT SUM(scan_count)::int FROM usage_counters uc WHERE uc.merchant_id = m.id), 0) AS total_scans,
+			COALESCE((SELECT COUNT(*)::int FROM transactions t WHERE t.merchant_id = m.id), 0) AS total_transactions,
+			(lwc.merchant_id IS NOT NULL) AS line_connected,
+			m.created_at
+		FROM merchants m
+		JOIN users owner ON owner.id = m.owner_id
+		LEFT JOIN subscriptions s ON s.merchant_id = m.id
+		LEFT JOIN subscription_plans p ON p.id = s.plan_id
+		LEFT JOIN line_webhook_configs lwc ON lwc.merchant_id = m.id
+		%s
+		ORDER BY m.created_at DESC
+		LIMIT $%d OFFSET $%d
+	`, where, limitPosition, offsetPosition)
+
+	args = append(args, limit, offset)
+	rows, err := r.db.Query(query, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	merchants := make([]models.AdminMerchantListItem, 0)
+	for rows.Next() {
+		var item models.AdminMerchantListItem
+		if err := rows.Scan(
+			&item.ID,
+			&item.ShopName,
+			&item.OwnerEmail,
+			&item.OwnerName,
+			&item.IsActive,
+			&item.SubscriptionStatus,
+			&item.Plan,
+			&item.TotalScans,
+			&item.TotalTransactions,
+			&item.LineConnected,
+			&item.CreatedAt,
+		); err != nil {
+			return nil, 0, err
+		}
+		merchants = append(merchants, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+
+	return merchants, total, nil
+}
+
+func buildAdminMerchantWhere(status string, search string) (string, []interface{}) {
+	conditions := make([]string, 0)
+	args := make([]interface{}, 0)
+
+	if trimmed := strings.TrimSpace(search); trimmed != "" {
+		args = append(args, "%"+trimmed+"%")
+		param := len(args)
+		conditions = append(conditions, fmt.Sprintf(`(
+			m.shop_name ILIKE $%d OR owner.email ILIKE $%d OR owner.name ILIKE $%d
+		)`, param, param, param))
+	}
+
+	switch status {
+	case "active":
+		conditions = append(conditions, "m.is_active = TRUE")
+	case "inactive":
+		conditions = append(conditions, "m.is_active = FALSE")
+	case "trial", "suspended", "cancelled", "expired", "pending":
+		args = append(args, status)
+		conditions = append(conditions, fmt.Sprintf("s.status = $%d", len(args)))
+	}
+
+	if len(conditions) == 0 {
+		return "", args
+	}
+
+	return "WHERE " + strings.Join(conditions, " AND "), args
 }
 
 // CreateMerchant inserts a new merchant into the database
@@ -203,6 +317,49 @@ func (r *merchantRepository) UpdateLogo(merchantID uuid.UUID, logoURL string) er
 	`
 
 	result, err := r.db.Exec(query, merchantID, logoURL)
+	if err != nil {
+		return err
+	}
+
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return errors.New("merchant not found")
+	}
+
+	return nil
+}
+
+// HasUsedFreePlan returns true once the merchant has consumed the one-time free plan.
+func (r *merchantRepository) HasUsedFreePlan(merchantID uuid.UUID) (bool, error) {
+	query := `
+		SELECT
+			COALESCE(m.free_plan_used, false)
+			OR EXISTS (
+				SELECT 1
+				FROM subscriptions s
+				WHERE s.merchant_id = m.id AND s.plan_id = 'plan-free'
+			)
+		FROM merchants m
+		WHERE m.id = $1
+	`
+
+	var used bool
+	if err := r.db.QueryRow(query, merchantID).Scan(&used); err != nil {
+		return false, err
+	}
+
+	return used, nil
+}
+
+// MarkFreePlanUsed permanently records that the merchant has consumed the free plan.
+func (r *merchantRepository) MarkFreePlanUsed(merchantID uuid.UUID) error {
+	query := `
+		UPDATE merchants
+		SET free_plan_used = true, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $1
+	`
+
+	result, err := r.db.Exec(query, merchantID)
 	if err != nil {
 		return err
 	}
@@ -446,6 +603,288 @@ func (r *merchantRepository) GetAdminMerchantUsage(merchantID uuid.UUID, periodS
 	usage.NextReset = resetDate.Format("2006-01-02")
 
 	return usage, nil
+}
+
+// GetAdminMerchantBillingSummary summarizes plan activations and revenue for one merchant.
+func (r *merchantRepository) GetAdminMerchantBillingSummary(merchantID uuid.UUID) (models.AdminMerchantBillingSummary, error) {
+	summary := models.AdminMerchantBillingSummary{
+		RevenueByPlan: make([]models.AdminMerchantPlanRevenue, 0),
+	}
+
+	query := `
+		SELECT
+			COALESCE((
+				SELECT COUNT(*)::int
+				FROM payment_logs
+				WHERE merchant_id = $1 AND status = 'success'
+			), 0) AS successful_payments,
+			COALESCE((
+				SELECT COUNT(*)::int
+				FROM payment_logs
+				WHERE merchant_id = $1 AND status = 'failed'
+			), 0) AS failed_payments,
+			COALESCE((
+				SELECT SUM(amount)::float8
+				FROM payment_logs
+				WHERE merchant_id = $1 AND status = 'success'
+			), 0) AS total_revenue,
+			COALESCE((
+				SELECT free_plan_used
+				FROM merchants
+				WHERE id = $1
+			), false) AS free_plan_used,
+			(
+				SELECT MAX(paid_at)
+				FROM payment_logs
+				WHERE merchant_id = $1 AND status = 'success'
+			) AS last_paid_at
+	`
+
+	var lastPaidAt sql.NullTime
+	if err := r.db.QueryRow(query, merchantID).Scan(
+		&summary.SuccessfulPayments,
+		&summary.FailedPayments,
+		&summary.TotalRevenue,
+		&summary.FreePlanUsed,
+		&lastPaidAt,
+	); err != nil {
+		return summary, err
+	}
+	if lastPaidAt.Valid {
+		summary.LastPaidAt = &lastPaidAt.Time
+	}
+	summary.PaidActivations = summary.SuccessfulPayments
+	summary.PlanActivations = summary.PaidActivations
+	if summary.FreePlanUsed {
+		summary.PlanActivations++
+	}
+
+	planQuery := `
+		SELECT
+			COALESCE(sp.id, 'unknown') AS plan_id,
+			COALESCE(sp.name, 'Unknown') AS plan,
+			COUNT(pl.id)::int AS activations,
+			COALESCE(SUM(pl.amount)::float8, 0) AS revenue
+		FROM payment_logs pl
+		LEFT JOIN subscriptions s ON s.id = pl.subscription_id
+		LEFT JOIN subscription_plans sp ON sp.id = s.plan_id
+		WHERE pl.merchant_id = $1 AND pl.status = 'success'
+		GROUP BY sp.id, sp.name
+		ORDER BY revenue DESC, plan ASC
+	`
+
+	rows, err := r.db.Query(planQuery, merchantID)
+	if err != nil {
+		return summary, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var item models.AdminMerchantPlanRevenue
+		if err := rows.Scan(&item.PlanID, &item.Plan, &item.Activations, &item.Revenue); err != nil {
+			return summary, err
+		}
+		summary.RevenueByPlan = append(summary.RevenueByPlan, item)
+	}
+	if err := rows.Err(); err != nil {
+		return summary, err
+	}
+
+	if summary.FreePlanUsed {
+		summary.RevenueByPlan = append([]models.AdminMerchantPlanRevenue{{
+			PlanID:      "plan-free",
+			Plan:        "Free",
+			Activations: 1,
+			Revenue:     0,
+		}}, summary.RevenueByPlan...)
+	}
+
+	return summary, nil
+}
+
+// GetAdminAnalyticsDashboard returns platform-level KPI data for backoffice.
+func (r *merchantRepository) GetAdminAnalyticsDashboard() (models.AdminAnalyticsDashboard, error) {
+	query := `
+		SELECT
+			COALESCE((SELECT COUNT(*)::int FROM transactions), 0) AS total_transactions,
+			COALESCE((SELECT COUNT(*)::int FROM transactions WHERE status = 'success'), 0) AS successful_transactions,
+			COALESCE((SELECT COUNT(*)::int FROM transactions WHERE status = 'failed'), 0) AS failed_transactions,
+			COALESCE((SELECT COUNT(*)::int FROM merchants WHERE is_active = TRUE), 0) AS active_merchants,
+			COALESCE((SELECT COUNT(*)::int FROM merchants), 0) AS total_merchants,
+			COALESCE((SELECT COUNT(*)::int FROM users), 0) AS total_users,
+			COALESCE((SELECT COUNT(*)::int FROM line_webhook_configs), 0) AS connected_bots,
+			COALESCE((SELECT SUM(scan_count)::int FROM usage_counters), 0) AS total_scans,
+			COALESCE((SELECT SUM(amount)::float8 FROM payment_logs WHERE status = 'success'), 0) AS total_revenue,
+			COALESCE((SELECT COUNT(*)::int FROM transactions WHERE created_at::date = CURRENT_DATE), 0) AS today_transactions,
+			COALESCE((SELECT SUM(amount)::float8 FROM payment_logs WHERE status = 'success' AND paid_at::date = CURRENT_DATE), 0) AS today_revenue,
+			COALESCE((
+				SELECT (COUNT(*) FILTER (WHERE status = 'failed')::float8 / NULLIF(COUNT(*) FILTER (WHERE status IN ('verified', 'failed')), 0)::float8) * 100
+				FROM slips
+			), 0) AS system_error_rate
+	`
+
+	var dashboard models.AdminAnalyticsDashboard
+	if err := r.db.QueryRow(query).Scan(
+		&dashboard.TotalTransactions,
+		&dashboard.SuccessfulTransactions,
+		&dashboard.FailedTransactions,
+		&dashboard.ActiveMerchants,
+		&dashboard.TotalMerchants,
+		&dashboard.TotalUsers,
+		&dashboard.ConnectedBots,
+		&dashboard.TotalScans,
+		&dashboard.TotalRevenue,
+		&dashboard.TodayTransactions,
+		&dashboard.TodayRevenue,
+		&dashboard.SystemErrorRate,
+	); err != nil {
+		return dashboard, err
+	}
+
+	return dashboard, nil
+}
+
+// GetAdminRevenueAnalytics returns revenue analytics grouped by plan.
+func (r *merchantRepository) GetAdminRevenueAnalytics(period string) (models.AdminRevenueAnalytics, error) {
+	analytics := models.AdminRevenueAnalytics{
+		RevenueByPlan: make([]models.AdminRevenueByPlan, 0),
+	}
+
+	revenueByPlanQuery := `
+		SELECT COALESCE(sp.name, 'Unknown') AS plan, COALESCE(SUM(pl.amount)::float8, 0) AS revenue
+		FROM payment_logs pl
+		LEFT JOIN subscriptions s ON s.id = pl.subscription_id
+		LEFT JOIN subscription_plans sp ON sp.id = s.plan_id
+		WHERE pl.status = 'success'
+		GROUP BY sp.name
+		ORDER BY revenue DESC
+	`
+	rows, err := r.db.Query(revenueByPlanQuery)
+	if err != nil {
+		return analytics, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var item models.AdminRevenueByPlan
+		if err := rows.Scan(&item.Plan, &item.Revenue); err != nil {
+			return analytics, err
+		}
+		analytics.RevenueByPlan = append(analytics.RevenueByPlan, item)
+	}
+	if err := rows.Err(); err != nil {
+		return analytics, err
+	}
+
+	query := `
+		SELECT
+			COALESCE((
+				SELECT SUM(
+					CASE
+						WHEN s.billing_cycle = 'yearly' THEN sp.price_yearly / 12
+						ELSE sp.price_monthly
+					END
+				)::float8
+				FROM subscriptions s
+				JOIN subscription_plans sp ON sp.id = s.plan_id
+				WHERE s.status = 'active'
+			), 0) AS mrr,
+			COALESCE((
+				SELECT SUM(amount)::float8 FROM payment_logs
+				WHERE status = 'success'
+					AND created_at >= date_trunc('month', CURRENT_DATE)
+			), 0) AS current_month_revenue,
+			COALESCE((
+				SELECT SUM(amount)::float8 FROM payment_logs
+				WHERE status = 'success'
+					AND created_at >= date_trunc('month', CURRENT_DATE) - INTERVAL '1 month'
+					AND created_at < date_trunc('month', CURRENT_DATE)
+			), 0) AS previous_month_revenue,
+			COALESCE((
+				SELECT (COUNT(*) FILTER (WHERE status IN ('cancelled', 'expired'))::float8 / NULLIF(COUNT(*), 0)::float8) * 100
+				FROM subscriptions
+			), 0) AS churn_rate
+	`
+
+	var currentMonthRevenue float64
+	var previousMonthRevenue float64
+	if err := r.db.QueryRow(query).Scan(
+		&analytics.MRR,
+		&currentMonthRevenue,
+		&previousMonthRevenue,
+		&analytics.ChurnRate,
+	); err != nil {
+		return analytics, err
+	}
+
+	if previousMonthRevenue > 0 {
+		analytics.GrowthPercent = ((currentMonthRevenue - previousMonthRevenue) / previousMonthRevenue) * 100
+	} else if currentMonthRevenue > 0 {
+		analytics.GrowthPercent = 100
+	}
+	analytics.RenewalRate = 100 - analytics.ChurnRate
+
+	return analytics, nil
+}
+
+// GetAdminMerchantPerformance returns platform merchant usage breakdown.
+func (r *merchantRepository) GetAdminMerchantPerformance() (models.AdminMerchantPerformanceAnalytics, error) {
+	analytics := models.AdminMerchantPerformanceAnalytics{
+		UsagePerMerchant: make([]models.AdminMerchantPerformanceItem, 0),
+		TopActive:        make([]models.AdminMerchantPerformanceItem, 0),
+		LowUsage:         make([]models.AdminMerchantPerformanceItem, 0),
+	}
+
+	query := `
+		SELECT
+			m.id,
+			m.shop_name,
+			COALESCE((SELECT SUM(scan_count)::int FROM usage_counters uc WHERE uc.merchant_id = m.id), 0) AS scans,
+			COALESCE(sp.quota_per_month, 0) AS quota,
+			COALESCE((SELECT MAX(created_at) FROM slips sl WHERE sl.merchant_id = m.id), NULL) AS last_scan
+		FROM merchants m
+		LEFT JOIN subscriptions s ON s.merchant_id = m.id
+		LEFT JOIN subscription_plans sp ON sp.id = s.plan_id
+		ORDER BY scans DESC, m.created_at DESC
+	`
+
+	rows, err := r.db.Query(query)
+	if err != nil {
+		return analytics, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var item models.AdminMerchantPerformanceItem
+		var lastScan sql.NullTime
+		if err := rows.Scan(&item.MerchantID, &item.ShopName, &item.Scans, &item.Quota, &lastScan); err != nil {
+			return analytics, err
+		}
+		if lastScan.Valid {
+			item.LastScan = &lastScan.Time
+		}
+		if item.Quota > 0 {
+			item.QuotaPercent = float64(item.Scans) / float64(item.Quota) * 100
+		}
+		analytics.UsagePerMerchant = append(analytics.UsagePerMerchant, item)
+	}
+	if err := rows.Err(); err != nil {
+		return analytics, err
+	}
+
+	for index, item := range analytics.UsagePerMerchant {
+		if index < 5 {
+			analytics.TopActive = append(analytics.TopActive, item)
+		}
+		if item.Scans <= 5 {
+			analytics.LowUsage = append(analytics.LowUsage, item)
+		}
+	}
+	if len(analytics.LowUsage) > 5 {
+		analytics.LowUsage = analytics.LowUsage[:5]
+	}
+
+	return analytics, nil
 }
 
 // GetMerchantAnalyticsDashboard returns KPI data for the merchant dashboard.

@@ -29,9 +29,75 @@ export default function OnboardingPage() {
   const [address, setAddress] = useState('');
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [hasProfile, setHasProfile] = useState(false);
+  const [checkingSetup, setCheckingSetup] = useState(true);
+  const [lineChannelId, setLineChannelId] = useState('');
+  const [lineChannelSecret, setLineChannelSecret] = useState('');
+  const [lineAccessToken, setLineAccessToken] = useState('');
 
   useEffect(() => {
-    if (!tokenManager.isAuthenticated()) router.push('/login');
+    if (!tokenManager.isAuthenticated()) {
+      router.push('/login');
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadSetup = async () => {
+      try {
+        const userResponse = await api.getProfile();
+        if (userResponse.data?.role === 'admin') {
+          router.replace('/admin?tab=analytics');
+          return;
+        }
+
+        let profileReady = false;
+        let lineReady = false;
+
+        try {
+          const profileResponse = await api.getMerchantProfile();
+          const profile = profileResponse.data?.profile;
+          if (profile?.id) {
+            profileReady = true;
+            setHasProfile(true);
+            setShopName(profile.shop_name || '');
+            setContactEmail(profile.contact_email || '');
+            setContactPhone(profile.contact_phone || '');
+            setAddress(profile.address || '');
+            setLogoPreview(profile.logo_url || null);
+          }
+        } catch {
+          profileReady = false;
+        }
+
+        try {
+          const lineResponse = await api.getLINEWebhookConfig();
+          const config = lineResponse.data?.config;
+          if (config?.line_channel_id) {
+            setLineChannelId(config.line_channel_id);
+          }
+          lineReady = Boolean(config?.is_configured);
+        } catch {
+          lineReady = false;
+        }
+
+        if (!cancelled) {
+          if (profileReady && lineReady) {
+            router.replace('/dashboard');
+            return;
+          }
+          setStep(profileReady ? 3 : 1);
+        }
+      } finally {
+        if (!cancelled) setCheckingSetup(false);
+      }
+    };
+
+    loadSetup();
+
+    return () => {
+      cancelled = true;
+    };
   }, [router]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -47,14 +113,20 @@ export default function OnboardingPage() {
     e.preventDefault();
     setIsLoading(true); setError('');
     try {
-      await api.createMerchantProfile({
+      const payload = {
         shop_name: shopName,
         contact_email: contactEmail || undefined,
         contact_phone: contactPhone || undefined,
         address: address || undefined,
         business_hours: { open: '09:00', close: '18:00', days: ['mon','tue','wed','thu','fri','sat'] },
         strict_mode: false,
-      });
+      };
+      if (hasProfile) {
+        await api.updateMerchantProfile(payload);
+      } else {
+        await api.createMerchantProfile(payload);
+        setHasProfile(true);
+      }
       setStep(2);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save profile.');
@@ -72,11 +144,35 @@ export default function OnboardingPage() {
     } finally { setIsLoading(false); }
   };
 
-  const handleComplete = () => {
-    localStorage.setItem('hasCompletedOnboarding', 'true');
-    toast.success('Setup complete! Welcome to FlowSlip.');
-    router.push('/dashboard');
+  const handleComplete = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!lineChannelId || !lineChannelSecret || !lineAccessToken) {
+      setError('Please fill in all LINE bot credentials.');
+      return;
+    }
+
+    setIsLoading(true); setError('');
+    try {
+      await api.updateLINEWebhookConfig({
+        line_channel_id: lineChannelId,
+        line_channel_secret: lineChannelSecret,
+        line_access_token: lineAccessToken,
+      });
+      localStorage.setItem('hasCompletedOnboarding', 'true');
+      toast.success('Setup complete! Welcome to FlowSlip.');
+      router.push('/dashboard');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to configure LINE bot.');
+    } finally { setIsLoading(false); }
   };
+
+  if (checkingSetup) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg)' }}>
+        <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'var(--gold)' }} />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6" style={{ background: 'var(--bg)' }}>
@@ -235,7 +331,7 @@ export default function OnboardingPage() {
 
           {/* Step 3 */}
           {step === 3 && (
-            <div className="space-y-5">
+            <form onSubmit={handleComplete} className="space-y-5">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 flex items-center justify-center"
                   style={{ background: '#ECFDF5', border: '1px solid #6EE7B7' }}>
@@ -247,47 +343,81 @@ export default function OnboardingPage() {
                 </div>
               </div>
 
+              <div className="space-y-4">
+                <div>
+                  <label className={labelClass} style={{ color: 'var(--text-muted)' }}>LINE Channel ID *</label>
+                  <input
+                    type="text"
+                    value={lineChannelId}
+                    onChange={(e) => setLineChannelId(e.target.value)}
+                    placeholder="2000000000"
+                    required
+                    className={inputClass}
+                    style={{ borderColor: 'var(--border)', color: 'var(--navy)' }}
+                    onFocus={(e) => (e.target.style.borderColor = 'var(--gold)')}
+                    onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
+                  />
+                </div>
+
+                <div>
+                  <label className={labelClass} style={{ color: 'var(--text-muted)' }}>LINE Channel Secret *</label>
+                  <input
+                    type="password"
+                    value={lineChannelSecret}
+                    onChange={(e) => setLineChannelSecret(e.target.value)}
+                    placeholder="Channel secret from LINE Developers"
+                    required
+                    className={inputClass}
+                    style={{ borderColor: 'var(--border)', color: 'var(--navy)' }}
+                    onFocus={(e) => (e.target.style.borderColor = 'var(--gold)')}
+                    onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
+                  />
+                </div>
+
+                <div>
+                  <label className={labelClass} style={{ color: 'var(--text-muted)' }}>LINE Access Token *</label>
+                  <input
+                    type="password"
+                    value={lineAccessToken}
+                    onChange={(e) => setLineAccessToken(e.target.value)}
+                    placeholder="Channel access token"
+                    required
+                    className={inputClass}
+                    style={{ borderColor: 'var(--border)', color: 'var(--navy)' }}
+                    onFocus={(e) => (e.target.style.borderColor = 'var(--gold)')}
+                    onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
+                  />
+                </div>
+              </div>
+
               <div className="p-5 space-y-3" style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border)' }}>
-                <p className="font-mono text-[11px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Setup Guide</p>
-                <ol className="space-y-2">
-                  {[
-                    'Go to LINE Developers Console',
-                    'Create or select a Messaging API channel',
-                    'Copy the Channel Access Token',
-                    'Paste the Webhook URL from your Dashboard',
-                  ].map((s, i) => (
-                    <li key={i} className="flex items-start gap-2.5">
-                      <span className="font-mono text-[10px] mt-0.5 shrink-0 font-bold" style={{ color: 'var(--gold)' }}>
-                        {String(i + 1).padStart(2, '0')}
-                      </span>
-                      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{s}</span>
-                    </li>
-                  ))}
-                </ol>
+                <p className="font-mono text-[11px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>LINE Console</p>
+                <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+                  Use your Messaging API channel credentials. After saving, copy the webhook URL from the LINE settings page into LINE Developers Console.
+                </p>
                 <a href="https://developers.line.biz/console/" target="_blank" rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest hover:underline mt-2"
+                  className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest hover:underline"
                   style={{ color: 'var(--gold)' }}>
                   Open LINE Console <ExternalLink className="w-3 h-3" />
                 </a>
               </div>
 
-              <p className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-                You can configure this later from Dashboard settings.
-              </p>
+              {error && <ErrorBox message={error} />}
 
               <div className="flex gap-3">
                 <button onClick={() => setStep(2)}
+                  type="button"
                   className="px-5 py-3 text-sm font-medium flex items-center gap-2 transition-colors"
                   style={{ border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
                   <ArrowLeft className="w-4 h-4" /> Back
                 </button>
-                <button onClick={handleComplete}
+                <button type="submit" disabled={isLoading}
                   className="flex-1 py-3 text-sm font-semibold flex items-center justify-center gap-2 transition-all hover:opacity-90"
                   style={{ background: 'var(--navy)', color: 'var(--gold-pale)' }}>
-                  Finish Setup <CheckCircle2 className="w-4 h-4" style={{ color: 'var(--gold)' }} />
+                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Finish Setup <CheckCircle2 className="w-4 h-4" style={{ color: 'var(--gold)' }} /></>}
                 </button>
               </div>
-            </div>
+            </form>
           )}
         </div>
 

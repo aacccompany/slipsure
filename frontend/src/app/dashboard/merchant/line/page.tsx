@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ChevronLeft, Plus, Trash2, RefreshCw, Loader2, Copy, MessageSquare, Key, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { ChevronLeft, Plus, Trash2, Loader2, Copy, MessageSquare, Key, Clock, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
 import { toast } from 'sonner';
-import type { LINEWebhookConfig, LINEWebhookTestResponse } from '@/types/api';
+import type { LINEWebhookConfig } from '@/types/api';
 
 export default function MerchantLinePage() {
   const queryClient = useQueryClient();
@@ -18,7 +18,6 @@ export default function MerchantLinePage() {
     line_channel_secret: '',
     line_access_token: '',
   });
-  const [testResult, setTestResult] = useState<LINEWebhookTestResponse | null>(null);
 
   // Fetch LINE webhook config
   const { data: configData, isLoading } = useQuery({
@@ -52,17 +51,6 @@ export default function MerchantLinePage() {
     },
   });
 
-  const testMutation = useMutation({
-    mutationFn: () => api.testLINEWebhook(),
-    onSuccess: (response) => {
-      setTestResult(response.data?.result || null);
-      toast.success('Webhook test completed');
-    },
-    onError: (error) => {
-      toast.error(error instanceof Error ? error.message : 'Webhook test failed');
-    },
-  });
-
   const handleSaveConfig = () => {
     if (!configForm.line_channel_id || !configForm.line_channel_secret || !configForm.line_access_token) {
       toast.error('Please fill in all LINE credentials');
@@ -75,10 +63,6 @@ export default function MerchantLinePage() {
     if (confirm('Are you sure you want to delete LINE webhook configuration?')) {
       deleteMutation.mutate();
     }
-  };
-
-  const handleTest = () => {
-    testMutation.mutate();
   };
 
   const copyToClipboard = (text: string) => {
@@ -361,77 +345,13 @@ export default function MerchantLinePage() {
                 Edit Configuration
               </button>
               <button
-                onClick={handleTest}
-                disabled={testMutation.isPending}
-                className="flex-1 bg-white border border-zinc-200 py-4 rounded-xl font-medium text-zinc-700 hover:bg-zinc-50 hover:border-zinc-300 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {testMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                Test Connection
-              </button>
-              <button
                 onClick={handleDelete}
                 disabled={deleteMutation.isPending}
-                className="px-6 py-4 border-2 border-rose-200 text-rose-600 rounded-xl font-medium hover:bg-rose-50 flex items-center justify-center gap-2 disabled:opacity-50"
+                className="flex-1 px-6 py-4 border-2 border-rose-200 text-rose-600 rounded-xl font-medium hover:bg-rose-50 flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {deleteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                 Delete
               </button>
-            </div>
-          )}
-
-          {/* Test Results */}
-          {testResult && (
-            <div className="bg-white border border-zinc-200 rounded-2xl p-6 mb-6">
-              <h3 className="text-lg font-bold text-zinc-900 mb-4">Test Results</h3>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center py-2 border-b border-zinc-50">
-                    <span className="text-sm text-zinc-500">Webhook Status</span>
-                    <span className={`text-sm font-medium flex items-center gap-2 ${
-                      testResult.webhook_status === 'active' ? 'text-green-700' : 'text-zinc-900'
-                    }`}>
-                      {testResult.webhook_status === 'active' ? (
-                        <CheckCircle className="w-4 h-4" />
-                      ) : (
-                        <XCircle className="w-4 h-4" />
-                      )}
-                      {testResult.webhook_status}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center py-2 border-b border-zinc-50">
-                    <span className="text-sm text-zinc-500">Connection</span>
-                    <span className={`text-sm font-medium ${
-                      testResult.connection_status === 'connected' ? 'text-green-700' : 'text-zinc-900'
-                    }`}>
-                      {testResult.connection_status}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center py-2">
-                    <span className="text-sm text-zinc-500">API Access</span>
-                    <span className={`text-sm font-medium ${
-                      testResult.api_access === 'working' ? 'text-green-700' : 'text-zinc-900'
-                    }`}>
-                      {testResult.api_access}
-                    </span>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center py-2 border-b border-zinc-50">
-                    <span className="text-sm text-zinc-500">Signature Validation</span>
-                    <span className="text-sm font-medium text-zinc-900">{testResult.signature_validation}</span>
-                  </div>
-                  <div className="flex justify-between items-center py-2">
-                    <span className="text-sm text-zinc-500">Response Time</span>
-                    <span className="text-sm font-medium text-zinc-900">{testResult.response_time_ms}ms</span>
-                  </div>
-                  <div className="flex justify-between items-center py-2">
-                    <span className="text-sm text-zinc-500">Tested At</span>
-                    <span className="text-sm font-medium text-zinc-900">
-                      {new Date(testResult.tested_at).toLocaleString('th-TH')}
-                    </span>
-                  </div>
-                </div>
-              </div>
             </div>
           )}
 

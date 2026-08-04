@@ -77,6 +77,10 @@ func (s *LINEWebhookService) UpdateLINEWebhookConfig(merchantID uuid.UUID, reque
 		return errors.New("all LINE credentials are required")
 	}
 
+	if _, err := s.getLINEBotInfo(request.LINEAccessToken); err != nil {
+		return fmt.Errorf("invalid LINE access token: %w", err)
+	}
+
 	// Encrypt sensitive credentials
 	encryptedSecret, err := s.cryptoService.Encrypt(request.LINEChannelSecret)
 	if err != nil {
@@ -115,54 +119,6 @@ func (s *LINEWebhookService) UpdateLINEWebhookConfig(merchantID uuid.UUID, reque
 // DeleteLINEWebhookConfig removes LINE webhook configuration
 func (s *LINEWebhookService) DeleteLINEWebhookConfig(merchantID uuid.UUID) error {
 	return s.merchantRepo.DeleteLINEWebhookConfig(merchantID)
-}
-
-// TestLINEWebhook tests LINE webhook connectivity
-func (s *LINEWebhookService) TestLINEWebhook(merchantID uuid.UUID) (*models.LINEWebhookTestResponse, error) {
-	config, err := s.merchantRepo.GetLINEWebhookConfig(merchantID)
-	if err != nil {
-		return nil, err
-	}
-
-	if !config.IsConfigured {
-		return &models.LINEWebhookTestResponse{
-			WebhookStatus:       "not_configured",
-			ConnectionStatus:    "disconnected",
-			SignatureValidation: "skipped",
-			APIAccess:           "unavailable",
-			TestedAt:            time.Now(),
-			ResponseTimeMs:      0,
-		}, nil
-	}
-
-	startTime := time.Now()
-	_, accessToken, err := s.decryptMerchantCredentials(&models.MerchantProfile{ID: merchantID})
-	if err != nil {
-		return &models.LINEWebhookTestResponse{
-			WebhookStatus:       "active",
-			ConnectionStatus:    "disconnected",
-			SignatureValidation: "skipped",
-			APIAccess:           "credentials_error",
-			TestedAt:            time.Now(),
-			ResponseTimeMs:      time.Since(startTime).Milliseconds(),
-		}, nil
-	}
-
-	testResult := s.testLINEAPIAccess(accessToken)
-	responseTime := time.Since(startTime).Milliseconds()
-	connectionStatus := "connected"
-	if testResult != "working" {
-		connectionStatus = "disconnected"
-	}
-
-	return &models.LINEWebhookTestResponse{
-		WebhookStatus:       "active",
-		ConnectionStatus:    connectionStatus,
-		SignatureValidation: "passed",
-		APIAccess:           testResult,
-		TestedAt:            time.Now(),
-		ResponseTimeMs:      responseTime,
-	}, nil
 }
 
 // ProcessWebhook processes incoming LINE webhook for a specific merchant
@@ -531,18 +487,6 @@ func (s *LINEWebhookService) processFollowEvent(merchant *models.MerchantProfile
 func (s *LINEWebhookService) processUnfollowEvent(merchant *models.MerchantProfile) error {
 	log.Printf("User unfollowed merchant %s LINE OA", merchant.ID)
 	return nil
-}
-
-func (s *LINEWebhookService) testLINEAPIAccess(accessToken string) string {
-	if _, err := s.getLINEBotInfo(accessToken); err != nil {
-		log.Printf("LINE API access test failed: %v", err)
-		if strings.Contains(err.Error(), "status 401") || strings.Contains(err.Error(), "status 403") {
-			return "invalid_access_token"
-		}
-		return "line_api_error"
-	}
-
-	return "working"
 }
 
 func (s *LINEWebhookService) getLINEBotInfo(accessToken string) (*LINEBotInfo, error) {

@@ -1272,6 +1272,65 @@ Get full merchant detail for backoffice, including current-period quota, lifetim
 
 ---
 
+### GET `/admin/merchants/:id/transactions`
+List transaction logs for one merchant.
+
+**Query Params:** `status`, `search`, `start_date`, `end_date`, `page`, `limit`
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": {
+    "items": [
+      {
+        "id": "txn-uuid",
+        "slip_id": "slip-uuid",
+        "merchant_id": "merchant-uuid",
+        "reference_no": "202607101234",
+        "amount": 500.25,
+        "status": "success",
+        "is_duplicate": false,
+        "created_at": "2026-07-10T10:00:00Z"
+      }
+    ],
+    "pagination": { "page": 1, "limit": 20, "total": 1, "total_pages": 1 }
+  }
+}
+```
+
+---
+
+### GET `/admin/users`
+List all platform users with their merchant association.
+
+**Query Params:** `role`, `search`, `page`, `limit`
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": {
+    "items": [
+      {
+        "id": "user-uuid",
+        "name": "Somchai",
+        "email": "somchai@shop.com",
+        "role": "merchant",
+        "merchant_id": "merchant-uuid",
+        "merchant_name": "ร้านดอกไม้",
+        "line_linked": true,
+        "email_verified": true,
+        "created_at": "2026-07-10T10:00:00Z"
+      }
+    ],
+    "pagination": { "page": 1, "limit": 20, "total": 1, "total_pages": 1 }
+  }
+}
+```
+
+---
+
 ### GET `/admin/subscriptions`
 List all subscriptions with status filter.
 
@@ -1414,8 +1473,16 @@ Platform-level KPI summary.
   "success": true,
   "data": {
     "total_transactions": 128450,
+    "successful_transactions": 126000,
+    "failed_transactions": 2450,
     "active_merchants": 87,
+    "total_merchants": 100,
+    "total_users": 120,
+    "connected_bots": 82,
+    "total_scans": 130000,
     "total_revenue": 63500,
+    "today_transactions": 300,
+    "today_revenue": 2500,
     "system_error_rate": 0.8
   }
 }

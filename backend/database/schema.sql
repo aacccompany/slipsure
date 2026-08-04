@@ -79,6 +79,7 @@ CREATE TABLE merchants (
     line_channel_secret VARCHAR(255),
     line_access_token TEXT,
     line_webhook_verified BOOLEAN DEFAULT FALSE,
+    free_plan_used BOOLEAN DEFAULT FALSE,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP

@@ -16,16 +16,18 @@ type BankValidationService struct {
 	mockMode bool
 	apiKey   string
 	apiURL   string
+	provider string
 }
 
 // NewBankValidationService creates a new bank validation service
 func NewBankValidationService() *BankValidationService {
-	mockMode := os.Getenv("KBANK_MOCK_MODE") == "true"
+	mockMode := getBankEnv("SCB_MOCK_MODE", getBankEnv("BANK_MOCK_MODE", os.Getenv("KBANK_MOCK_MODE"))) == "true"
 
 	return &BankValidationService{
 		mockMode: mockMode,
-		apiKey:   os.Getenv("K_API_KEY"),
-		apiURL:   os.Getenv("KBANK_API_URL"),
+		apiKey:   getBankEnv("SCB_API_KEY", os.Getenv("K_API_KEY")),
+		apiURL:   getBankEnv("SCB_API_URL", os.Getenv("KBANK_API_URL")),
+		provider: getBankEnv("BANK_VERIFY_PROVIDER", "scb"),
 	}
 }
 
@@ -35,8 +37,12 @@ func (s *BankValidationService) ValidateTransaction(emvData *models.EMVCoData, m
 		return s.mockValidateTransaction(emvData, merchantID)
 	}
 
-	// Real bank validation (to be implemented when API access is available)
-	return nil, fmt.Errorf("real bank validation not yet implemented")
+	if s.apiURL == "" || s.apiKey == "" {
+		return nil, fmt.Errorf("SCB bank validation is not configured")
+	}
+
+	// Real SCB validation must be implemented against the contracted SCB endpoint.
+	return nil, fmt.Errorf("SCB slip verification API integration not yet implemented")
 }
 
 // mockValidateTransaction simulates bank validation for testing
@@ -56,8 +62,8 @@ func (s *BankValidationService) mockValidateTransaction(emvData *models.EMVCoDat
 	now := time.Now()
 	transferTime := now.Add(-time.Duration(rand.Intn(60)) * time.Minute)
 
-	// Thai banks for mock data
-	banks := []string{"KBANK", "SCB", "KTB", "BBL", "AYA", "TMB", "CIMB"}
+	// Thai banks for mock sender data
+	banks := []string{"SCB", "KTB", "BBL", "AYA", "TTB", "CIMB"}
 	senderBank := banks[rand.Intn(len(banks))]
 
 	// Generate account number (mock format: xxx-x-xxxxx-x)
@@ -75,7 +81,7 @@ func (s *BankValidationService) mockValidateTransaction(emvData *models.EMVCoDat
 		Amount:          emvData.TransactionAmount,
 		SenderBank:      senderBank,
 		SenderAccount:   accountNum,
-		ReceiverBank:    "KBANK", // Assume merchant uses KBANK
+		ReceiverBank:    "SCB",
 		ReceiverAccount: "xxx-x-xxxxx-x",
 		TransferAt:      &transferTime,
 		TransactionDate: &transferTime,
@@ -91,7 +97,7 @@ func (s *BankValidationService) mockValidateTransaction(emvData *models.EMVCoDat
 	transaction.Amount = emvData.TransactionAmount
 
 	// Remove random failures for testing - always success
-	log.Printf("Mock bank validation: SUCCESS for ref=%s, amount=%.2f", emvData.ReferenceNumber, emvData.TransactionAmount)
+	log.Printf("Mock SCB bank validation: SUCCESS for ref=%s, amount=%.2f", emvData.ReferenceNumber, emvData.TransactionAmount)
 
 	return transaction, nil
 }
@@ -101,26 +107,21 @@ func (s *BankValidationService) GetBankStatus() ([]BankStatus, error) {
 	if s.mockMode {
 		return []BankStatus{
 			{
-				BankCode:         "KBANK",
-				BankName:         "Kasikornbank",
-				Status:           "operational",
-				ResponseTimeMs:   320 + rand.Intn(100),
-				LastCheck:        time.Now(),
-				ValidationSource: "mock",
-			},
-			{
 				BankCode:         "SCB",
 				BankName:         "Siam Commercial Bank",
 				Status:           "operational",
-				ResponseTimeMs:   410 + rand.Intn(100),
+				ResponseTimeMs:   320 + rand.Intn(100),
 				LastCheck:        time.Now(),
 				ValidationSource: "mock",
 			},
 		}, nil
 	}
 
-	// Real bank status check (to be implemented)
-	return nil, fmt.Errorf("real bank status check not yet implemented")
+	if s.apiURL == "" || s.apiKey == "" {
+		return nil, fmt.Errorf("SCB bank validation is not configured")
+	}
+
+	return nil, fmt.Errorf("SCB bank status check not yet implemented")
 }
 
 // SyncPendingTransactions syncs pending transactions with bank API
@@ -137,6 +138,13 @@ func (s *BankValidationService) SyncPendingTransactions(merchantID uuid.UUID) (*
 	}
 
 	return nil, fmt.Errorf("real sync not yet implemented")
+}
+
+func getBankEnv(key string, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return fallback
 }
 
 // BankStatus represents bank API status

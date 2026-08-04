@@ -106,8 +106,9 @@ func main() {
 	}
 
 	merchantRepo := repositories.NewMerchantRepository(database.DB)
+	transactionRepo := repositories.NewTransactionRepository(database.DB)
 	merchantService := services.NewMerchantService(merchantRepo, stripeService, userRepo)
-	merchantHandler := handlers.NewMerchantHandler(merchantService, stripeService, userRepo, merchantRepo)
+	merchantHandler := handlers.NewMerchantHandler(merchantService, stripeService, userRepo, merchantRepo, transactionRepo)
 
 	// Initialize storage service (DigitalOcean Spaces)
 	log.Println(" Attempting to initialize DigitalOcean Spaces storage service...")
@@ -123,7 +124,6 @@ func main() {
 
 	// Initialize slip verification service
 	slipRepo := repositories.NewSlipRepository(database.DB)
-	transactionRepo := repositories.NewTransactionRepository(database.DB)
 	usageCounterRepo := repositories.NewUsageCounterRepository(database.DB)
 	slipVerificationService := services.NewSlipVerificationService(slipRepo, transactionRepo, usageCounterRepo, merchantRepo, storageService)
 	slipHandler := handlers.NewSlipHandler(slipVerificationService, userRepo, merchantRepo)
@@ -202,7 +202,13 @@ func main() {
 		admin.Use(middleware.AuthMiddleware(), middleware.RequireRole("admin"))
 		{
 			admin.GET("/payments", merchantHandler.GetAdminPayments)
+			admin.GET("/users", merchantHandler.GetAdminUsers)
+			admin.GET("/merchants", merchantHandler.GetAdminMerchants)
+			admin.GET("/merchants/:id/transactions", merchantHandler.GetAdminMerchantTransactions)
 			admin.GET("/merchants/:id", merchantHandler.GetAdminMerchantDetail)
+			admin.GET("/analytics/dashboard", merchantHandler.GetAdminAnalyticsDashboard)
+			admin.GET("/analytics/revenue", merchantHandler.GetAdminRevenueAnalytics)
+			admin.GET("/analytics/merchants/performance", merchantHandler.GetAdminMerchantPerformance)
 		}
 
 		// Checkout routes (protected only - email verification disabled for testing)
@@ -277,7 +283,6 @@ func main() {
 				lineWebhookConfig.GET("/line-webhook", lineWebhookConfigHandler.GetConfig)
 				lineWebhookConfig.PUT("/line-webhook", lineWebhookConfigHandler.UpdateConfig)
 				lineWebhookConfig.DELETE("/line-webhook", lineWebhookConfigHandler.DeleteConfig)
-				lineWebhookConfig.POST("/test", lineWebhookConfigHandler.TestWebhook)
 				lineWebhookConfig.GET("/webhook-url", lineWebhookConfigHandler.GenerateWebhookURL)
 			}
 

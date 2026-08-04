@@ -95,6 +95,47 @@ type PaymentLogListResponse struct {
 	TotalPages int          `json:"total_pages"`
 }
 
+// AdminUserListItem represents one user row in admin backoffice.
+type AdminUserListItem struct {
+	ID            uuid.UUID  `json:"id"`
+	Name          string     `json:"name"`
+	Email         string     `json:"email"`
+	Phone         *string    `json:"phone,omitempty"`
+	Role          UserRole   `json:"role"`
+	MerchantID    *uuid.UUID `json:"merchant_id,omitempty"`
+	MerchantName  string     `json:"merchant_name,omitempty"`
+	LineLinked    bool       `json:"line_linked"`
+	EmailVerified bool       `json:"email_verified"`
+	CreatedAt     time.Time  `json:"created_at"`
+}
+
+// AdminUserListResponse represents paginated admin users.
+type AdminUserListResponse struct {
+	Items      []AdminUserListItem `json:"items"`
+	Pagination Pagination          `json:"pagination"`
+}
+
+// AdminMerchantListItem represents one merchant row in admin backoffice.
+type AdminMerchantListItem struct {
+	ID                 uuid.UUID `json:"id"`
+	ShopName           string    `json:"shop_name"`
+	OwnerEmail         string    `json:"owner_email"`
+	OwnerName          string    `json:"owner_name"`
+	IsActive           bool      `json:"is_active"`
+	SubscriptionStatus string    `json:"subscription_status"`
+	Plan               string    `json:"plan"`
+	TotalScans         int       `json:"total_scans"`
+	TotalTransactions  int       `json:"total_transactions"`
+	LineConnected      bool      `json:"line_connected"`
+	CreatedAt          time.Time `json:"created_at"`
+}
+
+// AdminMerchantListResponse represents paginated admin merchants.
+type AdminMerchantListResponse struct {
+	Items      []AdminMerchantListItem `json:"items"`
+	Pagination Pagination              `json:"pagination"`
+}
+
 // AdminMerchantUsage summarizes merchant activity for backoffice.
 type AdminMerchantUsage struct {
 	ThisMonth          int     `json:"this_month"`
@@ -111,15 +152,84 @@ type AdminMerchantUsage struct {
 	NextReset          string  `json:"next_reset"`
 }
 
+// AdminMerchantPlanRevenue summarizes merchant revenue grouped by plan.
+type AdminMerchantPlanRevenue struct {
+	PlanID      string  `json:"plan_id"`
+	Plan        string  `json:"plan"`
+	Activations int     `json:"activations"`
+	Revenue     float64 `json:"revenue"`
+}
+
+// AdminMerchantBillingSummary summarizes plan activations and revenue for one merchant.
+type AdminMerchantBillingSummary struct {
+	PlanActivations    int                        `json:"plan_activations"`
+	PaidActivations    int                        `json:"paid_activations"`
+	SuccessfulPayments int                        `json:"successful_payments"`
+	FailedPayments     int                        `json:"failed_payments"`
+	TotalRevenue       float64                    `json:"total_revenue"`
+	FreePlanUsed       bool                       `json:"free_plan_used"`
+	LastPaidAt         *time.Time                 `json:"last_paid_at,omitempty"`
+	RevenueByPlan      []AdminMerchantPlanRevenue `json:"revenue_by_plan"`
+}
+
 // AdminMerchantDetailResponse represents full merchant detail for backoffice.
 type AdminMerchantDetailResponse struct {
-	Merchant      *MerchantProfile   `json:"merchant"`
-	Subscription  *Subscription      `json:"subscription,omitempty"`
-	Usage         AdminMerchantUsage `json:"usage"`
-	LineConnected bool               `json:"line_connected"`
-	LineWebhook   *LINEWebhookConfig `json:"line_webhook,omitempty"`
-	Payments      []PaymentLog       `json:"payments"`
-	Users         []*User            `json:"users"`
+	Merchant      *MerchantProfile            `json:"merchant"`
+	Subscription  *Subscription               `json:"subscription,omitempty"`
+	Usage         AdminMerchantUsage          `json:"usage"`
+	Billing       AdminMerchantBillingSummary `json:"billing"`
+	LineConnected bool                        `json:"line_connected"`
+	LineWebhook   *LINEWebhookConfig          `json:"line_webhook,omitempty"`
+	Payments      []PaymentLog                `json:"payments"`
+	Users         []*User                     `json:"users"`
+}
+
+// AdminAnalyticsDashboard summarizes platform-level KPIs.
+type AdminAnalyticsDashboard struct {
+	TotalTransactions      int     `json:"total_transactions"`
+	SuccessfulTransactions int     `json:"successful_transactions"`
+	FailedTransactions     int     `json:"failed_transactions"`
+	ActiveMerchants        int     `json:"active_merchants"`
+	TotalMerchants         int     `json:"total_merchants"`
+	TotalUsers             int     `json:"total_users"`
+	ConnectedBots          int     `json:"connected_bots"`
+	TotalScans             int     `json:"total_scans"`
+	TotalRevenue           float64 `json:"total_revenue"`
+	TodayTransactions      int     `json:"today_transactions"`
+	TodayRevenue           float64 `json:"today_revenue"`
+	SystemErrorRate        float64 `json:"system_error_rate"`
+}
+
+// AdminRevenueByPlan summarizes paid revenue grouped by plan.
+type AdminRevenueByPlan struct {
+	Plan    string  `json:"plan"`
+	Revenue float64 `json:"revenue"`
+}
+
+// AdminRevenueAnalytics summarizes backoffice revenue performance.
+type AdminRevenueAnalytics struct {
+	RevenueByPlan []AdminRevenueByPlan `json:"revenue_by_plan"`
+	MRR           float64              `json:"mrr"`
+	GrowthPercent float64              `json:"growth_percent"`
+	ChurnRate     float64              `json:"churn_rate"`
+	RenewalRate   float64              `json:"renewal_rate"`
+}
+
+// AdminMerchantPerformanceItem summarizes merchant activity for admin analytics.
+type AdminMerchantPerformanceItem struct {
+	MerchantID   uuid.UUID  `json:"merchant_id"`
+	ShopName     string     `json:"shop_name"`
+	Scans        int        `json:"scans"`
+	Quota        int        `json:"quota"`
+	QuotaPercent float64    `json:"quota_percent"`
+	LastScan     *time.Time `json:"last_scan,omitempty"`
+}
+
+// AdminMerchantPerformanceAnalytics summarizes merchant usage distribution.
+type AdminMerchantPerformanceAnalytics struct {
+	UsagePerMerchant []AdminMerchantPerformanceItem `json:"usage_per_merchant"`
+	TopActive        []AdminMerchantPerformanceItem `json:"top_active"`
+	LowUsage         []AdminMerchantPerformanceItem `json:"low_usage"`
 }
 
 // MerchantAnalyticsDashboard summarizes merchant verification activity.
@@ -328,6 +438,7 @@ type MerchantSettingsResponse struct {
 // SubscriptionResponse represents subscription response
 type SubscriptionResponse struct {
 	Subscription *Subscription `json:"subscription"`
+	FreePlanUsed bool          `json:"free_plan_used"`
 }
 
 // LINEWebhookConfig represents LINE webhook configuration for a merchant
@@ -346,14 +457,4 @@ type UpdateLINEWebhookRequest struct {
 	LINEChannelID     string `json:"line_channel_id" binding:"required"`
 	LINEChannelSecret string `json:"line_channel_secret" binding:"required"`
 	LINEAccessToken   string `json:"line_access_token" binding:"required"`
-}
-
-// LINEWebhookTestResponse represents LINE webhook test response
-type LINEWebhookTestResponse struct {
-	WebhookStatus       string    `json:"webhook_status"`
-	ConnectionStatus    string    `json:"connection_status"`
-	SignatureValidation string    `json:"signature_validation"`
-	APIAccess           string    `json:"api_access"`
-	TestedAt            time.Time `json:"tested_at"`
-	ResponseTimeMs      int64     `json:"response_time_ms"`
 }

@@ -4,11 +4,12 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Store, User, BookOpen, LogOut } from 'lucide-react';
+import { LayoutDashboard, Store, User, BookOpen, LogOut, ReceiptText } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 
 const menuItems = [
   { name: 'Overview',  href: '/dashboard',          icon: LayoutDashboard, exact: true },
+  { name: 'Transactions', href: '/dashboard/slips', icon: ReceiptText },
   { name: 'Merchant',  href: '/dashboard/merchant',  icon: Store },
   { name: 'Account',   href: '/dashboard/account',   icon: User },
   { name: 'API Docs',  href: '/dashboard/docs',      icon: BookOpen },
