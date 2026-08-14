@@ -406,6 +406,9 @@ export interface MerchantAnalyticsDashboard {
   lifetime_transactions: number;
   failed_scans: number;
   verified_scans: number;
+  bot_clients: number;
+  new_bot_clients: number;
+  previous_bot_clients: number;
 }
 
 export interface MerchantUsagePoint {

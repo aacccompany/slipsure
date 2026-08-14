@@ -125,6 +125,7 @@ export default function SlipsPage() {
 
   const transactions = listData?.data?.items ?? [];
   const pagination = listData?.data?.pagination;
+  const totalPages = Math.max(1, pagination?.total_pages ?? 1);
 
   const downloadTransactions = async () => {
     try {
@@ -239,22 +240,27 @@ export default function SlipsPage() {
           transactions.map((transaction) => <TransactionRow key={transaction.id} transaction={transaction} />)
         )}
 
-        {pagination && pagination.total_pages > 1 && (
+        {pagination && (
           <div className="flex items-center justify-between px-5 py-4" style={{ borderTop: '1px solid var(--border)' }}>
             <button
-              disabled={page <= 1}
-              onClick={() => setPage((current) => current - 1)}
-              className="border border-zinc-200 px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-zinc-700 transition-colors disabled:opacity-30"
+              disabled={page <= 1 || isFetching}
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+              className="border border-zinc-200 px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-zinc-700 transition-colors disabled:cursor-not-allowed disabled:opacity-30"
             >
               Previous
             </button>
-            <span className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-              Page {page} / {pagination.total_pages}
-            </span>
+            <div className="text-center">
+              <p className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+                Page {pagination.page ?? page} / {totalPages}
+              </p>
+              <p className="mt-1 font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+                {pagination.total.toLocaleString()} total transactions
+              </p>
+            </div>
             <button
-              disabled={page >= pagination.total_pages}
-              onClick={() => setPage((current) => current + 1)}
-              className="border border-zinc-200 px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-zinc-700 transition-colors disabled:opacity-30"
+              disabled={page >= totalPages || isFetching}
+              onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+              className="border border-zinc-200 px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-zinc-700 transition-colors disabled:cursor-not-allowed disabled:opacity-30"
             >
               Next
             </button>

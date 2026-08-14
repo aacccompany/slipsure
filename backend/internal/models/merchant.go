@@ -248,6 +248,9 @@ type MerchantAnalyticsDashboard struct {
 	LifetimeTransactions int     `json:"lifetime_transactions"`
 	FailedScans          int     `json:"failed_scans"`
 	VerifiedScans        int     `json:"verified_scans"`
+	BotClients           int     `json:"bot_clients"`
+	NewBotClients        int     `json:"new_bot_clients"`
+	PreviousBotClients   int     `json:"previous_bot_clients"`
 }
 
 // MerchantUsagePoint represents verification volume for one date.

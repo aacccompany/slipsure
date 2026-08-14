@@ -97,7 +97,7 @@ function SuccessContent() {
         <div className="space-y-3">
           {[
             { icon: Zap,     title: 'Your quota is ready',     desc: 'Start verifying slips immediately — your monthly quota is now active.' },
-            { icon: Receipt, title: 'Integrate via API',       desc: 'Head to API Docs in your dashboard to start integrating.' },
+            { icon: Receipt, title: 'Review transactions',     desc: 'Use your dashboard to monitor verified slips and payment history.' },
             { icon: Shield,  title: 'Configure LINE webhook',  desc: 'Connect your LINE OA to receive and verify slips automatically.' },
           ].map(({ icon: Icon, title, desc }) => (
             <div key={title} className="flex items-start gap-4 p-4"

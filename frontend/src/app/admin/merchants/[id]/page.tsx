@@ -91,8 +91,8 @@ export default function AdminMerchantDetailPage() {
 
   if (!detail) {
     return (
-      <AdminShell title="Merchant Detail">
-        <Link href="/admin" className="inline-flex items-center gap-2 text-sm font-semibold text-zinc-700">
+      <AdminShell title="Merchant Detail" activeTab="merchants">
+        <Link href="/admin?tab=merchants" className="inline-flex items-center gap-2 text-sm font-semibold text-zinc-700">
           <ArrowLeft className="h-4 w-4" />
           Back to admin
         </Link>
@@ -111,9 +111,9 @@ export default function AdminMerchantDetailPage() {
   );
 
   return (
-    <AdminShell title={detail.merchant.shop_name} eyebrow="Merchant Detail">
+    <AdminShell title={detail.merchant.shop_name} eyebrow="Merchant Detail" activeTab="merchants">
       <div className="mb-6">
-        <Link href="/admin" className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-zinc-600 hover:text-zinc-950">
+        <Link href="/admin?tab=merchants" className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-zinc-600 hover:text-zinc-950">
           <ArrowLeft className="h-4 w-4" />
           Back to admin
         </Link>

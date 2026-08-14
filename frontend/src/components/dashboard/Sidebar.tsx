@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Store, User, BookOpen, LogOut, ReceiptText } from 'lucide-react';
+import { LayoutDashboard, Store, User, LogOut, ReceiptText } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 
 const menuItems = [
@@ -12,7 +12,6 @@ const menuItems = [
   { name: 'Transactions', href: '/dashboard/slips', icon: ReceiptText },
   { name: 'Merchant',  href: '/dashboard/merchant',  icon: Store },
   { name: 'Account',   href: '/dashboard/account',   icon: User },
-  { name: 'API Docs',  href: '/dashboard/docs',      icon: BookOpen },
 ];
 
 interface DashboardSidebarProps {
@@ -25,6 +24,10 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
   const { logout } = useAuth();
 
   const handleLogout = async () => {
+    if (!window.confirm('Are you sure you want to log out?')) {
+      return;
+    }
+
     localStorage.removeItem('isLoggedIn');
     await logout();
   };

@@ -3,7 +3,7 @@
 import React from 'react';
 import {
   ScanLine, ShieldCheck, CheckCircle2, CalendarClock,
-  Loader2, AlertCircle, ArrowUpRight,
+  Loader2, AlertCircle, ArrowUpRight, Users,
 } from 'lucide-react';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { useQuery } from '@tanstack/react-query';
@@ -97,7 +97,7 @@ export default function DashboardPage() {
       )}
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard
           title="Slips Verified"
           value={(stats?.verified_scans ?? 0).toLocaleString()}
@@ -118,6 +118,13 @@ export default function DashboardPage() {
           change={`${stats?.verified_scans ?? 0} verified`}
           isPositive={successRate >= 80}
           icon={CheckCircle2}
+        />
+        <StatCard
+          title="Bot Clients"
+          value={(stats?.bot_clients ?? 0).toLocaleString()}
+          change={`${stats?.new_bot_clients ?? 0} new / ${stats?.previous_bot_clients ?? 0} previous`}
+          isPositive={true}
+          icon={Users}
         />
         <StatCard
           title="Quota Resets"

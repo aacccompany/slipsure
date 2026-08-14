@@ -267,7 +267,7 @@ func (s *LINEWebhookService) processEvent(merchant *models.MerchantProfile, even
 	case "follow":
 		return s.processFollowEvent(merchant, event, accessToken)
 	case "unfollow":
-		return s.processUnfollowEvent(merchant)
+		return s.processUnfollowEvent(merchant, event)
 	default:
 		log.Printf("Unhandled event type: %s", event.Type)
 	}
@@ -280,6 +280,8 @@ func (s *LINEWebhookService) processMessageEvent(merchant *models.MerchantProfil
 		log.Printf("LINE message event missing message payload for merchant %s", merchant.ID)
 		return nil
 	}
+
+	s.recordLineBotClient(merchant.ID, event.Source.UserID, true)
 
 	if event.Message.Type == "image" {
 		return s.processLineImageMessage(merchant, event, accessToken)
@@ -480,13 +482,26 @@ func (s *LINEWebhookService) processTextMessage(merchant *models.MerchantProfile
 }
 
 func (s *LINEWebhookService) processFollowEvent(merchant *models.MerchantProfile, event LINEEvent, accessToken string) error {
+	s.recordLineBotClient(merchant.ID, event.Source.UserID, true)
+
 	welcomeMessage := fmt.Sprintf("Welcome to %s! Send us a payment slip for verification.", merchant.ShopName)
 	return s.ReplyMessage(event.ReplyToken, []LINEMessage{BuildTextMessage(welcomeMessage)}, accessToken)
 }
 
-func (s *LINEWebhookService) processUnfollowEvent(merchant *models.MerchantProfile) error {
+func (s *LINEWebhookService) processUnfollowEvent(merchant *models.MerchantProfile, event LINEEvent) error {
+	s.recordLineBotClient(merchant.ID, event.Source.UserID, false)
 	log.Printf("User unfollowed merchant %s LINE OA", merchant.ID)
 	return nil
+}
+
+func (s *LINEWebhookService) recordLineBotClient(merchantID uuid.UUID, lineUserID string, active bool) {
+	if strings.TrimSpace(lineUserID) == "" {
+		return
+	}
+
+	if err := s.merchantRepo.RecordLineBotClient(merchantID, lineUserID, active); err != nil {
+		log.Printf("Failed to record LINE bot client for merchant %s: %v", merchantID, err)
+	}
 }
 
 func (s *LINEWebhookService) getLINEBotInfo(accessToken string) (*LINEBotInfo, error) {

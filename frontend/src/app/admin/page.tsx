@@ -10,7 +10,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { AdminShell } from '@/components/admin/AdminShell';
 import type { AdminAnalyticsDashboard, AdminMerchantPerformanceAnalytics, AdminRevenueAnalytics } from '@/types/api';
 
-type Tab = 'merchants' | 'users' | 'payments' | 'analytics';
+type Tab = 'merchants' | 'users' | 'billing' | 'analytics';
 
 function formatDate(value?: string) {
   if (!value) return '-';
@@ -165,13 +165,15 @@ function AdminAnalyticsOverview({
 function AdminBackofficeContent() {
   const searchParams = useSearchParams();
   const { user, isLoading } = useAuth();
-  const requestedTab = searchParams.get('tab') as Tab | null;
-  const initialTab: Tab = requestedTab && ['merchants', 'users', 'payments', 'analytics'].includes(requestedTab)
-    ? requestedTab
+  const requestedTab = searchParams.get('tab');
+  const normalizedTab = requestedTab === 'payments' ? 'billing' : requestedTab;
+  const initialTab: Tab = normalizedTab && ['merchants', 'users', 'billing', 'analytics'].includes(normalizedTab)
+    ? normalizedTab as Tab
     : 'analytics';
   const [tab, setTab] = useState<Tab>(initialTab);
   const [userSearch, setUserSearch] = useState('');
   const [userPage, setUserPage] = useState(1);
+  const [billingPage, setBillingPage] = useState(1);
 
   useEffect(() => {
     setTab(initialTab);
@@ -226,6 +228,12 @@ function AdminBackofficeContent() {
     enabled: user?.role === 'admin' && tab === 'analytics',
   });
 
+  const paymentsQuery = useQuery({
+    queryKey: ['admin-payments', billingPage],
+    queryFn: () => api.getAdminPayments({ page: billingPage, limit: 20 }),
+    enabled: user?.role === 'admin' && tab === 'billing',
+  });
+
   if (isLoading || !user || user.role !== 'admin') {
     return (
       <div className="flex min-h-screen items-center justify-center bg-zinc-50">
@@ -237,6 +245,8 @@ function AdminBackofficeContent() {
   const merchants = merchantsQuery.data?.data?.items ?? [];
   const users = usersQuery.data?.data?.items ?? [];
   const usersPagination = usersQuery.data?.data?.pagination;
+  const payments = paymentsQuery.data?.data?.items ?? [];
+  const paymentsPagination = paymentsQuery.data?.data;
   const isTableLoading = tab === 'merchants' ? merchantsQuery.isLoading : usersQuery.isLoading;
 
   return (
@@ -256,12 +266,71 @@ function AdminBackofficeContent() {
       ) : null}
 
         <div className="overflow-hidden border border-zinc-200 bg-white">
-          {tab === 'payments' ? (
-            <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-              <CreditCard className="h-8 w-8 text-zinc-300" />
-              <p className="text-sm font-bold text-zinc-950">Payments menu is ready</p>
-              <p className="max-w-sm text-sm text-zinc-500">Add the payments table here when you want this screen separated from merchant detail.</p>
-            </div>
+          {tab === 'billing' ? (
+            paymentsQuery.isLoading ? (
+              <div className="flex h-64 items-center justify-center">
+                <Loader2 className="h-5 w-5 animate-spin text-blue-700" />
+              </div>
+            ) : (
+              <>
+                <table className="w-full text-left text-sm">
+                  <thead className="border-b border-zinc-200 bg-zinc-50 font-mono text-[10px] uppercase tracking-widest text-zinc-500">
+                    <tr>
+                      <th className="px-4 py-3">Merchant</th>
+                      <th className="px-4 py-3">Amount</th>
+                      <th className="px-4 py-3">Gateway</th>
+                      <th className="px-4 py-3">Reference</th>
+                      <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3">Paid</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {payments.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="px-4 py-10 text-center text-sm text-zinc-500">
+                          No billing records yet.
+                        </td>
+                      </tr>
+                    ) : payments.map((payment) => (
+                      <tr key={payment.id} className="border-b border-zinc-100 last:border-0">
+                        <td className="px-4 py-3">
+                          <Link href={`/admin/merchants/${payment.merchant_id}`} className="font-bold text-zinc-950 hover:text-blue-700">
+                            {payment.merchant_name || payment.merchant_id}
+                          </Link>
+                          <p className="font-mono text-[10px] text-zinc-400">{payment.merchant_id}</p>
+                        </td>
+                        <td className="px-4 py-3 font-semibold text-zinc-950">{formatMoney(payment.amount)}</td>
+                        <td className="px-4 py-3 capitalize text-zinc-700">{payment.gateway}</td>
+                        <td className="px-4 py-3 font-mono text-xs text-zinc-600">{payment.gateway_reference_id || '-'}</td>
+                        <td className="px-4 py-3 text-zinc-700">{payment.status}</td>
+                        <td className="px-4 py-3 text-zinc-500">{formatDate(payment.paid_at || payment.created_at)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div className="flex items-center justify-between border-t border-zinc-200 px-4 py-3">
+                  <button
+                    type="button"
+                    onClick={() => setBillingPage((page) => Math.max(1, page - 1))}
+                    disabled={billingPage <= 1 || paymentsQuery.isFetching}
+                    className="border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Previous
+                  </button>
+                  <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">
+                    Page {paymentsPagination?.page ?? billingPage} / {Math.max(1, paymentsPagination?.total_pages ?? 1)} - {paymentsPagination?.total ?? 0} total
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setBillingPage((page) => page + 1)}
+                    disabled={billingPage >= (paymentsPagination?.total_pages ?? 1) || paymentsQuery.isFetching}
+                    className="border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Next
+                  </button>
+                </div>
+              </>
+            )
           ) : tab === 'analytics' ? (
             <div className="p-5">
               <AdminAnalyticsOverview

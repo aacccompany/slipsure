@@ -40,6 +40,8 @@ type MerchantRepository interface {
 	GetMerchantAnalyticsDashboard(merchantID uuid.UUID) (models.MerchantAnalyticsDashboard, error)
 	GetMerchantAnalyticsUsage(merchantID uuid.UUID, days int) (models.MerchantAnalyticsUsage, error)
 	ListMerchantAnalyticsExport(merchantID uuid.UUID, startDate, endDate time.Time) ([]models.MerchantAnalyticsExportRow, error)
+	RecordLineBotClient(merchantID uuid.UUID, lineUserID string, active bool) error
+	GetLineBotClientStats(merchantID uuid.UUID) (total int, newClients int, previousClients int, err error)
 
 	// Plan operations
 	GetAllPlans() ([]models.SubscriptionPlan, error)
@@ -938,7 +940,64 @@ func (r *merchantRepository) GetMerchantAnalyticsDashboard(merchantID uuid.UUID)
 		dashboard.SuccessRate = float64(dashboard.VerifiedScans) / float64(completed) * 100
 	}
 
+	if total, newClients, previousClients, err := r.GetLineBotClientStats(merchantID); err == nil {
+		dashboard.BotClients = total
+		dashboard.NewBotClients = newClients
+		dashboard.PreviousBotClients = previousClients
+	}
+
 	return dashboard, nil
+}
+
+// RecordLineBotClient upserts a LINE user who interacted with a merchant bot.
+func (r *merchantRepository) RecordLineBotClient(merchantID uuid.UUID, lineUserID string, active bool) error {
+	lineUserID = strings.TrimSpace(lineUserID)
+	if lineUserID == "" {
+		return nil
+	}
+
+	query := `
+		INSERT INTO line_bot_clients (
+			merchant_id, line_user_id, is_active, first_seen_at, last_seen_at, unfollowed_at, updated_at
+		)
+		VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CASE WHEN $3 THEN NULL ELSE CURRENT_TIMESTAMP END, CURRENT_TIMESTAMP)
+		ON CONFLICT (merchant_id, line_user_id)
+		DO UPDATE SET
+			is_active = EXCLUDED.is_active,
+			last_seen_at = CASE WHEN EXCLUDED.is_active THEN CURRENT_TIMESTAMP ELSE line_bot_clients.last_seen_at END,
+			unfollowed_at = CASE WHEN EXCLUDED.is_active THEN NULL ELSE CURRENT_TIMESTAMP END,
+			updated_at = CURRENT_TIMESTAMP
+	`
+
+	if _, err := r.db.Exec(query, merchantID, lineUserID, active); err != nil {
+		return fmt.Errorf("failed to record LINE bot client: %w", err)
+	}
+
+	return nil
+}
+
+// GetLineBotClientStats returns active LINE client counts for a merchant bot.
+func (r *merchantRepository) GetLineBotClientStats(merchantID uuid.UUID) (int, int, int, error) {
+	var total, newClients, previousClients int
+	err := r.db.QueryRow(`
+		SELECT
+			COUNT(*) FILTER (WHERE is_active = TRUE)::int AS total,
+			COUNT(*) FILTER (
+				WHERE is_active = TRUE
+				  AND first_seen_at >= date_trunc('month', CURRENT_DATE)
+			)::int AS new_clients,
+			COUNT(*) FILTER (
+				WHERE is_active = TRUE
+				  AND first_seen_at < date_trunc('month', CURRENT_DATE)
+			)::int AS previous_clients
+		FROM line_bot_clients
+		WHERE merchant_id = $1
+	`, merchantID).Scan(&total, &newClients, &previousClients)
+	if err != nil {
+		return 0, 0, 0, fmt.Errorf("failed to count LINE bot clients: %w", err)
+	}
+
+	return total, newClients, previousClients, nil
 }
 
 // GetMerchantAnalyticsUsage returns daily usage, peak time, and failure reason breakdowns.

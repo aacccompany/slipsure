@@ -6,6 +6,7 @@ import {
   BarChart3,
   CreditCard,
   LogOut,
+  Store,
   Users,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -20,13 +21,14 @@ export type AdminMenuItem = {
 };
 
 export const adminMenuItems: AdminMenuItem[] = [
-  { name: 'Analytics', href: '/admin?tab=analytics', icon: BarChart3, matchPath: '/admin', matchTab: 'analytics' },
+  { name: 'Overview', href: '/admin?tab=analytics', icon: BarChart3, matchPath: '/admin', matchTab: 'analytics' },
+  { name: 'Merchants', href: '/admin?tab=merchants', icon: Store, matchPath: '/admin', matchTab: 'merchants' },
   { name: 'Users', href: '/admin?tab=users', icon: Users, matchPath: '/admin', matchTab: 'users' },
-  { name: 'Payments', href: '/admin?tab=payments', icon: CreditCard, matchPath: '/admin', matchTab: 'payments' },
+  { name: 'Billing', href: '/admin?tab=billing', icon: CreditCard, matchPath: '/admin', matchTab: 'billing' },
 ];
 
 function isMenuActive(item: AdminMenuItem, pathname: string, activeTab?: string) {
-  if (pathname.startsWith('/admin/merchants/') && item.name === 'Analytics') {
+  if (pathname.startsWith('/admin/merchants/') && item.name === 'Merchants') {
     return true;
   }
 
@@ -50,6 +52,13 @@ export function AdminShell({
 }) {
   const pathname = usePathname();
   const { logout } = useAuth();
+  const handleLogout = async () => {
+    if (!window.confirm('Are you sure you want to log out?')) {
+      return;
+    }
+
+    await logout();
+  };
 
   return (
     <div className="flex min-h-screen bg-zinc-50">
@@ -81,7 +90,7 @@ export function AdminShell({
 
         <div className="border-t border-zinc-200 p-2">
           <button
-            onClick={logout}
+            onClick={handleLogout}
             className="flex w-full items-center gap-3 px-3 py-2 text-sm font-semibold text-zinc-500 transition-colors hover:bg-rose-50 hover:text-rose-700"
           >
             <LogOut className="h-4 w-4 shrink-0" />

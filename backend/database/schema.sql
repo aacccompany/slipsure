@@ -47,6 +47,7 @@ DROP TABLE IF EXISTS slips CASCADE;
 DROP TABLE IF EXISTS transactions CASCADE;
 DROP TABLE IF EXISTS notifications CASCADE;
 DROP TABLE IF EXISTS usage_counters CASCADE;
+DROP TABLE IF EXISTS line_bot_clients CASCADE;
 DROP TABLE IF EXISTS system_logs CASCADE;
 
 CREATE TABLE users (
@@ -207,6 +208,23 @@ CREATE TABLE notifications (
 );
 
 -- ============================================
+-- LINE Bot Clients Table
+-- ============================================
+
+CREATE TABLE line_bot_clients (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    merchant_id UUID NOT NULL REFERENCES merchants(id) ON DELETE CASCADE,
+    line_user_id VARCHAR(255) NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    first_seen_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_seen_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    unfollowed_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(merchant_id, line_user_id)
+);
+
+-- ============================================
 -- Usage Counters Table
 -- ============================================
 
@@ -282,6 +300,10 @@ CREATE INDEX idx_notifications_status ON notifications(status);
 -- Usage Counters
 CREATE INDEX idx_usage_counters_merchant_id ON usage_counters(merchant_id);
 CREATE INDEX idx_usage_counters_year_month ON usage_counters(year, month);
+
+-- LINE Bot Clients
+CREATE INDEX idx_line_bot_clients_merchant_id ON line_bot_clients(merchant_id);
+CREATE INDEX idx_line_bot_clients_last_seen_at ON line_bot_clients(last_seen_at);
 
 -- System Logs
 CREATE INDEX idx_system_logs_merchant_id ON system_logs(merchant_id);
