@@ -31,6 +31,16 @@ export default function DashboardPage() {
   const successRate = Math.round(stats?.success_rate ?? 0);
   const dailyUsage = usageData?.data?.usage_per_day ?? [];
   const maxDailyCount = Math.max(1, ...dailyUsage.map((d) => d.verified + d.failed));
+  const verifiedScans = stats?.verified_scans ?? 0;
+  const failedScans = stats?.failed_scans ?? 0;
+  const duplicateScans = usageData?.data?.failed_scan_reasons
+    ?.find((item) => item.reason === 'DUPLICATE_SLIP')?.count ?? 0;
+  const maxResultCount = Math.max(1, verifiedScans, failedScans, duplicateScans);
+  const resultBreakdown = [
+    { label: 'Verified', value: verifiedScans, color: 'var(--blue)' },
+    { label: 'Failed', value: failedScans, color: '#FB7185' },
+    { label: 'Duplicate', value: duplicateScans, color: '#F59E0B' },
+  ];
 
   const downloadReport = async () => {
     try {
@@ -160,8 +170,9 @@ export default function DashboardPage() {
               {dailyUsage.length > 0 ? dailyUsage.map((data, i) => {
                 const successH = (data.verified / maxDailyCount) * 100;
                 const failH = (data.failed / maxDailyCount) * 100;
+                const total = data.verified + data.failed;
                 return (
-                  <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
+                  <div key={i} className="group relative flex flex-1 flex-col items-center gap-2">
                     <div className="w-full">
                       <div
                         className="w-full transition-colors"
@@ -176,6 +187,20 @@ export default function DashboardPage() {
                         <div className="w-full bg-rose-100 group-hover:bg-rose-400 transition-colors"
                           style={{ height: `${Math.max(failH, 2)}px` }} />
                       )}
+                    </div>
+                    <div className="pointer-events-none absolute bottom-8 left-1/2 z-10 hidden min-w-28 -translate-x-1/2 border border-zinc-200 bg-white px-3 py-2 text-left shadow-lg group-hover:block">
+                      <p className="mb-1 font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+                        {new Date(data.date).toLocaleDateString('en-US', { weekday: 'short', day: '2-digit', month: 'short' })}
+                      </p>
+                      <p className="text-xs font-semibold" style={{ color: 'var(--blue)' }}>
+                        Verified: {data.verified}
+                      </p>
+                      <p className="text-xs font-semibold text-rose-500">
+                        Failed: {data.failed}
+                      </p>
+                      <p className="mt-1 border-t border-zinc-100 pt-1 text-xs font-semibold text-zinc-700">
+                        Total: {total}
+                      </p>
                     </div>
                     <span className="font-mono text-[9px] uppercase" style={{ color: 'var(--border-strong)' }}>
                   {new Date(data.date).toLocaleDateString('en-US', { weekday: 'short' })}
@@ -196,22 +221,28 @@ export default function DashboardPage() {
         {/* Side panels */}
         <div className="lg:col-span-4 space-y-4">
 
-          {/* Gateway status */}
+          {/* Verification results */}
           <div className="bg-white p-6" style={{ border: '1px solid var(--border)' }}>
             <p className="font-mono text-[10px] uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>
-              Gateway Status
+              Verification Results
             </p>
-            <div className="space-y-0">
-              {['KBank Gateway', 'SCB Gateway', 'Bangkok Bank'].map((name, i, arr) => (
-                <div
-                  key={name}
-                  className="flex items-center justify-between py-2.5"
-                  style={{ borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none' }}
-                >
-                  <span className="text-sm font-medium" style={{ color: 'var(--navy)' }}>{name}</span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    <span className="font-mono text-[9px] uppercase tracking-widest text-emerald-600">active</span>
+            <div className="space-y-4">
+              {resultBreakdown.map((item) => (
+                <div key={item.label}>
+                  <div className="mb-1.5 flex items-center justify-between">
+                    <span className="text-sm font-medium" style={{ color: 'var(--navy)' }}>{item.label}</span>
+                    <span className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+                      {item.value.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="h-2 w-full" style={{ background: 'var(--border)' }}>
+                    <div
+                      className="h-full transition-all"
+                      style={{
+                        width: `${Math.max(item.value > 0 ? 4 : 0, (item.value / maxResultCount) * 100)}%`,
+                        background: item.color,
+                      }}
+                    />
                   </div>
                 </div>
               ))}
