@@ -6,3 +6,6 @@
 docker-compose.yml
 .agents/
 .claude/
+.env.uat
+.github
+docker-compose.deploy.yml
