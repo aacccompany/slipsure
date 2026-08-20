@@ -47,6 +47,7 @@ DROP TABLE IF EXISTS slips CASCADE;
 DROP TABLE IF EXISTS transactions CASCADE;
 DROP TABLE IF EXISTS notifications CASCADE;
 DROP TABLE IF EXISTS usage_counters CASCADE;
+DROP TABLE IF EXISTS line_webhook_configs CASCADE;
 DROP TABLE IF EXISTS line_bot_clients CASCADE;
 DROP TABLE IF EXISTS system_logs CASCADE;
 
@@ -208,6 +209,20 @@ CREATE TABLE notifications (
 );
 
 -- ============================================
+-- LINE Webhook Configurations Table
+-- ============================================
+
+CREATE TABLE line_webhook_configs (
+    merchant_id UUID PRIMARY KEY REFERENCES merchants(id) ON DELETE CASCADE,
+    line_channel_id VARCHAR(255) NOT NULL,
+    encrypted_channel_secret TEXT NOT NULL,
+    encrypted_access_token TEXT NOT NULL,
+    webhook_reference_id VARCHAR(10) UNIQUE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================
 -- LINE Bot Clients Table
 -- ============================================
 
@@ -302,6 +317,7 @@ CREATE INDEX idx_usage_counters_merchant_id ON usage_counters(merchant_id);
 CREATE INDEX idx_usage_counters_year_month ON usage_counters(year, month);
 
 -- LINE Bot Clients
+CREATE INDEX idx_line_webhook_configs_webhook_ref_id ON line_webhook_configs(webhook_reference_id);
 CREATE INDEX idx_line_bot_clients_merchant_id ON line_bot_clients(merchant_id);
 CREATE INDEX idx_line_bot_clients_last_seen_at ON line_bot_clients(last_seen_at);
 
