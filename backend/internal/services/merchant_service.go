@@ -3,6 +3,7 @@ package services
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"slipsure-backend/internal/models"
@@ -180,8 +181,9 @@ func (s *MerchantService) CancelSubscription(merchantID uuid.UUID, req *models.C
 		return err
 	}
 
-	// Cancel in Stripe if there's a subscription ID
-	if subscription.StripeSubscriptionID != nil {
+	// Stripe Checkout is currently created in one-time payment mode, so older
+	// rows may store a Checkout Session ID (cs_*) instead of a Subscription ID.
+	if subscription.StripeSubscriptionID != nil && strings.HasPrefix(*subscription.StripeSubscriptionID, "sub_") {
 		// Check if Stripe service is available
 		if s.stripeService == nil {
 			return errors.New("stripe service is not available. please configure STRIPE_SECRET_KEY")
