@@ -60,7 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         tokenManager.setTokens({ access_token, refresh_token, expires_in });
         setUser(userData);
 
-        router.push(userData.role === 'admin' ? '/admin?tab=analytics' : '/onboarding');
+        router.push(userData.role === 'admin' ? '/admin?tab=analytics' : '/dashboard');
       } else {
         throw new Error(response.message || 'Login failed');
       }
@@ -80,7 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         tokenManager.setTokens({ access_token, refresh_token, expires_in });
         setUser(userData);
 
-        router.push(userData.role === 'admin' ? '/admin?tab=analytics' : '/onboarding');
+        router.push(userData.role === 'admin' ? '/admin?tab=analytics' : '/dashboard');
       } else {
         throw new Error(response.message || 'LINE login failed');
       }
@@ -121,7 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { access_token, refresh_token, expires_in } = response.data;
       tokenManager.setTokens({ access_token, refresh_token, expires_in });
       await refreshUser();
-      router.push('/onboarding');
+      router.push('/dashboard');
     }
   };
 

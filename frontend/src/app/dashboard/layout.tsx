@@ -6,7 +6,6 @@ import { DashboardSidebar } from '@/components/dashboard/Sidebar';
 import { DashboardHeader } from '@/components/dashboard/Header';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
-import { api } from '@/lib/api-client';
 
 export default function DashboardLayout({
   children,
@@ -16,8 +15,6 @@ export default function DashboardLayout({
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [setupChecking, setSetupChecking] = useState(true);
-  const [setupBlocked, setSetupBlocked] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -30,46 +27,7 @@ export default function DashboardLayout({
     }
   }, [user, authLoading, router]);
 
-  useEffect(() => {
-    if (authLoading || !user) return;
-    if (user.role === 'admin') return;
-
-    let cancelled = false;
-
-    const checkSetup = async () => {
-      try {
-        const [profileResponse, lineResponse] = await Promise.all([
-          api.getMerchantProfile(),
-          api.getLINEWebhookConfig(),
-        ]);
-
-        const hasProfile = Boolean(profileResponse.data?.profile?.id);
-        const hasLineBot = Boolean(lineResponse.data?.config?.is_configured);
-
-        if (!cancelled && (!hasProfile || !hasLineBot)) {
-          setSetupBlocked(true);
-          router.replace('/onboarding?required=1');
-          return;
-        }
-      } catch {
-        if (!cancelled) {
-          setSetupBlocked(true);
-          router.replace('/onboarding?required=1');
-          return;
-        }
-      } finally {
-        if (!cancelled) setSetupChecking(false);
-      }
-    };
-
-    checkSetup();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [user, authLoading, router]);
-
-  if (authLoading || !user || setupChecking || setupBlocked) {
+  if (authLoading || !user) {
     return (
       <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
         <Loader2 className="w-10 h-10 text-blue-800 animate-spin" />
