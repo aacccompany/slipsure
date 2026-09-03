@@ -2,9 +2,11 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import { useParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Loader2, ReceiptText, Store, Users } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { useAuth } from '@/contexts/auth-context';
 import { AdminShell } from '@/components/admin/AdminShell';
@@ -47,6 +49,19 @@ function formatPercent(used: number, total: number) {
   return `${((used / total) * 100).toFixed(1)}%`;
 }
 
+function StatBox({ icon: Icon, label, value, hint }: { icon: LucideIcon; label: string; value: ReactNode; hint?: string }) {
+  return (
+    <div className="bg-white p-5" style={{ border: '1px solid var(--border)' }}>
+      <div className="mb-3 flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>
+        <Icon className="h-4 w-4" style={{ color: 'var(--blue)' }} />
+        <span className="font-mono text-[10px] uppercase tracking-widest">{label}</span>
+      </div>
+      <p className="text-xl font-bold tracking-tight" style={{ color: 'var(--navy)' }}>{value}</p>
+      {hint && <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>{hint}</p>}
+    </div>
+  );
+}
+
 export default function AdminMerchantDetailPage() {
   const params = useParams<{ id: string }>();
   const merchantId = params.id;
@@ -79,8 +94,8 @@ export default function AdminMerchantDetailPage() {
 
   if (isLoading || !user || user.role !== 'admin' || detailQuery.isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-50">
-        <Loader2 className="h-6 w-6 animate-spin text-blue-700" />
+      <div className="flex min-h-screen items-center justify-center" style={{ background: 'var(--bg)' }}>
+        <Loader2 className="h-6 w-6 animate-spin" style={{ color: 'var(--blue)' }} />
       </div>
     );
   }
@@ -91,12 +106,14 @@ export default function AdminMerchantDetailPage() {
 
   if (!detail) {
     return (
-      <AdminShell title="Merchant Detail" activeTab="merchants">
-        <Link href="/admin?tab=merchants" className="inline-flex items-center gap-2 text-sm font-semibold text-zinc-700">
-          <ArrowLeft className="h-4 w-4" />
-          Back to admin
-        </Link>
-        <p className="mt-8 text-sm text-zinc-500">Merchant not found.</p>
+      <AdminShell activeTab="merchants">
+        <div className="p-6" style={{ background: 'var(--bg)' }}>
+          <Link href="/admin?tab=merchants" className="inline-flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--text-muted)' }}>
+            <ArrowLeft className="h-4 w-4" />
+            Back to admin
+          </Link>
+          <p className="mt-8 text-sm" style={{ color: 'var(--text-muted)' }}>Merchant not found.</p>
+        </div>
       </AdminShell>
     );
   }
@@ -111,31 +128,48 @@ export default function AdminMerchantDetailPage() {
   );
 
   return (
-    <AdminShell title={detail.merchant.shop_name} eyebrow="Merchant Detail" activeTab="merchants">
-      <div className="mb-6">
-        <Link href="/admin?tab=merchants" className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-zinc-600 hover:text-zinc-950">
-          <ArrowLeft className="h-4 w-4" />
-          Back to admin
-        </Link>
+    <AdminShell activeTab="merchants">
+      <div className="p-6 space-y-6" style={{ background: 'var(--bg)' }}>
+        <div className="pb-4" style={{ borderBottom: '1px solid var(--border)' }}>
+          <Link
+            href="/admin?tab=merchants"
+            className="mb-3 inline-flex items-center gap-2 text-sm font-medium transition-colors"
+            style={{ color: 'var(--text-muted)' }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--navy)')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to admin
+          </Link>
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
-              <p className="mt-1 text-sm text-zinc-500">{detail.merchant.contact_email || 'No contact email'} · {detail.merchant.contact_phone || 'No phone'}</p>
+              <p className="font-mono text-[10px] uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>
+                / Merchant Detail
+              </p>
+              <h1 className="font-bold tracking-tight" style={{ fontSize: '1.4rem', color: 'var(--navy)', letterSpacing: '-0.02em' }}>
+                {detail.merchant.shop_name}
+              </h1>
+              <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
+                {detail.merchant.contact_email || 'No contact email'} · {detail.merchant.contact_phone || 'No phone'}
+              </p>
             </div>
-            <span className={detail.line_connected ? 'text-sm font-bold text-emerald-700' : 'text-sm font-bold text-rose-600'}>
+            <span className="text-sm font-bold" style={{ color: detail.line_connected ? '#047857' : '#DC2626' }}>
               LINE {detail.line_connected ? 'connected' : 'not connected'}
             </span>
           </div>
-      </div>
-        <div className="mb-4 flex flex-wrap gap-2 border-b border-zinc-200 pb-3">
+        </div>
+
+        <div className="flex flex-wrap gap-2 pb-3" style={{ borderBottom: '1px solid var(--border)' }}>
           {detailTabs.map((item) => (
             <button
               key={item.id}
               onClick={() => setTab(item.id)}
-              className={`px-3 py-2 text-sm font-semibold transition-colors ${
+              className="px-3 py-2 text-sm font-semibold transition-colors"
+              style={
                 tab === item.id
-                  ? 'bg-zinc-950 text-white'
-                  : 'bg-white text-zinc-500 hover:bg-zinc-100 hover:text-zinc-950'
-              }`}
+                  ? { background: 'var(--navy)', color: '#fff' }
+                  : { background: '#fff', color: 'var(--text-muted)', border: '1px solid var(--border)' }
+              }
             >
               {item.label}
             </button>
@@ -143,263 +177,213 @@ export default function AdminMerchantDetailPage() {
         </div>
 
         {(tab === 'overview' || tab === 'usage') && (
-        <div className="mb-4 grid gap-3 md:grid-cols-4">
-          <div className="border border-zinc-200 bg-white p-5">
-            <div className="mb-3 flex items-center gap-2 text-zinc-500">
-              <Store className="h-4 w-4" />
-              <span className="font-mono text-[10px] uppercase tracking-widest">Current Plan</span>
-            </div>
-            <p className="text-xl font-black text-zinc-950">{detail.subscription?.plan?.name || detail.subscription?.plan_id || 'No plan'}</p>
-            <p className="mt-1 text-xs text-zinc-500">{detail.subscription?.status || 'none'}</p>
+          <div className="grid gap-3 md:grid-cols-4">
+            <StatBox
+              icon={Store}
+              label="Current Plan"
+              value={detail.subscription?.plan?.name || detail.subscription?.plan_id || 'No plan'}
+              hint={detail.subscription?.status || 'none'}
+            />
+            <StatBox
+              icon={ReceiptText}
+              label="Lifetime Usage"
+              value={detail.usage.lifetime}
+              hint={`${detail.usage.total_transactions} transactions`}
+            />
+            <StatBox
+              icon={ReceiptText}
+              label="Total Amount"
+              value={formatMoney(detail.usage.total_amount)}
+              hint={`${detail.usage.verified_slips} verified slips`}
+            />
+            <StatBox icon={Users} label="Users" value={detail.users.length} hint="attached to merchant" />
           </div>
-          <div className="border border-zinc-200 bg-white p-5">
-            <div className="mb-3 flex items-center gap-2 text-zinc-500">
-              <ReceiptText className="h-4 w-4" />
-              <span className="font-mono text-[10px] uppercase tracking-widest">Lifetime Usage</span>
-            </div>
-            <p className="text-xl font-black text-zinc-950">{detail.usage.lifetime}</p>
-            <p className="mt-1 text-xs text-zinc-500">{detail.usage.total_transactions} transactions</p>
-          </div>
-          <div className="border border-zinc-200 bg-white p-5">
-            <div className="mb-3 flex items-center gap-2 text-zinc-500">
-              <ReceiptText className="h-4 w-4" />
-              <span className="font-mono text-[10px] uppercase tracking-widest">Total Amount</span>
-            </div>
-            <p className="text-xl font-black text-zinc-950">{formatMoney(detail.usage.total_amount)}</p>
-            <p className="mt-1 text-xs text-zinc-500">{detail.usage.verified_slips} verified slips</p>
-          </div>
-          <div className="border border-zinc-200 bg-white p-5">
-            <div className="mb-3 flex items-center gap-2 text-zinc-500">
-              <Users className="h-4 w-4" />
-              <span className="font-mono text-[10px] uppercase tracking-widest">Users</span>
-            </div>
-            <p className="text-xl font-black text-zinc-950">{detail.users.length}</p>
-            <p className="mt-1 text-xs text-zinc-500">attached to merchant</p>
-          </div>
-        </div>
         )}
 
         {tab === 'usage' && (
-        <div className="mb-6 grid gap-3 md:grid-cols-5">
-          <div className="border border-zinc-200 bg-white p-4">
-            <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Current Usage</p>
-            <p className="mt-2 text-xl font-black text-zinc-950">{usage.this_month} / {usage.quota}</p>
-            <p className="mt-1 text-xs text-zinc-500">{formatPercent(usage.this_month, usage.quota)} of plan quota</p>
+          <div className="grid gap-3 md:grid-cols-5">
+            <StatBox icon={ReceiptText} label="Current Usage" value={`${usage.this_month} / ${usage.quota}`} hint={`${formatPercent(usage.this_month, usage.quota)} of plan quota`} />
+            <StatBox icon={ReceiptText} label="Remaining" value={usage.remaining} hint="credits left" />
+            <StatBox icon={ReceiptText} label="Total Slips" value={usage.total_slips} hint={`${usage.verified_slips} verified / ${usage.failed_slips} failed`} />
+            <StatBox icon={ReceiptText} label="Duplicates" value={usage.duplicate_slips} hint="blocked by strict checks" />
+            <StatBox icon={ReceiptText} label="Reset Window" value={formatShortDate(usage.next_reset)} hint={`from ${formatShortDate(usage.current_period_start)}`} />
           </div>
-          <div className="border border-zinc-200 bg-white p-4">
-            <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Remaining</p>
-            <p className="mt-2 text-xl font-black text-zinc-950">{usage.remaining}</p>
-            <p className="mt-1 text-xs text-zinc-500">credits left</p>
-          </div>
-          <div className="border border-zinc-200 bg-white p-4">
-            <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Total Slips</p>
-            <p className="mt-2 text-xl font-black text-zinc-950">{usage.total_slips}</p>
-            <p className="mt-1 text-xs text-zinc-500">{usage.verified_slips} verified / {usage.failed_slips} failed</p>
-          </div>
-          <div className="border border-zinc-200 bg-white p-4">
-            <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Duplicates</p>
-            <p className="mt-2 text-xl font-black text-zinc-950">{usage.duplicate_slips}</p>
-            <p className="mt-1 text-xs text-zinc-500">blocked by strict checks</p>
-          </div>
-          <div className="border border-zinc-200 bg-white p-4">
-            <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Reset Window</p>
-            <p className="mt-2 text-sm font-black text-zinc-950">{formatShortDate(usage.next_reset)}</p>
-            <p className="mt-1 text-xs text-zinc-500">from {formatShortDate(usage.current_period_start)}</p>
-          </div>
-        </div>
         )}
 
         {tab === 'billing' && (
-        <div className="mb-6 grid gap-3 md:grid-cols-5">
-          <div className="border border-zinc-200 bg-white p-4">
-            <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Plan Activations</p>
-            <p className="mt-2 text-xl font-black text-zinc-950">{billing.plan_activations}</p>
-            <p className="mt-1 text-xs text-zinc-500">free + paid activations</p>
+          <div className="grid gap-3 md:grid-cols-5">
+            <StatBox icon={ReceiptText} label="Plan Activations" value={billing.plan_activations} hint="free + paid activations" />
+            <StatBox icon={ReceiptText} label="Paid Activations" value={billing.paid_activations} hint={`${billing.successful_payments} successful payments`} />
+            <StatBox icon={ReceiptText} label="Collected" value={formatMoney(billing.total_revenue)} hint="from this merchant" />
+            <StatBox icon={ReceiptText} label="Free Plan" value={billing.free_plan_used ? 'Used' : 'Not used'} hint="one-time free activation" />
+            <StatBox icon={ReceiptText} label="Last Paid" value={billing.last_paid_at ? formatShortDate(billing.last_paid_at) : '-'} hint={`${billing.failed_payments} failed payments`} />
           </div>
-          <div className="border border-zinc-200 bg-white p-4">
-            <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Paid Activations</p>
-            <p className="mt-2 text-xl font-black text-zinc-950">{billing.paid_activations}</p>
-            <p className="mt-1 text-xs text-zinc-500">{billing.successful_payments} successful payments</p>
-          </div>
-          <div className="border border-zinc-200 bg-white p-4">
-            <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Collected</p>
-            <p className="mt-2 text-xl font-black text-zinc-950">{formatMoney(billing.total_revenue)}</p>
-            <p className="mt-1 text-xs text-zinc-500">from this merchant</p>
-          </div>
-          <div className="border border-zinc-200 bg-white p-4">
-            <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Free Plan</p>
-            <p className="mt-2 text-xl font-black text-zinc-950">{billing.free_plan_used ? 'Used' : 'Not used'}</p>
-            <p className="mt-1 text-xs text-zinc-500">one-time free activation</p>
-          </div>
-          <div className="border border-zinc-200 bg-white p-4">
-            <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Last Paid</p>
-            <p className="mt-2 text-sm font-black text-zinc-950">{billing.last_paid_at ? formatShortDate(billing.last_paid_at) : '-'}</p>
-            <p className="mt-1 text-xs text-zinc-500">{billing.failed_payments} failed payments</p>
-          </div>
-        </div>
         )}
 
         {tab === 'overview' && (
-        <div className="mb-6 grid gap-6 lg:grid-cols-2">
-          <section className="border border-zinc-200 bg-white">
-            <div className="border-b border-zinc-200 px-5 py-4">
-              <h2 className="text-sm font-bold text-zinc-950">Merchant Users</h2>
-            </div>
-            <div className="divide-y divide-zinc-100">
-              {detail.users.length === 0 ? (
-                <p className="p-5 text-sm text-zinc-500">No users attached.</p>
-              ) : detail.users.map((item) => (
-                <div key={item.id} className="px-5 py-4">
-                  <p className="font-semibold text-zinc-950">{item.name}</p>
-                  <p className="text-xs text-zinc-500">{item.email} · {item.role}</p>
-                </div>
-              ))}
-            </div>
-          </section>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <section className="bg-white" style={{ border: '1px solid var(--border)' }}>
+              <div className="px-5 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
+                <h2 className="text-sm font-bold" style={{ color: 'var(--navy)' }}>Merchant Users</h2>
+              </div>
+              <div>
+                {detail.users.length === 0 ? (
+                  <p className="p-5 text-sm" style={{ color: 'var(--text-muted)' }}>No users attached.</p>
+                ) : detail.users.map((item) => (
+                  <div key={item.id} className="px-5 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
+                    <p className="font-semibold" style={{ color: 'var(--navy)' }}>{item.name}</p>
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{item.email} · {item.role}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
 
-          <section className="border border-zinc-200 bg-white">
-            <div className="border-b border-zinc-200 px-5 py-4">
-              <h2 className="text-sm font-bold text-zinc-950">Recent Payments</h2>
-            </div>
-            <div className="divide-y divide-zinc-100">
-              {detail.payments.length === 0 ? (
-                <p className="p-5 text-sm text-zinc-500">No payments yet.</p>
-              ) : detail.payments.map((payment) => (
-                <div key={payment.id} className="flex items-center justify-between px-5 py-4">
-                  <div>
-                    <p className="font-semibold text-zinc-950">{formatMoney(payment.amount)}</p>
-                    <p className="text-xs text-zinc-500">{payment.gateway_reference_id}</p>
+            <section className="bg-white" style={{ border: '1px solid var(--border)' }}>
+              <div className="px-5 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
+                <h2 className="text-sm font-bold" style={{ color: 'var(--navy)' }}>Recent Payments</h2>
+              </div>
+              <div>
+                {detail.payments.length === 0 ? (
+                  <p className="p-5 text-sm" style={{ color: 'var(--text-muted)' }}>No payments yet.</p>
+                ) : detail.payments.map((payment) => (
+                  <div key={payment.id} className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
+                    <div>
+                      <p className="font-semibold" style={{ color: 'var(--navy)' }}>{formatMoney(payment.amount)}</p>
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{payment.gateway_reference_id}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold" style={{ color: 'var(--navy)' }}>{payment.status}</p>
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{formatDate(payment.paid_at || payment.created_at)}</p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-semibold text-zinc-700">{payment.status}</p>
-                    <p className="text-xs text-zinc-500">{formatDate(payment.paid_at || payment.created_at)}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
+                ))}
+              </div>
+            </section>
+          </div>
         )}
 
         {tab === 'billing' && (
-        <section className="mb-6 border border-zinc-200 bg-white">
-          <div className="flex items-center justify-between border-b border-zinc-200 px-5 py-4">
-            <h2 className="text-sm font-bold text-zinc-950">Plan Revenue & Activations</h2>
-            <span className="font-mono text-[10px] text-zinc-500">{billing.plan_activations} total activations</span>
-          </div>
-          {billing.revenue_by_plan.length === 0 ? (
-            <p className="p-5 text-sm text-zinc-500">No plan activations recorded yet.</p>
-          ) : (
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-zinc-200 bg-zinc-50 font-mono text-[10px] uppercase tracking-widest text-zinc-500">
-                <tr>
-                  <th className="px-4 py-3">Plan</th>
-                  <th className="px-4 py-3">Activations</th>
-                  <th className="px-4 py-3">Revenue</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visiblePlanRevenue.map((item) => (
-                  <tr key={item.plan_id} className="border-b border-zinc-100 last:border-0">
-                    <td className="px-4 py-3">
-                      <p className="font-semibold text-zinc-950">{item.plan}</p>
-                      <p className="font-mono text-[10px] text-zinc-400">{item.plan_id}</p>
-                    </td>
-                    <td className="px-4 py-3 font-semibold text-zinc-800">{item.activations}</td>
-                    <td className="px-4 py-3 font-semibold text-zinc-950">{formatMoney(item.revenue)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-          <div className="flex items-center justify-between border-t border-zinc-200 px-5 py-4">
-            <button
-              disabled={planRevenuePage <= 1}
-              onClick={() => setPlanRevenuePage((page) => page - 1)}
-              className="border border-zinc-200 px-4 py-2 text-xs font-semibold text-zinc-700 disabled:opacity-40"
-            >
-              Previous
-            </button>
-            <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">
-              Page {planRevenuePage} / {planRevenueTotalPages}
-            </span>
-            <button
-              disabled={planRevenuePage >= planRevenueTotalPages}
-              onClick={() => setPlanRevenuePage((page) => page + 1)}
-              className="border border-zinc-200 px-4 py-2 text-xs font-semibold text-zinc-700 disabled:opacity-40"
-            >
-              Next
-            </button>
-          </div>
-        </section>
-        )}
-
-        {tab === 'transactions' && (
-        <section className="border border-zinc-200 bg-white">
-          <div className="flex items-center justify-between border-b border-zinc-200 px-5 py-4">
-            <h2 className="text-sm font-bold text-zinc-950">Transaction Logs</h2>
-            {pagination && (
-              <span className="font-mono text-[10px] text-zinc-500">
-                Page {pagination.page} / {Math.max(1, pagination.total_pages)} · {pagination.total} total
-              </span>
-            )}
-          </div>
-          {transactionsQuery.isLoading ? (
-            <div className="flex h-48 items-center justify-center">
-              <Loader2 className="h-5 w-5 animate-spin text-blue-700" />
+          <section className="bg-white" style={{ border: '1px solid var(--border)' }}>
+            <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
+              <h2 className="text-sm font-bold" style={{ color: 'var(--navy)' }}>Plan Revenue & Activations</h2>
+              <span className="font-mono text-[10px]" style={{ color: 'var(--text-muted)' }}>{billing.plan_activations} total activations</span>
             </div>
-          ) : transactions.length === 0 ? (
-            <p className="p-5 text-sm text-zinc-500">No transaction logs yet.</p>
-          ) : (
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-zinc-200 bg-zinc-50 font-mono text-[10px] uppercase tracking-widest text-zinc-500">
-                <tr>
-                  <th className="px-4 py-3">Reference</th>
-                  <th className="px-4 py-3">Amount</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Banks</th>
-                  <th className="px-4 py-3">Created</th>
-                </tr>
-              </thead>
-              <tbody>
-                {transactions.map((transaction) => (
-                  <tr key={transaction.id} className="border-b border-zinc-100 last:border-0">
-                    <td className="px-4 py-3">
-                      <p className="font-mono text-xs text-zinc-950">{transaction.reference_no || transaction.id}</p>
-                      {transaction.is_duplicate && <p className="mt-1 text-xs text-amber-700">Duplicate</p>}
-                    </td>
-                    <td className="px-4 py-3 font-semibold text-zinc-950">{formatMoney(transaction.amount)}</td>
-                    <td className="px-4 py-3 text-zinc-700">{transaction.status}</td>
-                    <td className="px-4 py-3 text-zinc-600">{transaction.sender_bank || '-'} to {transaction.receiver_bank || '-'}</td>
-                    <td className="px-4 py-3 text-zinc-500">{formatDate(transaction.created_at)}</td>
+            {billing.revenue_by_plan.length === 0 ? (
+              <p className="p-5 text-sm" style={{ color: 'var(--text-muted)' }}>No plan activations recorded yet.</p>
+            ) : (
+              <table className="w-full text-left text-sm">
+                <thead style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-subtle)' }}>
+                  <tr>
+                    {['Plan', 'Activations', 'Revenue'].map((header) => (
+                      <th key={header} className="px-4 py-3 font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+                        {header}
+                      </th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-          {pagination && (
-            <div className="flex items-center justify-between border-t border-zinc-200 px-5 py-4">
+                </thead>
+                <tbody>
+                  {visiblePlanRevenue.map((item) => (
+                    <tr key={item.plan_id} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <td className="px-4 py-3">
+                        <p className="font-semibold" style={{ color: 'var(--navy)' }}>{item.plan}</p>
+                        <p className="font-mono text-[10px]" style={{ color: 'var(--text-muted)' }}>{item.plan_id}</p>
+                      </td>
+                      <td className="px-4 py-3 font-semibold" style={{ color: 'var(--navy)' }}>{item.activations}</td>
+                      <td className="px-4 py-3 font-semibold" style={{ color: 'var(--navy)' }}>{formatMoney(item.revenue)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+            <div className="flex items-center justify-between px-5 py-4" style={{ borderTop: '1px solid var(--border)' }}>
               <button
-                disabled={txnPage <= 1}
-                onClick={() => setTxnPage((page) => page - 1)}
-                className="border border-zinc-200 px-4 py-2 text-xs font-semibold text-zinc-700 disabled:opacity-40"
+                disabled={planRevenuePage <= 1}
+                onClick={() => setPlanRevenuePage((page) => page - 1)}
+                className="border border-zinc-200 px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-zinc-700 disabled:opacity-30"
               >
                 Previous
               </button>
-              <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">
-                Page {pagination.page} / {pagination.total_pages}
+              <span className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+                Page {planRevenuePage} / {planRevenueTotalPages}
               </span>
               <button
-                disabled={txnPage >= Math.max(1, pagination.total_pages)}
-                onClick={() => setTxnPage((page) => page + 1)}
-                className="border border-zinc-200 px-4 py-2 text-xs font-semibold text-zinc-700 disabled:opacity-40"
+                disabled={planRevenuePage >= planRevenueTotalPages}
+                onClick={() => setPlanRevenuePage((page) => page + 1)}
+                className="border border-zinc-200 px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-zinc-700 disabled:opacity-30"
               >
                 Next
               </button>
             </div>
-          )}
-        </section>
+          </section>
         )}
+
+        {tab === 'transactions' && (
+          <section className="bg-white" style={{ border: '1px solid var(--border)' }}>
+            <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
+              <h2 className="text-sm font-bold" style={{ color: 'var(--navy)' }}>Transaction Logs</h2>
+              {pagination && (
+                <span className="font-mono text-[10px]" style={{ color: 'var(--text-muted)' }}>
+                  Page {pagination.page} / {Math.max(1, pagination.total_pages)} · {pagination.total} total
+                </span>
+              )}
+            </div>
+            {transactionsQuery.isLoading ? (
+              <div className="flex h-48 items-center justify-center">
+                <Loader2 className="h-5 w-5 animate-spin" style={{ color: 'var(--blue)' }} />
+              </div>
+            ) : transactions.length === 0 ? (
+              <p className="p-5 text-sm" style={{ color: 'var(--text-muted)' }}>No transaction logs yet.</p>
+            ) : (
+              <table className="w-full text-left text-sm">
+                <thead style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-subtle)' }}>
+                  <tr>
+                    {['Reference', 'Amount', 'Status', 'Banks', 'Created'].map((header) => (
+                      <th key={header} className="px-4 py-3 font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+                        {header}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {transactions.map((transaction) => (
+                    <tr key={transaction.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <td className="px-4 py-3">
+                        <p className="font-mono text-xs" style={{ color: 'var(--navy)' }}>{transaction.reference_no || transaction.id}</p>
+                        {transaction.is_duplicate && <p className="mt-1 text-xs text-amber-700">Duplicate</p>}
+                      </td>
+                      <td className="px-4 py-3 font-semibold" style={{ color: 'var(--navy)' }}>{formatMoney(transaction.amount)}</td>
+                      <td className="px-4 py-3" style={{ color: 'var(--navy)' }}>{transaction.status}</td>
+                      <td className="px-4 py-3" style={{ color: 'var(--text-muted)' }}>{transaction.sender_bank || '-'} to {transaction.receiver_bank || '-'}</td>
+                      <td className="px-4 py-3" style={{ color: 'var(--text-muted)' }}>{formatDate(transaction.created_at)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+            {pagination && (
+              <div className="flex items-center justify-between px-5 py-4" style={{ borderTop: '1px solid var(--border)' }}>
+                <button
+                  disabled={txnPage <= 1}
+                  onClick={() => setTxnPage((page) => page - 1)}
+                  className="border border-zinc-200 px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-zinc-700 disabled:opacity-30"
+                >
+                  Previous
+                </button>
+                <span className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+                  Page {pagination.page} / {pagination.total_pages}
+                </span>
+                <button
+                  disabled={txnPage >= Math.max(1, pagination.total_pages)}
+                  onClick={() => setTxnPage((page) => page + 1)}
+                  className="border border-zinc-200 px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-zinc-700 disabled:opacity-30"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </section>
+        )}
+      </div>
     </AdminShell>
   );
 }
