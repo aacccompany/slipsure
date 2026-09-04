@@ -165,16 +165,20 @@ export default function SubscriptionPage() {
               <div>
                 <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Reset Date</p>
                 <h3 className="text-lg font-bold text-zinc-900">
-                  {new Date(quota.reset_date).toLocaleDateString('th-TH', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                  })}
+                  {quota.reset_date
+                    ? new Date(quota.reset_date).toLocaleDateString('th-TH', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })
+                    : '—'}
                 </h3>
               </div>
             </div>
             <p className="text-xs font-medium text-zinc-500">
-              In {Math.ceil((new Date(quota.reset_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))} days
+              {quota.reset_date
+                ? `In ${Math.ceil((new Date(quota.reset_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))} days`
+                : 'No active plan'}
             </p>
           </div>
 

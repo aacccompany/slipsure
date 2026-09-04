@@ -202,13 +202,17 @@ func main() {
 		admin.Use(middleware.AuthMiddleware(), middleware.RequireRole("admin"))
 		{
 			admin.GET("/payments", merchantHandler.GetAdminPayments)
+			admin.GET("/payments/export", merchantHandler.ExportAdminPayments)
 			admin.GET("/users", merchantHandler.GetAdminUsers)
+			admin.GET("/users/export", merchantHandler.ExportAdminUsers)
 			admin.GET("/merchants", merchantHandler.GetAdminMerchants)
+			admin.GET("/merchants/export", merchantHandler.ExportAdminMerchants)
 			admin.GET("/merchants/:id/transactions", merchantHandler.GetAdminMerchantTransactions)
 			admin.GET("/merchants/:id", merchantHandler.GetAdminMerchantDetail)
 			admin.GET("/analytics/dashboard", merchantHandler.GetAdminAnalyticsDashboard)
 			admin.GET("/analytics/revenue", merchantHandler.GetAdminRevenueAnalytics)
 			admin.GET("/analytics/merchants/performance", merchantHandler.GetAdminMerchantPerformance)
+			admin.GET("/bank/status", merchantHandler.GetAdminBankStatus)
 		}
 
 		// Checkout routes (protected only - email verification disabled for testing)

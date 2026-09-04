@@ -177,7 +177,7 @@ export default function AdminMerchantDetailPage() {
         </div>
 
         {(tab === 'overview' || tab === 'usage') && (
-          <div className="grid gap-3 md:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <StatBox
               icon={Store}
               label="Current Plan"
@@ -201,7 +201,7 @@ export default function AdminMerchantDetailPage() {
         )}
 
         {tab === 'usage' && (
-          <div className="grid gap-3 md:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
             <StatBox icon={ReceiptText} label="Current Usage" value={`${usage.this_month} / ${usage.quota}`} hint={`${formatPercent(usage.this_month, usage.quota)} of plan quota`} />
             <StatBox icon={ReceiptText} label="Remaining" value={usage.remaining} hint="credits left" />
             <StatBox icon={ReceiptText} label="Total Slips" value={usage.total_slips} hint={`${usage.verified_slips} verified / ${usage.failed_slips} failed`} />
@@ -211,7 +211,7 @@ export default function AdminMerchantDetailPage() {
         )}
 
         {tab === 'billing' && (
-          <div className="grid gap-3 md:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
             <StatBox icon={ReceiptText} label="Plan Activations" value={billing.plan_activations} hint="free + paid activations" />
             <StatBox icon={ReceiptText} label="Paid Activations" value={billing.paid_activations} hint={`${billing.successful_payments} successful payments`} />
             <StatBox icon={ReceiptText} label="Collected" value={formatMoney(billing.total_revenue)} hint="from this merchant" />
@@ -271,6 +271,7 @@ export default function AdminMerchantDetailPage() {
             {billing.revenue_by_plan.length === 0 ? (
               <p className="p-5 text-sm" style={{ color: 'var(--text-muted)' }}>No plan activations recorded yet.</p>
             ) : (
+              <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-subtle)' }}>
                   <tr>
@@ -294,6 +295,7 @@ export default function AdminMerchantDetailPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
             <div className="flex items-center justify-between px-5 py-4" style={{ borderTop: '1px solid var(--border)' }}>
               <button
@@ -334,6 +336,7 @@ export default function AdminMerchantDetailPage() {
             ) : transactions.length === 0 ? (
               <p className="p-5 text-sm" style={{ color: 'var(--text-muted)' }}>No transaction logs yet.</p>
             ) : (
+              <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-subtle)' }}>
                   <tr>
@@ -359,6 +362,7 @@ export default function AdminMerchantDetailPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
             {pagination && (
               <div className="flex items-center justify-between px-5 py-4" style={{ borderTop: '1px solid var(--border)' }}>

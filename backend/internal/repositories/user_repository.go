@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"slipsure-backend/internal/models"
 
@@ -23,7 +24,7 @@ type UserRepository interface {
 	EmailExists(email string) (bool, error)
 	LinkLineAccount(userID uuid.UUID, lineUserID string) error
 	FindByMerchantID(merchantID uuid.UUID) ([]*models.User, error)
-	ListAdminUsers(search string, role string, limit int, offset int) ([]models.AdminUserListItem, int, error)
+	ListAdminUsers(search string, role string, startDate *time.Time, endDate *time.Time, limit int, offset int) ([]models.AdminUserListItem, int, error)
 }
 
 // userRepository implements UserRepository interface
@@ -316,8 +317,8 @@ func (r *userRepository) FindByMerchantID(merchantID uuid.UUID) ([]*models.User,
 }
 
 // ListAdminUsers retrieves users with their merchant relation for backoffice.
-func (r *userRepository) ListAdminUsers(search string, role string, limit int, offset int) ([]models.AdminUserListItem, int, error) {
-	where, args := buildAdminUserWhere(search, role)
+func (r *userRepository) ListAdminUsers(search string, role string, startDate *time.Time, endDate *time.Time, limit int, offset int) ([]models.AdminUserListItem, int, error) {
+	where, args := buildAdminUserWhere(search, role, startDate, endDate)
 
 	countQuery := fmt.Sprintf(`
 		SELECT COUNT(*)
@@ -389,7 +390,7 @@ func (r *userRepository) ListAdminUsers(search string, role string, limit int, o
 	return users, total, nil
 }
 
-func buildAdminUserWhere(search string, role string) (string, []interface{}) {
+func buildAdminUserWhere(search string, role string, startDate *time.Time, endDate *time.Time) (string, []interface{}) {
 	conditions := make([]string, 0)
 	args := make([]interface{}, 0)
 
@@ -405,6 +406,16 @@ func buildAdminUserWhere(search string, role string) (string, []interface{}) {
 	if role != "" {
 		args = append(args, role)
 		conditions = append(conditions, fmt.Sprintf("u.role = $%d", len(args)))
+	}
+
+	if startDate != nil {
+		args = append(args, *startDate)
+		conditions = append(conditions, fmt.Sprintf("u.created_at >= $%d", len(args)))
+	}
+
+	if endDate != nil {
+		args = append(args, endDate.AddDate(0, 0, 1))
+		conditions = append(conditions, fmt.Sprintf("u.created_at < $%d", len(args)))
 	}
 
 	if len(conditions) == 0 {

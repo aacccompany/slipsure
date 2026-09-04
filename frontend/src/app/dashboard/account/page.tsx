@@ -199,7 +199,7 @@ export default function AccountPage() {
             </Link>
           </div>
 
-          <div className="grid md:grid-cols-3 divide-x" style={{ borderColor: 'var(--border)' }}>
+          <div className="grid divide-y md:grid-cols-3 md:divide-x md:divide-y-0" style={{ borderColor: 'var(--border)' }}>
             {[
               { icon: CreditCard, label: 'Plan', value: subscription?.plan?.name || 'Free', sub: `Status: ${subscription?.status || 'trial'}` },
               { icon: Shield, label: 'Quota', value: `${quota?.used ?? 0} / ${quota?.quota_limit ?? 50}`, sub: `${quota?.remaining ?? 0} remaining` },
@@ -222,7 +222,7 @@ export default function AccountPage() {
           <div className="px-5 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
             <p className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Quick Actions</p>
           </div>
-          <div className="grid md:grid-cols-2 gap-0 divide-x divide-y" style={{ borderColor: 'var(--border)' }}>
+          <div className="grid md:grid-cols-2 gap-0 divide-y md:divide-x" style={{ borderColor: 'var(--border)' }}>
             <Link href="/dashboard/subscription"
               className="p-5 group transition-colors"
               onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-subtle)')}

@@ -354,6 +354,21 @@ export interface AdminMerchantPerformanceAnalytics {
   low_usage: AdminMerchantPerformanceItem[];
 }
 
+export interface AdminBankStatusItem {
+  bank_code: string;
+  bank_name: string;
+  status: string;
+  response_time_ms: number;
+  last_check: string;
+  validation_source: string;
+}
+
+export interface AdminBankStatus {
+  configured: boolean;
+  message?: string;
+  banks: AdminBankStatusItem[];
+}
+
 export interface AdminUserListResponse {
   items: AdminUserListItem[];
   pagination: Pagination;

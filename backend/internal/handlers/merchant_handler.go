@@ -658,18 +658,21 @@ func (h *MerchantHandler) GetQuota(c *gin.Context) {
 
 	quota, err := h.merchantService.GetQuotaStatus(merchantID)
 	if err != nil {
-		// No subscription/quota found - return proper response
-		c.JSON(http.StatusNotFound, gin.H{
+		// No active subscription — return the same field names as the
+		// QuotaStatus success path so every frontend consumer relies on one
+		// consistent contract. reset_date is explicitly null (not a zeroed
+		// time.Time, which would serialize as "0001-01-01..." and defeat the
+		// frontend's `reset_date ? ... : fallback` checks).
+		c.JSON(http.StatusOK, gin.H{
 			"success": true,
 			"data": gin.H{
-				"quota": gin.H{
-					"limit":      0,
-					"used":       0,
-					"remaining":  0,
-					"reset_date": "N/A",
-					"message":    "No active subscription. Please choose a plan to use slip verification features.",
-				},
+				"quota_limit": 0,
+				"used":        0,
+				"remaining":   0,
+				"reset_date":  nil,
+				"is_blocked":  false,
 			},
+			"message": "No active subscription. Please choose a plan to use slip verification features.",
 		})
 		return
 	}
@@ -948,7 +951,12 @@ func (h *MerchantHandler) GetAdminPayments(c *gin.Context) {
 		return
 	}
 
-	payments, total, err := h.merchantRepo.ListPaymentLogs(status, limit, (page-1)*limit)
+	startDate, endDate, ok := readAdminDateRange(c)
+	if !ok {
+		return
+	}
+
+	payments, total, err := h.merchantRepo.ListPaymentLogs(status, startDate, endDate, limit, (page-1)*limit)
 	if err != nil {
 		log.Printf("Failed to list admin payments: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -984,7 +992,12 @@ func (h *MerchantHandler) GetAdminUsers(c *gin.Context) {
 		return
 	}
 
-	users, total, err := h.userRepo.ListAdminUsers(c.Query("search"), role, limit, (page-1)*limit)
+	startDate, endDate, ok := readAdminDateRange(c)
+	if !ok {
+		return
+	}
+
+	users, total, err := h.userRepo.ListAdminUsers(c.Query("search"), role, startDate, endDate, limit, (page-1)*limit)
 	if err != nil {
 		log.Printf("Failed to list admin users: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -1021,7 +1034,12 @@ func (h *MerchantHandler) GetAdminMerchants(c *gin.Context) {
 		return
 	}
 
-	merchants, total, err := h.merchantRepo.ListAdminMerchants(status, c.Query("search"), limit, (page-1)*limit)
+	startDate, endDate, ok := readAdminDateRange(c)
+	if !ok {
+		return
+	}
+
+	merchants, total, err := h.merchantRepo.ListAdminMerchants(status, c.Query("search"), startDate, endDate, limit, (page-1)*limit)
 	if err != nil {
 		log.Printf("Failed to list admin merchants: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -1037,6 +1055,149 @@ func (h *MerchantHandler) GetAdminMerchants(c *gin.Context) {
 		"data": models.AdminMerchantListResponse{
 			Items:      merchants,
 			Pagination: buildPagination(page, limit, total),
+		},
+	})
+}
+
+// ExportAdminUsers streams all matching admin users as CSV.
+func (h *MerchantHandler) ExportAdminUsers(c *gin.Context) {
+	role := c.Query("role")
+	if role != "" && role != string(models.RoleMerchant) && role != string(models.RoleAdmin) {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "INVALID_ROLE", "message": "Role must be merchant or admin"})
+		return
+	}
+
+	startDate, endDate, ok := readAdminDateRange(c)
+	if !ok {
+		return
+	}
+
+	users, _, err := h.userRepo.ListAdminUsers(c.Query("search"), role, startDate, endDate, 100000, 0)
+	if err != nil {
+		log.Printf("Failed to export admin users: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "DATABASE_ERROR", "message": "Failed to export users"})
+		return
+	}
+
+	filename := fmt.Sprintf("admin-users-%s.csv", time.Now().Format("20060102-150405"))
+	c.Header("Content-Type", "text/csv")
+	c.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+
+	writer := csv.NewWriter(c.Writer)
+	defer writer.Flush()
+
+	_ = writer.Write([]string{"id", "name", "email", "role", "merchant_name", "line_linked", "email_verified", "created_at"})
+	for _, u := range users {
+		merchantName := u.MerchantName
+		_ = writer.Write([]string{
+			u.ID.String(), u.Name, u.Email, string(u.Role), merchantName,
+			strconv.FormatBool(u.LineLinked), strconv.FormatBool(u.EmailVerified), u.CreatedAt.Format(time.RFC3339),
+		})
+	}
+}
+
+// ExportAdminMerchants streams all matching admin merchants as CSV.
+func (h *MerchantHandler) ExportAdminMerchants(c *gin.Context) {
+	status := c.Query("status")
+	validStatuses := map[string]bool{
+		"": true, "active": true, "inactive": true, "trial": true,
+		"pending": true, "suspended": true, "cancelled": true, "expired": true,
+	}
+	if !validStatuses[status] {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "INVALID_STATUS", "message": "Status must be active, inactive, trial, pending, suspended, cancelled, or expired"})
+		return
+	}
+
+	startDate, endDate, ok := readAdminDateRange(c)
+	if !ok {
+		return
+	}
+
+	merchants, _, err := h.merchantRepo.ListAdminMerchants(status, c.Query("search"), startDate, endDate, 100000, 0)
+	if err != nil {
+		log.Printf("Failed to export admin merchants: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "DATABASE_ERROR", "message": "Failed to export merchants"})
+		return
+	}
+
+	filename := fmt.Sprintf("admin-merchants-%s.csv", time.Now().Format("20060102-150405"))
+	c.Header("Content-Type", "text/csv")
+	c.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+
+	writer := csv.NewWriter(c.Writer)
+	defer writer.Flush()
+
+	_ = writer.Write([]string{"id", "shop_name", "owner_email", "owner_name", "is_active", "subscription_status", "plan", "total_scans", "total_transactions", "line_connected", "created_at"})
+	for _, m := range merchants {
+		_ = writer.Write([]string{
+			m.ID.String(), m.ShopName, m.OwnerEmail, m.OwnerName, strconv.FormatBool(m.IsActive),
+			m.SubscriptionStatus, m.Plan, strconv.Itoa(m.TotalScans), strconv.Itoa(m.TotalTransactions),
+			strconv.FormatBool(m.LineConnected), m.CreatedAt.Format(time.RFC3339),
+		})
+	}
+}
+
+// ExportAdminPayments streams all matching admin payment logs as CSV.
+func (h *MerchantHandler) ExportAdminPayments(c *gin.Context) {
+	status := c.Query("status")
+	validStatuses := map[string]bool{"": true, "pending": true, "success": true, "failed": true, "refunded": true}
+	if !validStatuses[status] {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "INVALID_STATUS", "message": "Status must be pending, success, failed, or refunded"})
+		return
+	}
+
+	startDate, endDate, ok := readAdminDateRange(c)
+	if !ok {
+		return
+	}
+
+	payments, _, err := h.merchantRepo.ListPaymentLogs(status, startDate, endDate, 100000, 0)
+	if err != nil {
+		log.Printf("Failed to export admin payments: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "DATABASE_ERROR", "message": "Failed to export payments"})
+		return
+	}
+
+	filename := fmt.Sprintf("admin-payments-%s.csv", time.Now().Format("20060102-150405"))
+	c.Header("Content-Type", "text/csv")
+	c.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+
+	writer := csv.NewWriter(c.Writer)
+	defer writer.Flush()
+
+	_ = writer.Write([]string{"id", "merchant_name", "amount", "currency", "gateway", "gateway_reference_id", "status", "paid_at", "created_at"})
+	for _, p := range payments {
+		paidAt := ""
+		if p.PaidAt != nil {
+			paidAt = p.PaidAt.Format(time.RFC3339)
+		}
+		_ = writer.Write([]string{
+			p.ID.String(), p.MerchantName, fmt.Sprintf("%.2f", p.Amount), p.Currency, p.Gateway,
+			p.GatewayReferenceID, p.Status, paidAt, p.CreatedAt.Format(time.RFC3339),
+		})
+	}
+}
+
+// GetAdminBankStatus reports the status of the bank validation integration (mock or live).
+func (h *MerchantHandler) GetAdminBankStatus(c *gin.Context) {
+	banks, err := services.NewBankValidationService().GetBankStatus()
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"data": gin.H{
+				"configured": false,
+				"message":    err.Error(),
+				"banks":      []services.BankStatus{},
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data": gin.H{
+			"configured": true,
+			"banks":      banks,
 		},
 	})
 }
@@ -1280,6 +1441,35 @@ func buildPagination(page int, limit int, total int) models.Pagination {
 		Total:      total,
 		TotalPages: totalPages,
 	}
+}
+
+// readAdminDateRange parses optional start_date/end_date query params (YYYY-MM-DD)
+// shared by the admin users/merchants/payments list and export endpoints.
+func readAdminDateRange(c *gin.Context) (startDate *time.Time, endDate *time.Time, ok bool) {
+	if value := c.Query("start_date"); value != "" {
+		parsed, err := time.Parse("2006-01-02", value)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "VALIDATION_ERROR", "message": "Invalid start_date. Use YYYY-MM-DD"})
+			return nil, nil, false
+		}
+		startDate = &parsed
+	}
+
+	if value := c.Query("end_date"); value != "" {
+		parsed, err := time.Parse("2006-01-02", value)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "VALIDATION_ERROR", "message": "Invalid end_date. Use YYYY-MM-DD"})
+			return nil, nil, false
+		}
+		endDate = &parsed
+	}
+
+	if startDate != nil && endDate != nil && endDate.Before(*startDate) {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "VALIDATION_ERROR", "message": "end_date must be after start_date"})
+		return nil, nil, false
+	}
+
+	return startDate, endDate, true
 }
 
 func readAdminTransactionFilters(c *gin.Context, limit int, offset int) (models.TransactionFilters, bool) {

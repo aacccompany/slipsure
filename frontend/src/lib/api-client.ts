@@ -34,6 +34,7 @@ import type {
   AdminAnalyticsDashboard,
   AdminRevenueAnalytics,
   AdminMerchantPerformanceAnalytics,
+  AdminBankStatus,
   PaymentLog,
   LINEWebhookConfig,
   UpdateLINEWebhookRequest,
@@ -486,9 +487,30 @@ class ApiClient {
     limit?: number;
     role?: string;
     search?: string;
+    start_date?: string;
+    end_date?: string;
   }): Promise<ApiResponse<AdminUserListResponse>> {
     const queryString = toQueryString(params);
     return this.request(`/v1/admin/users${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async exportAdminUsers(params?: {
+    role?: string;
+    search?: string;
+    start_date?: string;
+    end_date?: string;
+  }): Promise<Blob> {
+    const queryString = toQueryString(params);
+    const token = this.getAuthHeader();
+    const response = await fetch(`${this.baseURL}/v1/admin/users/export${queryString ? `?${queryString}` : ''}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to export users');
+    }
+
+    return response.blob();
   }
 
   async getAdminMerchants(params?: {
@@ -496,9 +518,30 @@ class ApiClient {
     limit?: number;
     status?: string;
     search?: string;
+    start_date?: string;
+    end_date?: string;
   }): Promise<ApiResponse<AdminMerchantListResponse>> {
     const queryString = toQueryString(params);
     return this.request(`/v1/admin/merchants${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async exportAdminMerchants(params?: {
+    status?: string;
+    search?: string;
+    start_date?: string;
+    end_date?: string;
+  }): Promise<Blob> {
+    const queryString = toQueryString(params);
+    const token = this.getAuthHeader();
+    const response = await fetch(`${this.baseURL}/v1/admin/merchants/export${queryString ? `?${queryString}` : ''}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to export merchants');
+    }
+
+    return response.blob();
   }
 
   async getAdminMerchantDetail(merchantId: string): Promise<ApiResponse<AdminMerchantDetail>> {
@@ -524,13 +567,37 @@ class ApiClient {
     page?: number;
     limit?: number;
     status?: string;
+    start_date?: string;
+    end_date?: string;
   }): Promise<ApiResponse<{ items: PaymentLog[]; page: number; limit: number; total: number; total_pages: number }>> {
     const queryString = toQueryString(params);
     return this.request(`/v1/admin/payments${queryString ? `?${queryString}` : ''}`);
   }
 
+  async exportAdminPayments(params?: {
+    status?: string;
+    start_date?: string;
+    end_date?: string;
+  }): Promise<Blob> {
+    const queryString = toQueryString(params);
+    const token = this.getAuthHeader();
+    const response = await fetch(`${this.baseURL}/v1/admin/payments/export${queryString ? `?${queryString}` : ''}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to export payments');
+    }
+
+    return response.blob();
+  }
+
   async getAdminAnalyticsDashboard(): Promise<ApiResponse<AdminAnalyticsDashboard>> {
     return this.request('/v1/admin/analytics/dashboard');
+  }
+
+  async getAdminBankStatus(): Promise<ApiResponse<AdminBankStatus>> {
+    return this.request('/v1/admin/bank/status');
   }
 
   async getAdminRevenueAnalytics(params?: { period?: 'monthly' | 'yearly' }): Promise<ApiResponse<AdminRevenueAnalytics>> {
