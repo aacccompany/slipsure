@@ -1,18 +1,21 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ChevronLeft, Plus, Trash2, Loader2, Copy, MessageSquare, Key, Clock, CheckCircle } from 'lucide-react';
+import { ChevronLeft, Plus, Trash2, Loader2, Copy, MessageSquare, Key, Clock, CheckCircle, X } from 'lucide-react';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
 import { toast } from 'sonner';
-import type { LINEWebhookConfig } from '@/types/api';
+
+const inputClass = 'w-full px-4 py-3 text-sm transition-all focus:outline-none';
+const inputStyle = { border: '1px solid var(--border)', color: 'var(--navy)', background: '#fff' };
 
 export default function MerchantLinePage() {
   const queryClient = useQueryClient();
 
   const [isConfiguring, setIsConfiguring] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [configForm, setConfigForm] = useState({
     line_channel_id: '',
     line_channel_secret: '',
@@ -44,10 +47,12 @@ export default function MerchantLinePage() {
     mutationFn: () => api.deleteLINEWebhookConfig(),
     onSuccess: () => {
       toast.success('LINE webhook configuration deleted');
+      setIsDeleting(false);
       queryClient.invalidateQueries({ queryKey: ['line-webhook-config'] });
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : 'Failed to delete webhook config');
+      setIsDeleting(false);
     },
   });
 
@@ -59,12 +64,6 @@ export default function MerchantLinePage() {
     configMutation.mutate(configForm);
   };
 
-  const handleDelete = () => {
-    if (confirm('Are you sure you want to delete LINE webhook configuration?')) {
-      deleteMutation.mutate();
-    }
-  };
-
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success('Copied to clipboard!');
@@ -73,7 +72,7 @@ export default function MerchantLinePage() {
   if (isLoading) {
     return (
       <div className="flex h-[80vh] items-center justify-center">
-        <Loader2 className="w-10 h-10 text-blue-800 animate-spin" />
+        <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'var(--blue)' }} />
       </div>
     );
   }
@@ -99,11 +98,12 @@ export default function MerchantLinePage() {
   };
 
   return (
-    <div className="p-8 space-y-8 max-w-4xl">
-      <div className="mb-8">
+    <div className="p-6 md:p-8 space-y-6 max-w-4xl" style={{ background: 'var(--bg)' }}>
+      <div>
         <Link
           href="/dashboard/merchant"
-          className="flex items-center gap-2 text-sm font-medium text-zinc-600 hover:text-zinc-900 transition-colors"
+          className="inline-flex items-center gap-2 text-sm font-medium transition-colors"
+          style={{ color: 'var(--text-muted)' }}
         >
           <ChevronLeft className="w-4 h-4" />
           Back to Merchant
@@ -111,171 +111,176 @@ export default function MerchantLinePage() {
       </div>
 
       <div>
-        <h1 className="text-3xl font-black text-zinc-900 tracking-tight mb-2">LINE Integration</h1>
-        <p className="text-sm font-medium text-zinc-500">ตั้งค่าการเชื่อมต่อ LINE Official Account ของคุณ</p>
+        <p className="font-mono text-[10px] uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>
+          / Merchant / LINE Integration
+        </p>
+        <h1 className="font-bold tracking-tight" style={{ fontSize: '1.4rem', color: 'var(--navy)', letterSpacing: '-0.02em' }}>
+          LINE Integration
+        </h1>
+        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>ตั้งค่าการเชื่อมต่อ LINE Official Account ของคุณ</p>
       </div>
 
       {!hasSavedConfig ? (
-        <div className="max-w-2xl">
-          <div className="bg-white border border-zinc-200 rounded-2xl p-8">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center">
-                <MessageSquare className="w-6 h-6 text-green-700" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-zinc-900">Setup LINE Webhook</h3>
-                <p className="text-sm text-zinc-500">
-                  Connect your LINE Official Account to enable slip verification via LINE.
-                </p>
-              </div>
+        <div className="bg-white p-8" style={{ border: '1px solid var(--border)' }}>
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-11 h-11 flex items-center justify-center" style={{ background: '#DCFCE7' }}>
+              <MessageSquare className="w-5 h-5 text-emerald-700" />
             </div>
-
-            {isConfiguring ? (
-              <form onSubmit={(e) => { e.preventDefault(); handleSaveConfig(); }} className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-2">
-                    LINE Channel ID
-                  </label>
-                  <input
-                    type="text"
-                    value={configForm.line_channel_id}
-                    onChange={(e) => setConfigForm({ ...configForm, line_channel_id: e.target.value })}
-                    placeholder="Enter from LINE Developers"
-                    className="w-full px-4 py-3 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-700/20"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-2">
-                    LINE Channel Secret
-                  </label>
-                  <input
-                    type="password"
-                    value={configForm.line_channel_secret}
-                    onChange={(e) => setConfigForm({ ...configForm, line_channel_secret: e.target.value })}
-                    placeholder="Enter from LINE Developers"
-                    className="w-full px-4 py-3 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-700/20"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-2">
-                    LINE Access Token (Channel Access Token)
-                  </label>
-                  <input
-                    type="password"
-                    value={configForm.line_access_token}
-                    onChange={(e) => setConfigForm({ ...configForm, line_access_token: e.target.value })}
-                    placeholder="Enter from LINE Developers"
-                    className="w-full px-4 py-3 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-700/20"
-                    required
-                  />
-                </div>
-
-                <div className="flex gap-3">
-                  <button
-                    type="submit"
-                    disabled={configMutation.isPending}
-                    className="flex-1 bg-blue-800 text-white py-3 rounded-xl font-medium hover:bg-blue-900 flex items-center justify-center gap-2 disabled:opacity-50"
-                  >
-                    {configMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Configuration'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsConfiguring(false)}
-                    className="px-6 py-3 border border-zinc-200 text-zinc-700 rounded-xl font-medium hover:bg-zinc-50"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <button
-                onClick={() => setIsConfiguring(true)}
-                className="w-full py-4 border-2 border-dashed border-zinc-200 rounded-2xl text-sm font-bold text-zinc-500 hover:border-blue-400 hover:text-blue-700 transition-all flex items-center justify-center gap-2"
-              >
-                <Plus className="w-5 h-5" />
-                Configure LINE Webhook
-              </button>
-            )}
+            <div>
+              <h3 className="font-bold text-base" style={{ color: 'var(--navy)' }}>Setup LINE Webhook</h3>
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                Connect your LINE Official Account to enable slip verification via LINE.
+              </p>
+            </div>
           </div>
+
+          {isConfiguring ? (
+            <form onSubmit={(e) => { e.preventDefault(); handleSaveConfig(); }} className="space-y-5">
+              <div>
+                <label className="block font-mono text-[9px] uppercase tracking-widest mb-1.5" style={{ color: 'var(--text-muted)' }}>
+                  LINE Channel ID
+                </label>
+                <input
+                  type="text"
+                  value={configForm.line_channel_id}
+                  onChange={(e) => setConfigForm({ ...configForm, line_channel_id: e.target.value })}
+                  placeholder="Enter from LINE Developers"
+                  className={inputClass}
+                  style={inputStyle}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block font-mono text-[9px] uppercase tracking-widest mb-1.5" style={{ color: 'var(--text-muted)' }}>
+                  LINE Channel Secret
+                </label>
+                <input
+                  type="password"
+                  value={configForm.line_channel_secret}
+                  onChange={(e) => setConfigForm({ ...configForm, line_channel_secret: e.target.value })}
+                  placeholder="Enter from LINE Developers"
+                  className={inputClass}
+                  style={inputStyle}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block font-mono text-[9px] uppercase tracking-widest mb-1.5" style={{ color: 'var(--text-muted)' }}>
+                  LINE Access Token (Channel Access Token)
+                </label>
+                <input
+                  type="password"
+                  value={configForm.line_access_token}
+                  onChange={(e) => setConfigForm({ ...configForm, line_access_token: e.target.value })}
+                  placeholder="Enter from LINE Developers"
+                  className={inputClass}
+                  style={inputStyle}
+                  required
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  type="submit"
+                  disabled={configMutation.isPending}
+                  className="flex-1 py-3 text-sm font-semibold flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-60"
+                  style={{ background: 'var(--navy)', color: '#fff' }}
+                >
+                  {configMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Configuration'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsConfiguring(false)}
+                  className="px-6 py-3 text-sm font-semibold transition-all hover:opacity-90"
+                  style={{ border: '1px solid var(--border)', color: 'var(--navy)' }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          ) : (
+            <button
+              onClick={() => setIsConfiguring(true)}
+              className="w-full py-4 text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
+              style={{ border: '1px dashed var(--border-strong)', color: 'var(--text-muted)' }}
+            >
+              <Plus className="w-5 h-5" />
+              Configure LINE Webhook
+            </button>
+          )}
         </div>
       ) : (
         <>
           {/* Status Overview */}
-          <div className="grid lg:grid-cols-3 gap-6 mb-8">
-            <div className="bg-white border border-zinc-100 rounded-2xl p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-green-50 rounded-full flex items-center justify-center">
-                  <CheckCircle className="w-5 h-5 text-green-700" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Status</p>
-                  <p className={`text-sm font-bold ${config?.is_configured ? 'text-green-700' : 'text-amber-700'}`}>
-                    {config?.is_configured ? 'Active' : 'Saved, needs update'}
-                  </p>
-                </div>
+          <div className="grid md:grid-cols-3 divide-y md:divide-y-0 md:divide-x bg-white" style={{ border: '1px solid var(--border)', borderColor: 'var(--border)' }}>
+            <div className="p-6 flex items-center gap-3">
+              <div className="w-10 h-10 flex items-center justify-center" style={{ background: '#DCFCE7' }}>
+                <CheckCircle className="w-5 h-5 text-emerald-700" />
+              </div>
+              <div>
+                <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Status</p>
+                <p className="text-sm font-bold" style={{ color: config?.is_configured ? '#047857' : '#B45309' }}>
+                  {config?.is_configured ? 'Active' : 'Saved, needs update'}
+                </p>
               </div>
             </div>
 
-            <div className="bg-white border border-zinc-100 rounded-2xl p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center">
-                  <Key className="w-5 h-5 text-blue-700" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Reference ID</p>
-                  <p className="text-sm font-bold text-zinc-900 font-mono">{config?.webhook_reference_id || '-'}</p>
-                </div>
+            <div className="p-6 flex items-center gap-3">
+              <div className="w-10 h-10 flex items-center justify-center" style={{ background: 'var(--blue-pale)' }}>
+                <Key className="w-5 h-5" style={{ color: 'var(--blue)' }} />
+              </div>
+              <div>
+                <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Reference ID</p>
+                <p className="text-sm font-bold font-mono" style={{ color: 'var(--navy)' }}>{config?.webhook_reference_id || '-'}</p>
               </div>
             </div>
 
-            <div className="bg-white border border-zinc-100 rounded-2xl p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-purple-50 rounded-full flex items-center justify-center">
-                  <Clock className="w-5 h-5 text-purple-700" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Configured</p>
-                  <p className="text-sm font-bold text-zinc-900">
-                    {config?.updated_at ? new Date(config.updated_at).toLocaleDateString('th-TH') : '-'}
-                  </p>
-                </div>
+            <div className="p-6 flex items-center gap-3">
+              <div className="w-10 h-10 flex items-center justify-center" style={{ background: '#F3E8FF' }}>
+                <Clock className="w-5 h-5 text-purple-700" />
+              </div>
+              <div>
+                <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Configured</p>
+                <p className="text-sm font-bold" style={{ color: 'var(--navy)' }}>
+                  {config?.updated_at ? new Date(config.updated_at).toLocaleDateString('th-TH') : '-'}
+                </p>
               </div>
             </div>
           </div>
 
           {/* Webhook URL */}
-          <div className="bg-white border border-zinc-200 rounded-2xl p-8 mb-6">
-            <h3 className="text-lg font-bold text-zinc-900 mb-4 flex items-center gap-2">
-              <Key className="w-5 h-5 text-blue-700" />
-              Your Webhook URL
-            </h3>
-            <div className="flex items-center gap-4 p-4 bg-zinc-50 rounded-xl">
-              <code className="flex-1 text-sm font-mono text-blue-800 truncate">
+          <section className="bg-white p-8" style={{ border: '1px solid var(--border)' }}>
+            <p className="font-mono text-[10px] uppercase tracking-widest mb-4 flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>
+              <Key className="w-3.5 h-3.5" /> Your Webhook URL
+            </p>
+            <div className="flex items-center gap-4 p-4" style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border)' }}>
+              <code className="flex-1 text-sm font-mono truncate" style={{ color: 'var(--blue)' }}>
                 {config?.webhook_url}
               </code>
               <button
                 onClick={() => config?.webhook_url && copyToClipboard(config.webhook_url)}
-                className="p-2 hover:bg-zinc-100 rounded-lg transition-colors"
+                className="p-2 transition-colors"
+                style={{ color: 'var(--text-muted)' }}
               >
-                <Copy className="w-4 h-4 text-zinc-500" />
+                <Copy className="w-4 h-4" />
               </button>
             </div>
-            <p className="text-xs text-zinc-500 mt-3">
-              📌 Add this URL to your LINE Developers Console → Messaging API → Webhook settings
+            <p className="text-xs mt-3" style={{ color: 'var(--text-muted)' }}>
+              Add this URL to your LINE Developers Console → Messaging API → Webhook settings
             </p>
-          </div>
+          </section>
 
           {/* Edit Configuration Form */}
           {isEditing ? (
-            <div className="bg-white border border-zinc-200 rounded-2xl p-8 mb-6">
-              <h3 className="text-lg font-bold text-zinc-900 mb-6">Edit LINE Configuration</h3>
-              <form onSubmit={(e) => { e.preventDefault(); handleSaveConfig(); }} className="space-y-6">
+            <section className="bg-white p-8" style={{ border: '1px solid var(--border)' }}>
+              <p className="font-mono text-[10px] uppercase tracking-widest mb-6" style={{ color: 'var(--text-muted)' }}>
+                Edit LINE Configuration
+              </p>
+              <form onSubmit={(e) => { e.preventDefault(); handleSaveConfig(); }} className="space-y-5">
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-2">
+                  <label className="block font-mono text-[9px] uppercase tracking-widest mb-1.5" style={{ color: 'var(--text-muted)' }}>
                     LINE Channel ID
                   </label>
                   <input
@@ -283,13 +288,14 @@ export default function MerchantLinePage() {
                     value={configForm.line_channel_id}
                     onChange={(e) => setConfigForm({ ...configForm, line_channel_id: e.target.value })}
                     placeholder="Enter from LINE Developers"
-                    className="w-full px-4 py-3 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-700/20"
+                    className={inputClass}
+                    style={inputStyle}
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-2">
+                  <label className="block font-mono text-[9px] uppercase tracking-widest mb-1.5" style={{ color: 'var(--text-muted)' }}>
                     LINE Channel Secret
                   </label>
                   <input
@@ -297,14 +303,15 @@ export default function MerchantLinePage() {
                     value={configForm.line_channel_secret}
                     onChange={(e) => setConfigForm({ ...configForm, line_channel_secret: e.target.value })}
                     placeholder="Enter from LINE Developers"
-                    className="w-full px-4 py-3 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-700/20"
+                    className={inputClass}
+                    style={inputStyle}
                     required
                   />
-                  <p className="text-xs text-zinc-500 mt-1">Current secret will be replaced</p>
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Current secret will be replaced</p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-2">
+                  <label className="block font-mono text-[9px] uppercase tracking-widest mb-1.5" style={{ color: 'var(--text-muted)' }}>
                     LINE Access Token (Channel Access Token)
                   </label>
                   <input
@@ -312,93 +319,124 @@ export default function MerchantLinePage() {
                     value={configForm.line_access_token}
                     onChange={(e) => setConfigForm({ ...configForm, line_access_token: e.target.value })}
                     placeholder="Enter from LINE Developers"
-                    className="w-full px-4 py-3 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-700/20"
+                    className={inputClass}
+                    style={inputStyle}
                     required
                   />
-                  <p className="text-xs text-zinc-500 mt-1">Current token will be replaced</p>
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Current token will be replaced</p>
                 </div>
 
                 <div className="flex gap-3">
                   <button
                     type="submit"
                     disabled={configMutation.isPending}
-                    className="flex-1 bg-blue-800 text-white py-3 rounded-xl font-medium hover:bg-blue-900 flex items-center justify-center gap-2 disabled:opacity-50"
+                    className="flex-1 py-3 text-sm font-semibold flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-60"
+                    style={{ background: 'var(--navy)', color: '#fff' }}
                   >
                     {configMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Update Configuration'}
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsEditing(false)}
-                    className="px-6 py-3 border border-zinc-200 text-zinc-700 rounded-xl font-medium hover:bg-zinc-50"
+                    className="px-6 py-3 text-sm font-semibold transition-all hover:opacity-90"
+                    style={{ border: '1px solid var(--border)', color: 'var(--navy)' }}
                   >
                     Cancel
                   </button>
                 </div>
               </form>
-            </div>
+            </section>
           ) : (
-            <div className="flex gap-4 mb-6">
+            <div className="flex gap-3">
               <button
                 onClick={handleEditClick}
-                className="flex-1 bg-blue-800 text-white py-4 rounded-xl font-medium hover:bg-blue-900 transition-all flex items-center justify-center gap-2"
+                className="flex-1 py-3.5 text-sm font-semibold transition-all hover:opacity-90"
+                style={{ background: 'var(--navy)', color: '#fff' }}
               >
                 Edit Configuration
               </button>
               <button
-                onClick={handleDelete}
-                disabled={deleteMutation.isPending}
-                className="flex-1 px-6 py-4 border-2 border-rose-200 text-rose-600 rounded-xl font-medium hover:bg-rose-50 flex items-center justify-center gap-2 disabled:opacity-50"
+                onClick={() => setIsDeleting(true)}
+                className="flex-1 py-3.5 text-sm font-semibold transition-colors"
+                style={{ border: '1px solid #FECDD3', color: '#E11D48' }}
               >
-                {deleteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                 Delete
               </button>
             </div>
           )}
 
           {/* Instructions */}
-          <div className="bg-green-50 border border-green-100 rounded-2xl p-8">
-            <h3 className="text-lg font-bold text-zinc-900 mb-4 flex items-center gap-2">
-              <MessageSquare className="w-5 h-5 text-green-700" />
-              Setup Instructions
-            </h3>
-            <div className="space-y-4 text-sm text-zinc-700">
+          <section className="p-8" style={{ background: '#ECFDF5', border: '1px solid #A7F3D0' }}>
+            <p className="font-mono text-[10px] uppercase tracking-widest mb-4 flex items-center gap-2" style={{ color: '#047857' }}>
+              <MessageSquare className="w-3.5 h-3.5" /> Setup Instructions
+            </p>
+            <div className="space-y-4 text-sm" style={{ color: 'var(--navy)' }}>
               <div className="flex gap-4">
-                <span className="flex-shrink-0 w-6 h-6 bg-green-800 text-white rounded-full flex items-center justify-center font-bold">
-                  1
-                </span>
+                <span className="shrink-0 w-6 h-6 flex items-center justify-center text-xs font-bold text-white" style={{ background: '#047857' }}>1</span>
                 <p>
                   Go to{' '}
                   <a
                     href="https://developers.line.biz/"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-green-800 font-medium underline"
+                    className="font-medium underline"
+                    style={{ color: '#047857' }}
                   >
                     LINE Developers Console
                   </a>
                 </p>
               </div>
               <div className="flex gap-4">
-                <span className="flex-shrink-0 w-6 h-6 bg-green-800 text-white rounded-full flex items-center justify-center font-bold">
-                  2
-                </span>
+                <span className="shrink-0 w-6 h-6 flex items-center justify-center text-xs font-bold text-white" style={{ background: '#047857' }}>2</span>
                 <p>Select your Messaging API channel</p>
               </div>
               <div className="flex gap-4">
-                <span className="flex-shrink-0 w-6 h-6 bg-green-800 text-white rounded-full flex items-center justify-center font-bold">
-                  3
-                </span>
+                <span className="shrink-0 w-6 h-6 flex items-center justify-center text-xs font-bold text-white" style={{ background: '#047857' }}>3</span>
                 <p>Go to "Messaging API" tab → "Webhook settings" and add the webhook URL above</p>
               </div>
               <div className="flex gap-4">
-                <span className="flex-shrink-0 w-6 h-6 bg-green-800 text-white rounded-full flex items-center justify-center font-bold">
-                  4
-                </span>
+                <span className="shrink-0 w-6 h-6 flex items-center justify-center text-xs font-bold text-white" style={{ background: '#047857' }}>4</span>
                 <p>Enable "Use webhook" checkbox and verify your channel secret</p>
               </div>
             </div>
-          </div>
+          </section>
         </>
+      )}
+
+      {/* Delete confirmation */}
+      {isDeleting && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white max-w-md w-full p-8" style={{ border: '1px solid var(--border)' }}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-lg" style={{ color: 'var(--navy)' }}>Delete LINE configuration?</h3>
+              <button onClick={() => setIsDeleting(false)} style={{ color: 'var(--text-muted)' }}>
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-sm mb-6" style={{ color: 'var(--text-muted)' }}>
+              Customers will no longer be able to send slips through LINE until you configure it again. This cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => deleteMutation.mutate()}
+                disabled={deleteMutation.isPending}
+                className="flex-1 py-3 text-sm font-semibold flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-60"
+                style={{ background: '#E11D48', color: '#fff' }}
+              >
+                {deleteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                Yes, delete
+              </button>
+              <button
+                onClick={() => setIsDeleting(false)}
+                disabled={deleteMutation.isPending}
+                className="flex-1 py-3 text-sm font-semibold transition-all hover:opacity-90"
+                style={{ border: '1px solid var(--border)', color: 'var(--navy)' }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -3,49 +3,19 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Download, ImageIcon, Loader2, MessageSquare, RefreshCw } from 'lucide-react';
+import { Download, ImageIcon, Loader2, MessageSquare, RefreshCw, Search } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { toast } from 'sonner';
 import type { Transaction, TransactionStatus } from '@/types/api';
+import { STATUS_LABEL, FAIL_LABEL, statusStyle, formatTime } from '@/lib/transaction-format';
 
-const STATUS_LABEL: Record<TransactionStatus, string> = {
-  pending: 'Pending',
-  processing: 'Processing',
-  success: 'Success',
-  failed: 'Failed',
-};
-
-const FAIL_LABEL: Record<string, string> = {
-  DUPLICATE_SLIP: 'Duplicate slip',
-  AMOUNT_MISMATCH: 'Amount mismatch',
-  TIMEOUT: 'Timed out',
-  INVALID_QR: 'Invalid QR',
-  BANK_ERROR: 'Bank error',
-  EXPIRED_SLIP: 'Expired slip',
-};
-
-function statusStyle(status: TransactionStatus) {
-  switch (status) {
-    case 'success':
-      return { bg: '#ECFDF5', text: '#047857', dot: '#10B981' };
-    case 'failed':
-      return { bg: '#FEF2F2', text: '#B91C1C', dot: '#EF4444' };
-    case 'processing':
-      return { bg: '#EFF6FF', text: '#1D4ED8', dot: '#2563EB' };
-    default:
-      return { bg: '#F8FAFC', text: '#64748B', dot: '#94A3B8' };
-  }
-}
-
-function formatTime(value?: string) {
-  if (!value) return '-';
-  return new Date(value).toLocaleString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
+const STATUS_OPTIONS: { value: TransactionStatus | ''; label: string }[] = [
+  { value: '', label: 'All statuses' },
+  { value: 'pending', label: STATUS_LABEL.pending },
+  { value: 'processing', label: STATUS_LABEL.processing },
+  { value: 'success', label: STATUS_LABEL.success },
+  { value: 'failed', label: STATUS_LABEL.failed },
+];
 
 function TransactionRow({ transaction }: { transaction: Transaction }) {
   const colors = statusStyle(transaction.status);
@@ -117,19 +87,41 @@ function TransactionRow({ transaction }: { transaction: Transaction }) {
 
 export default function SlipsPage() {
   const [page, setPage] = useState(1);
+  const [status, setStatus] = useState<TransactionStatus | ''>('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [search, setSearch] = useState('');
+  const [isExporting, setIsExporting] = useState(false);
+
+  const filters = {
+    status: status || undefined,
+    start_date: startDate || undefined,
+    end_date: endDate || undefined,
+    search: search.trim() || undefined,
+  };
+  const hasActiveFilters = Boolean(status || startDate || endDate || search.trim());
 
   const { data: listData, isLoading, isFetching, refetch } = useQuery({
-    queryKey: ['transactions', page],
-    queryFn: () => api.getTransactions({ page, limit: 15 }),
+    queryKey: ['transactions', page, status, startDate, endDate, search.trim()],
+    queryFn: () => api.getTransactions({ page, limit: 15, ...filters }),
   });
 
   const transactions = listData?.data?.items ?? [];
   const pagination = listData?.data?.pagination;
   const totalPages = Math.max(1, pagination?.total_pages ?? 1);
 
+  const clearFilters = () => {
+    setStatus('');
+    setStartDate('');
+    setEndDate('');
+    setSearch('');
+    setPage(1);
+  };
+
   const downloadTransactions = async () => {
+    setIsExporting(true);
     try {
-      const blob = await api.exportTransactions({ format: 'csv' });
+      const blob = await api.exportTransactions({ format: 'csv', ...filters });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -140,6 +132,8 @@ export default function SlipsPage() {
       URL.revokeObjectURL(url);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to export transactions');
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -158,9 +152,10 @@ export default function SlipsPage() {
         <div className="flex gap-2">
           <button
             onClick={downloadTransactions}
-            className="inline-flex items-center gap-2 border border-zinc-200 bg-white px-4 py-2 text-xs font-semibold text-zinc-700 transition-colors hover:border-zinc-900 hover:text-zinc-900"
+            disabled={isExporting}
+            className="inline-flex items-center gap-2 border border-zinc-200 bg-white px-4 py-2 text-xs font-semibold text-zinc-700 transition-colors hover:border-zinc-900 hover:text-zinc-900 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <Download className="h-4 w-4" />
+            {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
             Export CSV
           </button>
           <button
@@ -197,6 +192,82 @@ export default function SlipsPage() {
         </div>
       </div>
 
+      <div
+        className="mb-6 flex flex-col gap-3 bg-white p-3 lg:flex-row lg:items-center lg:justify-between"
+        style={{ border: '1px solid var(--border)' }}
+      >
+        <div className="flex flex-1 flex-col gap-3 lg:flex-row lg:items-center">
+          <label
+            className="flex min-h-11 flex-1 items-center gap-2 px-3 text-sm lg:max-w-xs"
+            style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}
+          >
+            <Search className="h-4 w-4" />
+            <input
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPage(1);
+              }}
+              placeholder="Search reference no..."
+              className="w-full bg-transparent outline-none placeholder:opacity-60"
+              style={{ color: 'var(--navy)' }}
+            />
+          </label>
+
+          <select
+            value={status}
+            onChange={(event) => {
+              setStatus(event.target.value as TransactionStatus | '');
+              setPage(1);
+            }}
+            className="min-h-11 px-3 text-sm outline-none"
+            style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border)', color: 'var(--navy)' }}
+          >
+            {STATUS_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              type="date"
+              value={startDate}
+              onChange={(event) => {
+                setStartDate(event.target.value);
+                setPage(1);
+              }}
+              max={endDate || undefined}
+              className="min-h-11 px-3 text-sm outline-none"
+              style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border)', color: 'var(--navy)' }}
+            />
+            <span className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>to</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(event) => {
+                setEndDate(event.target.value);
+                setPage(1);
+              }}
+              min={startDate || undefined}
+              className="min-h-11 px-3 text-sm outline-none"
+              style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border)', color: 'var(--navy)' }}
+            />
+            {hasActiveFilters ? (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="font-mono text-[10px] uppercase tracking-widest transition-colors"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                Clear
+              </button>
+            ) : null}
+          </div>
+        </div>
+      </div>
+
       <div className="bg-white" style={{ border: '1px solid var(--border)' }}>
         <div
           className="hidden grid-cols-[140px_1fr_160px_120px] gap-4 px-5 py-3 md:grid"
@@ -230,11 +301,23 @@ export default function SlipsPage() {
               <ImageIcon className="h-5 w-5" style={{ color: 'var(--text-muted)' }} />
             </div>
             <p className="text-sm font-semibold" style={{ color: 'var(--navy)' }}>
-              No slips yet
+              {hasActiveFilters ? 'No matching slips' : 'No slips yet'}
             </p>
             <p className="max-w-sm text-sm" style={{ color: 'var(--text-muted)' }}>
-              Once a customer sends a slip to your connected LINE bot, it will appear here.
+              {hasActiveFilters
+                ? 'Try widening the date range or clearing filters.'
+                : 'Once a customer sends a slip to your connected LINE bot, it will appear here.'}
             </p>
+            {hasActiveFilters ? (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="mt-1 font-mono text-[10px] uppercase tracking-widest transition-colors"
+                style={{ color: 'var(--blue)' }}
+              >
+                Clear filters
+              </button>
+            ) : null}
           </div>
         ) : (
           transactions.map((transaction) => <TransactionRow key={transaction.id} transaction={transaction} />)

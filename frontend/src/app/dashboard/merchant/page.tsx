@@ -14,15 +14,15 @@ export default function MerchantProfilePage() {
     queryKey: ['merchant-profile'],
     queryFn: () => api.getMerchantProfile(),
   });
-  const { data: subscriptionData } = useQuery({
+  const { data: subscriptionData, isLoading: subscriptionLoading } = useQuery({
     queryKey: ['subscription'],
     queryFn: () => api.getSubscription(),
   });
-  const { data: quotaData } = useQuery({
+  const { data: quotaData, isLoading: quotaLoading } = useQuery({
     queryKey: ['quota'],
     queryFn: () => api.getQuota(),
   });
-  const { data: lineConfigData } = useQuery({
+  const { data: lineConfigData, isLoading: lineConfigLoading } = useQuery({
     queryKey: ['line-webhook-config'],
     queryFn: () => api.getLINEWebhookConfig(),
   });
@@ -32,7 +32,7 @@ export default function MerchantProfilePage() {
   const quota = quotaData?.data;
   const lineConfig = lineConfigData?.data?.config;
 
-  if (merchantLoading) {
+  if (merchantLoading || subscriptionLoading || quotaLoading || lineConfigLoading) {
     return (
       <div className="flex h-[80vh] items-center justify-center">
         <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'var(--blue)' }} />

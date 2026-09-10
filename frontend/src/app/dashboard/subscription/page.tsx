@@ -1,12 +1,11 @@
-﻿'use client';
+'use client';
 
 import React, { useState } from 'react';
-import { Check, Crown, Zap, Shield, ArrowRight, CreditCard, Clock, History, Loader2, X } from 'lucide-react';
+import { Check, Zap, ArrowRight, CreditCard, Clock, History, Loader2, X } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
 import { toast } from 'sonner';
 import { FreePlanConfirmModal } from '@/components/subscription/FreePlanConfirmModal';
-import type { SubscriptionPlan, Subscription, QuotaStatus } from '@/types/api';
 
 export default function SubscriptionPage() {
   const queryClient = useQueryClient();
@@ -96,7 +95,7 @@ export default function SubscriptionPage() {
   if (subLoading) {
     return (
       <div className="flex h-[80vh] items-center justify-center">
-        <Loader2 className="w-10 h-10 text-blue-800 animate-spin" />
+        <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'var(--blue)' }} />
       </div>
     );
   }
@@ -104,7 +103,7 @@ export default function SubscriptionPage() {
   const currentPlan = plans.find(p => p.id === subscription?.plan_id);
 
   return (
-    <div className="p-8 space-y-10 max-w-6xl">
+    <div className="p-6 md:p-8 space-y-6 max-w-6xl" style={{ background: 'var(--bg)' }}>
       <FreePlanConfirmModal
         open={freeConfirmOpen}
         isLoading={checkoutMutation.isPending}
@@ -112,21 +111,28 @@ export default function SubscriptionPage() {
         onConfirm={handleConfirmFreePlan}
       />
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-black text-zinc-900 tracking-tight mb-2">Subscription</h1>
-          <p className="text-sm font-medium text-zinc-500">Manage your plan, billing, and credit usage.</p>
+          <p className="font-mono text-[10px] uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>/ Subscription</p>
+          <h1 className="font-bold tracking-tight" style={{ fontSize: '1.4rem', color: 'var(--navy)', letterSpacing: '-0.02em' }}>
+            Subscription
+          </h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>Manage your plan, billing, and credit usage.</p>
         </div>
         {subscription && (
-          <div className={`px-4 py-2 rounded-xl flex items-center gap-2 ${
-            subscription.status === 'active'
-              ? 'bg-blue-50 border border-blue-50'
-              : 'bg-zinc-100 border border-zinc-200'
-          }`}>
-            <Zap className={`w-4 h-4 ${subscription.status === 'active' ? 'text-blue-800' : 'text-zinc-500'}`} />
-            <span className={`text-xs font-bold uppercase tracking-widest ${
-              subscription.status === 'active' ? 'text-blue-900' : 'text-zinc-500'
-            }`}>
+          <div
+            className="px-4 py-2 flex items-center gap-2"
+            style={
+              subscription.status === 'active'
+                ? { background: 'var(--blue-pale)', border: '1px solid var(--blue-pale)' }
+                : { background: 'var(--bg-subtle)', border: '1px solid var(--border)' }
+            }
+          >
+            <Zap className="w-4 h-4" style={{ color: subscription.status === 'active' ? 'var(--blue)' : 'var(--text-muted)' }} />
+            <span
+              className="font-mono text-[9px] font-bold uppercase tracking-widest"
+              style={{ color: subscription.status === 'active' ? 'var(--navy)' : 'var(--text-muted)' }}
+            >
               {subscription.status} Plan
             </span>
           </div>
@@ -135,36 +141,36 @@ export default function SubscriptionPage() {
 
       {/* Usage Overview */}
       {quota && (
-        <div className="grid md:grid-cols-3 gap-6">
-          <div className="bg-white border border-zinc-100 rounded-[2rem] p-8 shadow-sm">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-zinc-50 rounded-xl flex items-center justify-center border border-zinc-100">
-                <Zap className="w-5 h-5 text-zinc-400" />
+        <div className="grid md:grid-cols-3 divide-y md:divide-y-0 md:divide-x bg-white" style={{ border: '1px solid var(--border)', borderColor: 'var(--border)' }}>
+          <div className="p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 flex items-center justify-center" style={{ background: 'var(--bg-subtle)' }}>
+                <Zap className="w-5 h-5" style={{ color: 'var(--text-muted)' }} />
               </div>
               <div>
-                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Monthly Usage</p>
-                <h3 className="text-lg font-bold text-zinc-900">
+                <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Monthly Usage</p>
+                <h3 className="text-lg font-bold" style={{ color: 'var(--navy)' }}>
                   {quota.used} / {quota.quota_limit}
                 </h3>
               </div>
             </div>
-            <div className="w-full h-2 bg-zinc-100 rounded-full overflow-hidden">
+            <div className="h-1.5 w-full" style={{ background: 'var(--border)' }}>
               <div
-                className="h-full bg-blue-800 rounded-full transition-all"
-                style={{ width: `${(quota.used / quota.quota_limit) * 100}%` }}
+                className="h-full transition-all"
+                style={{ width: `${quota.quota_limit > 0 ? Math.min((quota.used / quota.quota_limit) * 100, 100) : 0}%`, background: 'var(--blue)' }}
               />
             </div>
-            <p className="text-xs text-zinc-500 mt-2">{quota.remaining} credits remaining</p>
+            <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>{quota.remaining} credits remaining</p>
           </div>
 
-          <div className="bg-white border border-zinc-100 rounded-[2rem] p-8 shadow-sm">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-zinc-50 rounded-xl flex items-center justify-center border border-zinc-100">
-                <Clock className="w-5 h-5 text-zinc-400" />
+          <div className="p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 flex items-center justify-center" style={{ background: 'var(--bg-subtle)' }}>
+                <Clock className="w-5 h-5" style={{ color: 'var(--text-muted)' }} />
               </div>
               <div>
-                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Reset Date</p>
-                <h3 className="text-lg font-bold text-zinc-900">
+                <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Reset Date</p>
+                <h3 className="text-lg font-bold" style={{ color: 'var(--navy)' }}>
                   {quota.reset_date
                     ? new Date(quota.reset_date).toLocaleDateString('th-TH', {
                         month: 'short',
@@ -175,29 +181,27 @@ export default function SubscriptionPage() {
                 </h3>
               </div>
             </div>
-            <p className="text-xs font-medium text-zinc-500">
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
               {quota.reset_date
                 ? `In ${Math.ceil((new Date(quota.reset_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))} days`
                 : 'No active plan'}
             </p>
           </div>
 
-          <div className="bg-white border border-zinc-100 rounded-[2rem] p-8 shadow-sm">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-zinc-50 rounded-xl flex items-center justify-center border border-zinc-100">
-                <CreditCard className="w-5 h-5 text-zinc-400" />
+          <div className="p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 flex items-center justify-center" style={{ background: 'var(--bg-subtle)' }}>
+                <CreditCard className="w-5 h-5" style={{ color: 'var(--text-muted)' }} />
               </div>
               <div>
-                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Status</p>
-                <h3 className={`text-lg font-bold capitalize ${
-                  quota.is_blocked ? 'text-rose-600' : 'text-green-600'
-                }`}>
+                <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Status</p>
+                <h3 className="text-lg font-bold" style={{ color: quota.is_blocked ? '#E11D48' : '#059669' }}>
                   {quota.is_blocked ? 'Blocked' : 'Active'}
                 </h3>
               </div>
             </div>
             {quota.is_blocked && (
-              <p className="text-xs font-medium text-rose-600">
+              <p className="text-xs" style={{ color: '#E11D48' }}>
                 Quota exceeded. Upgrade to continue.
               </p>
             )}
@@ -206,10 +210,10 @@ export default function SubscriptionPage() {
       )}
 
       {/* Plans Selection */}
-      <div className="grid lg:grid-cols-3 gap-8">
+      <div className="grid lg:grid-cols-3 gap-6">
         {visiblePlans.map((plan) => {
           const isCurrentPlan = plan.id === subscription?.plan_id;
-          const isSelectedForHighlight = plan.is_popular && !isCurrentPlan;
+          const isHighlighted = plan.is_popular && !isCurrentPlan;
           const isFreeUnavailable = plan.id === 'plan-free' && freePlanUsed && !isCurrentPlan;
           const yearlySavings = plan.price_yearly > 0
             ? Math.round(((plan.price_monthly * 12 - plan.price_yearly) / (plan.price_monthly * 12)) * 100)
@@ -218,67 +222,53 @@ export default function SubscriptionPage() {
           return (
             <div
               key={plan.id}
-              className={`
-                relative p-10 rounded-[2.5rem] border transition-all duration-300 flex flex-col
-                ${isSelectedForHighlight
-                  ? 'bg-zinc-900 border-zinc-800 shadow-2xl shadow-blue-500/10 scale-105 z-10'
-                  : isCurrentPlan
-                    ? 'bg-blue-50 border-blue-200'
-                    : 'bg-white border-zinc-100 hover:border-blue-50'
-                }
-              `}
+              className="relative p-8 bg-white flex flex-col"
+              style={{
+                border: isHighlighted ? '2px solid var(--navy)' : isCurrentPlan ? '2px solid var(--blue)' : '1px solid var(--border)',
+                background: isCurrentPlan ? 'var(--bg-subtle)' : '#fff',
+              }}
             >
-              {plan.is_popular && !isCurrentPlan && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-blue-800 border border-blue-600 rounded-full text-[10px] font-bold text-white uppercase tracking-widest">
+              {isHighlighted && (
+                <div
+                  className="absolute -top-3 left-6 px-3 py-1 font-mono text-[9px] font-bold uppercase tracking-widest text-white"
+                  style={{ background: 'var(--navy)' }}
+                >
                   Most Popular
                 </div>
               )}
 
               {isCurrentPlan && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-blue-100 border border-blue-300 rounded-full text-[10px] font-bold text-blue-800 uppercase tracking-widest">
+                <div
+                  className="absolute -top-3 left-6 px-3 py-1 font-mono text-[9px] font-bold uppercase tracking-widest"
+                  style={{ background: 'var(--blue-pale)', color: 'var(--blue)' }}
+                >
                   Current Plan
                 </div>
               )}
 
-              <div className="mb-8">
-                <h3 className={`text-xl font-bold mb-2 ${
-                  isSelectedForHighlight ? 'text-white' : isCurrentPlan ? 'text-blue-900' : 'text-zinc-900'
-                }`}>
+              <div className="mb-6 mt-2">
+                <h3 className="text-lg font-bold mb-1" style={{ color: 'var(--navy)' }}>
                   {plan.name}
                 </h3>
-                <p className={`text-sm font-medium ${
-                  isSelectedForHighlight ? 'text-zinc-400' : 'text-zinc-500'
-                }`}>
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
                   {plan.description}
                 </p>
               </div>
 
-              <div className="mb-10 flex items-baseline gap-1">
-                <span className={`text-5xl font-black tracking-tighter ${
-                  isSelectedForHighlight ? 'text-white' : 'text-zinc-900'
-                }`}>
+              <div className="mb-8 flex items-baseline gap-1">
+                <span className="text-4xl font-bold tracking-tight" style={{ color: 'var(--navy)' }}>
                   ฿{plan.price_monthly.toLocaleString()}
                 </span>
-                <span className={`text-sm font-bold ${
-                  isSelectedForHighlight ? 'text-zinc-500' : 'text-zinc-400'
-                }`}>
+                <span className="text-sm font-semibold" style={{ color: 'var(--text-muted)' }}>
                   /month
                 </span>
               </div>
 
-              <div className="space-y-4 mb-12 flex-1">
+              <div className="space-y-3 mb-8 flex-1">
                 {plan.features.map((feature, i) => (
                   <div key={i} className="flex items-center gap-3">
-                    <Check className={`w-4 h-4 ${
-                      isSelectedForHighlight
-                        ? 'text-blue-500'
-                        : isCurrentPlan
-                          ? 'text-blue-800'
-                          : 'text-zinc-600'
-                    }`} />
-                    <span className={`text-sm font-medium ${
-                      isSelectedForHighlight ? 'text-zinc-300' : 'text-zinc-600'
-                    }`}>
+                    <Check className="w-4 h-4 shrink-0 text-emerald-600" />
+                    <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
                       {feature}
                     </span>
                   </div>
@@ -286,26 +276,27 @@ export default function SubscriptionPage() {
               </div>
 
               {isCurrentPlan ? (
-                <button className="w-full py-4 rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2 bg-blue-100 text-blue-800 cursor-default">
+                <button
+                  className="w-full py-3 text-sm font-semibold cursor-default"
+                  style={{ background: 'var(--blue-pale)', color: 'var(--blue)' }}
+                >
                   Current Plan
                 </button>
               ) : isFreeUnavailable ? (
                 <button
                   disabled
-                  className="w-full py-4 rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2 bg-zinc-200 text-zinc-500 cursor-not-allowed"
+                  className="w-full py-3 text-sm font-semibold cursor-not-allowed"
+                  style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)' }}
                 >
                   Used Already
                 </button>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   <button
                     onClick={() => handleUpgrade(plan.id, 'monthly')}
                     disabled={checkoutMutation.isPending}
-                    className={`w-full py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
-                      isSelectedForHighlight
-                        ? 'bg-white text-zinc-900 hover:bg-zinc-100'
-                        : 'bg-zinc-900 text-white hover:bg-black'
-                    }`}
+                    className="w-full py-3 text-sm font-semibold transition-all hover:opacity-90 disabled:opacity-60 flex items-center justify-center gap-2"
+                    style={{ background: 'var(--navy)', color: '#fff' }}
                   >
                     {checkoutMutation.isPending ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -319,11 +310,8 @@ export default function SubscriptionPage() {
                   <button
                     onClick={() => handleUpgrade(plan.id, 'yearly')}
                     disabled={checkoutMutation.isPending}
-                    className={`w-full py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 border ${
-                      isSelectedForHighlight
-                        ? 'border-zinc-700 text-zinc-300 hover:border-zinc-500 hover:text-zinc-400'
-                        : 'border-zinc-200 text-zinc-600 hover:border-zinc-900'
-                    }`}
+                    className="w-full py-3 text-sm font-semibold transition-all hover:opacity-90 disabled:opacity-60"
+                    style={{ border: '1px solid var(--border)', color: 'var(--navy)' }}
                   >
                     {plan.price_yearly > 0 ? `Yearly (Save ${yearlySavings}%)` : 'Yearly'}
                   </button>
@@ -336,83 +324,89 @@ export default function SubscriptionPage() {
 
       {/* Current Subscription Details */}
       {subscription && subscription.status === 'active' && (
-        <div className="bg-white border border-zinc-100 rounded-[2.5rem] p-10 shadow-sm">
-          <div className="flex items-center justify-between mb-8">
-            <h3 className="text-xl font-bold text-zinc-900 flex items-center gap-3">
-              <History className="w-5 h-5 text-blue-700" />
+        <section className="bg-white p-8" style={{ border: '1px solid var(--border)' }}>
+          <div className="flex items-center justify-between mb-6">
+            <p className="font-mono text-[10px] uppercase tracking-widest flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>
+              <History className="w-3.5 h-3.5" />
               Subscription Details
-            </h3>
+            </p>
             <button
               onClick={() => setIsCancelling(true)}
-              className="text-sm font-medium text-rose-600 hover:text-rose-700 flex items-center gap-1"
+              className="text-sm font-medium transition-colors"
+              style={{ color: '#E11D48' }}
             >
               Cancel Plan
             </button>
           </div>
 
           <div className="grid md:grid-cols-2 gap-8">
-            <div className="space-y-4">
-              <div className="flex justify-between py-2 border-b border-zinc-50">
-                <span className="text-sm text-zinc-500">Plan</span>
-                <span className="text-sm font-medium text-zinc-900">{subscription.plan?.name || 'N/A'}</span>
+            <div className="space-y-3">
+              <div className="flex justify-between py-2" style={{ borderBottom: '1px solid var(--border)' }}>
+                <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Plan</span>
+                <span className="text-sm font-medium" style={{ color: 'var(--navy)' }}>{subscription.plan?.name || 'N/A'}</span>
               </div>
-              <div className="flex justify-between py-2 border-b border-zinc-50">
-                <span className="text-sm text-zinc-500">Status</span>
-                <span className={`text-sm font-medium capitalize ${
-                  subscription.status === 'active' ? 'text-green-600' : 'text-zinc-900'
-                }`}>
+              <div className="flex justify-between py-2" style={{ borderBottom: '1px solid var(--border)' }}>
+                <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Status</span>
+                <span className="text-sm font-medium capitalize" style={{ color: subscription.status === 'active' ? '#059669' : 'var(--navy)' }}>
                   {subscription.status}
                 </span>
               </div>
-              <div className="flex justify-between py-2 border-b border-zinc-50">
-                <span className="text-sm text-zinc-500">Billing Cycle</span>
-                <span className="text-sm font-medium text-zinc-900 capitalize">{subscription.billing_cycle}</span>
+              <div className="flex justify-between py-2" style={{ borderBottom: '1px solid var(--border)' }}>
+                <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Billing Cycle</span>
+                <span className="text-sm font-medium capitalize" style={{ color: 'var(--navy)' }}>{subscription.billing_cycle}</span>
               </div>
             </div>
-            <div className="space-y-4">
-              <div className="flex justify-between py-2 border-b border-zinc-50">
-                <span className="text-sm text-zinc-500">Started At</span>
-                <span className="text-sm font-medium text-zinc-900">
+            <div className="space-y-3">
+              <div className="flex justify-between py-2" style={{ borderBottom: '1px solid var(--border)' }}>
+                <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Started At</span>
+                <span className="text-sm font-medium" style={{ color: 'var(--navy)' }}>
                   {new Date(subscription.started_at).toLocaleDateString('th-TH')}
                 </span>
               </div>
-              <div className="flex justify-between py-2 border-b border-zinc-50">
-                <span className="text-sm text-zinc-500">Expires At</span>
-                <span className="text-sm font-medium text-zinc-900">
+              <div className="flex justify-between py-2" style={{ borderBottom: '1px solid var(--border)' }}>
+                <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Expires At</span>
+                <span className="text-sm font-medium" style={{ color: 'var(--navy)' }}>
                   {subscription.expires_at
                     ? new Date(subscription.expires_at).toLocaleDateString('th-TH')
                     : 'N/A'}
                 </span>
               </div>
-              <div className="flex justify-between py-2 border-b border-zinc-50">
-                <span className="text-sm text-zinc-500">Auto Renew</span>
-                <span className="text-sm font-medium text-zinc-900">{subscription.auto_renew ? 'Enabled' : 'Disabled'}</span>
+              <div className="flex justify-between py-2" style={{ borderBottom: '1px solid var(--border)' }}>
+                <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Auto Renew</span>
+                <span className="text-sm font-medium" style={{ color: 'var(--navy)' }}>{subscription.auto_renew ? 'Enabled' : 'Disabled'}</span>
               </div>
             </div>
           </div>
-        </div>
+        </section>
       )}
 
       {/* Cancel Confirmation Modal */}
       {isCancelling && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-2xl p-8 max-w-md w-full">
-            <h3 className="text-xl font-bold text-zinc-900 mb-4">Cancel Subscription?</h3>
-            <p className="text-sm text-zinc-600 mb-6">
+          <div className="bg-white max-w-md w-full p-8" style={{ border: '1px solid var(--border)' }}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-lg" style={{ color: 'var(--navy)' }}>Cancel Subscription?</h3>
+              <button onClick={() => setIsCancelling(false)} style={{ color: 'var(--text-muted)' }}>
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-sm mb-6" style={{ color: 'var(--text-muted)' }}>
               Your subscription will remain active until the end of your current billing period.
             </p>
             <div className="space-y-3">
               <button
                 onClick={handleCancel}
                 disabled={cancelMutation.isPending}
-                className="w-full py-3 bg-rose-600 text-white rounded-xl font-medium hover:bg-rose-700 flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full py-3 text-sm font-semibold flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-60"
+                style={{ background: '#E11D48', color: '#fff' }}
               >
                 {cancelMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Yes, Cancel Subscription'}
               </button>
               <button
                 onClick={() => setIsCancelling(false)}
                 disabled={cancelMutation.isPending}
-                className="w-full py-3 border border-zinc-200 text-zinc-700 rounded-xl font-medium hover:bg-zinc-50 flex items-center justify-center gap-2"
+                className="w-full py-3 text-sm font-semibold flex items-center justify-center gap-2 transition-all hover:opacity-90"
+                style={{ border: '1px solid var(--border)', color: 'var(--navy)' }}
               >
                 <X className="w-4 h-4" />
                 No, Keep My Plan

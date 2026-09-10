@@ -84,13 +84,13 @@ export default function MerchantSubscriptionPage() {
   if (isLoading || plansLoading) {
     return (
       <div className="flex h-[80vh] items-center justify-center">
-        <Loader2 className="w-10 h-10 text-blue-800 animate-spin" />
+        <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'var(--blue)' }} />
       </div>
     );
   }
 
   return (
-    <div className="p-8 space-y-8 max-w-6xl">
+    <div className="p-6 md:p-8 space-y-6 max-w-6xl" style={{ background: 'var(--bg)' }}>
       <FreePlanConfirmModal
         open={freeConfirmOpen}
         isLoading={checkoutMutation.isPending}
@@ -98,10 +98,11 @@ export default function MerchantSubscriptionPage() {
         onConfirm={handleConfirmFreePlan}
       />
 
-      <div className="mb-8">
+      <div>
         <Link
           href="/dashboard/merchant"
-          className="flex items-center gap-2 text-sm font-medium text-zinc-600 hover:text-zinc-900 transition-colors"
+          className="inline-flex items-center gap-2 text-sm font-medium transition-colors"
+          style={{ color: 'var(--text-muted)' }}
         >
           <ChevronLeft className="w-4 h-4" />
           Back to Merchant
@@ -109,87 +110,90 @@ export default function MerchantSubscriptionPage() {
       </div>
 
       <div>
-        <h1 className="text-3xl font-black text-zinc-900 tracking-tight mb-2">Subscription</h1>
-        <p className="text-sm font-medium text-zinc-500">จัดการแผนการใช้งานและโควต้า</p>
+        <p className="font-mono text-[10px] uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>
+          / Merchant / Subscription
+        </p>
+        <h1 className="font-bold tracking-tight" style={{ fontSize: '1.4rem', color: 'var(--navy)', letterSpacing: '-0.02em' }}>
+          Subscription
+        </h1>
+        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>จัดการแผนการใช้งานและโควต้า</p>
       </div>
 
       {/* Current Plan Overview */}
-      <div className="grid md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white border border-zinc-200 rounded-2xl p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-amber-50 rounded-full flex items-center justify-center">
-              <CreditCard className="w-5 h-5 text-amber-700" />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Current Plan</p>
-              <p className="text-sm font-bold text-zinc-900">{currentPlan?.name || 'Free Plan'}</p>
-            </div>
+      <div className="grid md:grid-cols-3 divide-y md:divide-y-0 md:divide-x bg-white" style={{ border: '1px solid var(--border)', borderColor: 'var(--border)' }}>
+        <div className="p-6 flex items-center gap-3">
+          <div className="w-10 h-10 flex items-center justify-center" style={{ background: '#FEF9C3' }}>
+            <CreditCard className="w-5 h-5 text-amber-700" />
+          </div>
+          <div>
+            <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Current Plan</p>
+            <p className="text-sm font-bold" style={{ color: 'var(--navy)' }}>{currentPlan?.name || 'Free Plan'}</p>
           </div>
         </div>
 
-        <div className="bg-white border border-zinc-200 rounded-2xl p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center">
-              <BarChart3 className="w-5 h-5 text-blue-700" />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Quota Used</p>
-              <p className="text-sm font-bold text-zinc-900">
-                {quota?.used || 0} / {quota?.quota_limit || 50}
-              </p>
-            </div>
+        <div className="p-6 flex items-center gap-3">
+          <div className="w-10 h-10 flex items-center justify-center" style={{ background: 'var(--blue-pale)' }}>
+            <BarChart3 className="w-5 h-5" style={{ color: 'var(--blue)' }} />
+          </div>
+          <div>
+            <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Quota Used</p>
+            <p className="text-sm font-bold" style={{ color: 'var(--navy)' }}>
+              {quota?.used ?? 0} / {quota?.quota_limit ?? 50}
+            </p>
           </div>
         </div>
 
-        <div className="bg-white border border-zinc-200 rounded-2xl p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-green-50 rounded-full flex items-center justify-center">
-              <CheckCircle className="w-5 h-5 text-green-700" />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Remaining</p>
-              <p className="text-sm font-bold text-green-700">{quota?.remaining || 50}</p>
-            </div>
+        <div className="p-6 flex items-center gap-3">
+          <div className="w-10 h-10 flex items-center justify-center" style={{ background: '#ECFDF5' }}>
+            <CheckCircle className="w-5 h-5 text-emerald-700" />
+          </div>
+          <div>
+            <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Remaining</p>
+            <p className="text-sm font-bold text-emerald-700">{quota?.remaining ?? 50}</p>
           </div>
         </div>
       </div>
 
       {/* Usage Progress */}
-      <div className="bg-white border border-zinc-200 rounded-2xl p-6 mb-8">
+      <section className="bg-white p-6" style={{ border: '1px solid var(--border)' }}>
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-sm font-bold text-zinc-900">Monthly Usage</h3>
-          <span className="text-xs text-zinc-500">
+          <p className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Monthly Usage</p>
+          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
             Resets on {quota?.reset_date ? new Date(quota.reset_date).toLocaleDateString('th-TH') : '—'}
           </span>
         </div>
-        <div className="w-full h-2 bg-zinc-100 rounded-full overflow-hidden">
+        <div className="h-1.5 w-full" style={{ background: 'var(--border)' }}>
           <div
-            className="h-full bg-blue-800 transition-all"
+            className="h-full transition-all"
             style={{
-              width: `${quota ? Math.min((quota.used / quota.quota_limit) * 100, 100) : 0}%`
+              width: `${quota && quota.quota_limit > 0 ? Math.min((quota.used / quota.quota_limit) * 100, 100) : 0}%`,
+              background: quota?.is_blocked ? '#EF4444' : 'var(--blue)',
             }}
           />
         </div>
         {quota?.is_blocked && (
-          <div className="mt-4 flex items-center gap-2 text-sm text-rose-600">
+          <div className="mt-4 flex items-center gap-2 text-sm" style={{ color: '#DC2626' }}>
             <AlertCircle className="w-4 h-4" />
             <span>Quota exhausted. Upgrade to continue verifying slips.</span>
           </div>
         )}
-      </div>
+      </section>
 
       {/* Available Plans */}
       <div>
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-zinc-900">Available Plans</h2>
-          <div className="flex rounded-xl border border-zinc-200 bg-white p-1">
+        <div className="flex items-center justify-between mb-4">
+          <p className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Available Plans</p>
+          <div className="flex" style={{ border: '1px solid var(--border)', background: '#fff' }}>
             {(['monthly', 'yearly'] as BillingCycle[]).map((cycle) => (
               <button
                 key={cycle}
                 onClick={() => setBillingCycle(cycle)}
-                className={`px-4 py-2 text-sm font-medium rounded-lg capitalize transition-colors ${
-                  billingCycle === cycle ? 'bg-zinc-900 text-white' : 'text-zinc-500 hover:text-zinc-900'
-                }`}
+                className="px-4 py-2 text-sm font-medium capitalize transition-colors"
+                style={
+                  billingCycle === cycle
+                    ? { background: 'var(--navy)', color: '#fff' }
+                    : { color: 'var(--text-muted)' }
+                }
               >
                 {cycle}
               </button>
@@ -206,41 +210,40 @@ export default function MerchantSubscriptionPage() {
             return (
               <div
                 key={plan.id}
-                className={`bg-white border-2 rounded-2xl p-6 transition-all ${
-                  isCurrent
-                    ? 'border-blue-800 bg-blue-50'
-                    : isSelected
-                      ? 'border-amber-400'
-                      : 'border-zinc-200 hover:border-zinc-300'
-                } ${isFreeUnavailable ? 'opacity-60' : ''}`}
+                className="bg-white p-6 transition-all"
+                style={{
+                  border: isCurrent ? '2px solid var(--blue)' : isSelected ? '2px solid #F59E0B' : '1px solid var(--border)',
+                  background: isCurrent ? 'var(--bg-subtle)' : '#fff',
+                  opacity: isFreeUnavailable ? 0.6 : 1,
+                }}
               >
                 {isCurrent && (
-                  <div className="flex items-center gap-1 text-xs font-bold text-blue-800 mb-3">
+                  <div className="flex items-center gap-1 font-mono text-[9px] uppercase tracking-widest mb-3" style={{ color: 'var(--blue)' }}>
                     <Check className="w-3 h-3" />
                     Current Plan
                   </div>
                 )}
 
                 <div className="flex items-center gap-2 mb-2">
-                  {plan.price_monthly === 0 && <Store className="w-6 h-6 text-zinc-700" />}
-                  {plan.price_monthly > 0 && plan.quota_per_month <= 500 && <Building className="w-6 h-6 text-blue-700" />}
-                  {plan.quota_per_month > 500 && <Building2 className="w-6 h-6 text-amber-700" />}
-                  <h3 className="text-sm font-bold text-zinc-900">{plan.name}</h3>
+                  {plan.price_monthly === 0 && <Store className="w-5 h-5" style={{ color: 'var(--text-muted)' }} />}
+                  {plan.price_monthly > 0 && plan.quota_per_month <= 500 && <Building className="w-5 h-5" style={{ color: 'var(--blue)' }} />}
+                  {plan.quota_per_month > 500 && <Building2 className="w-5 h-5 text-amber-700" />}
+                  <h3 className="text-sm font-bold" style={{ color: 'var(--navy)' }}>{plan.name}</h3>
                 </div>
-                <p className="text-xs text-zinc-500 mb-4">{plan.description}</p>
+                <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>{plan.description}</p>
 
                 <div className="mb-4">
-                  <span className="text-2xl font-black text-zinc-900">
+                  <span className="text-2xl font-bold" style={{ color: 'var(--navy)' }}>
                     {price === 0 ? 'Free' : `฿${price.toLocaleString()}`}
                   </span>
-                  {price > 0 && <span className="text-sm text-zinc-500 ml-1">/{billingCycle === 'monthly' ? 'mo' : 'yr'}</span>}
-                  <p className="text-xs text-zinc-500 mt-1">{plan.quota_per_month.toLocaleString()} verifications/month</p>
+                  {price > 0 && <span className="text-sm ml-1" style={{ color: 'var(--text-muted)' }}>/{billingCycle === 'monthly' ? 'mo' : 'yr'}</span>}
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{plan.quota_per_month.toLocaleString()} verifications/month</p>
                 </div>
 
                 <ul className="space-y-2 mb-6">
                   {plan.features.map((feature) => (
-                    <li key={feature} className="flex items-start gap-2 text-xs text-zinc-600">
-                      <Check className="w-3 h-3 text-green-600 shrink-0 mt-0.5" />
+                    <li key={feature} className="flex items-start gap-2 text-xs" style={{ color: 'var(--text-muted)' }}>
+                      <Check className="w-3 h-3 shrink-0 mt-0.5 text-emerald-600" />
                       {feature}
                     </li>
                   ))}
@@ -249,25 +252,28 @@ export default function MerchantSubscriptionPage() {
                 {isCurrent ? (
                   <button
                     disabled
-                    className="w-full py-3 bg-blue-800 text-white rounded-xl font-medium opacity-50 cursor-not-allowed"
+                    className="w-full py-3 text-sm font-semibold cursor-not-allowed"
+                    style={{ background: 'var(--blue-pale)', color: 'var(--blue)' }}
                   >
                     Current Plan
                   </button>
                 ) : isFreeUnavailable ? (
                   <button
                     disabled
-                    className="w-full py-3 bg-zinc-200 text-zinc-500 rounded-xl font-medium cursor-not-allowed"
+                    className="w-full py-3 text-sm font-semibold cursor-not-allowed"
+                    style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)' }}
                   >
                     Used Already
                   </button>
                 ) : (
                   <button
                     onClick={() => setSelectedPlanId(plan.id)}
-                    className={`w-full py-3 rounded-xl font-medium transition-all flex items-center justify-center gap-2 ${
+                    className="w-full py-3 text-sm font-semibold transition-all flex items-center justify-center gap-2"
+                    style={
                       isSelected
-                        ? 'bg-amber-700 text-white'
-                        : 'border border-zinc-200 text-zinc-700 hover:border-zinc-900 hover:text-zinc-900'
-                    }`}
+                        ? { background: '#D97706', color: '#fff' }
+                        : { border: '1px solid var(--border)', color: 'var(--navy)' }
+                    }
                   >
                     {isSelected ? 'Selected' : 'Select Plan'}
                     {!isSelected && <ArrowRight className="w-4 h-4" />}
@@ -281,27 +287,29 @@ export default function MerchantSubscriptionPage() {
 
       {/* Upgrade Action */}
       {selectedPlanId && selectedPlanId !== currentPlanId && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-zinc-200 p-4 shadow-lg">
+        <div className="fixed bottom-0 left-0 right-0 bg-white p-4" style={{ borderTop: '1px solid var(--border)' }}>
           <div className="max-w-6xl mx-auto flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-zinc-900">
+              <p className="text-sm font-medium" style={{ color: 'var(--navy)' }}>
                 Continue to checkout
               </p>
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                 {plans.find((plan) => plan.id === selectedPlanId)?.name} · {billingCycle} billing
               </p>
             </div>
             <div className="flex gap-3">
               <button
                 onClick={() => setSelectedPlanId(null)}
-                className="px-6 py-3 border border-zinc-200 text-zinc-700 rounded-xl font-medium hover:bg-zinc-50"
+                className="px-6 py-3 text-sm font-semibold transition-all hover:opacity-90"
+                style={{ border: '1px solid var(--border)', color: 'var(--navy)' }}
               >
                 Cancel
               </button>
               <button
                 onClick={handleUpgrade}
                 disabled={checkoutMutation.isPending}
-                className="px-8 py-3 bg-amber-700 text-white rounded-xl font-medium hover:bg-amber-800 flex items-center gap-2 disabled:opacity-50"
+                className="px-8 py-3 text-sm font-semibold flex items-center gap-2 transition-all hover:opacity-90 disabled:opacity-60"
+                style={{ background: '#D97706', color: '#fff' }}
               >
                 {checkoutMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Checkout'}
               </button>

@@ -6,6 +6,7 @@ import {
   Loader2, AlertCircle, ArrowUpRight, Users,
 } from 'lucide-react';
 import { StatCard } from '@/components/dashboard/StatCard';
+import { RecentSlips } from '@/components/dashboard/RecentSlips';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
 import Link from 'next/link';
@@ -17,28 +18,35 @@ export default function DashboardPage() {
     queryFn: () => api.getQuota(),
   });
 
-  const { data: slipStatsData } = useQuery({
+  const { data: slipStatsData, isLoading: statsLoading } = useQuery({
     queryKey: ['merchant-analytics-dashboard'],
     queryFn: () => api.getMerchantAnalyticsDashboard(),
   });
 
-  const { data: usageData } = useQuery({
+  const { data: usageData, isLoading: usageLoading } = useQuery({
     queryKey: ['merchant-analytics-usage', '7d'],
     queryFn: () => api.getMerchantAnalyticsUsage({ period: '7d' }),
+  });
+
+  const { data: subscriptionData, isLoading: subLoading } = useQuery({
+    queryKey: ['subscription'],
+    queryFn: () => api.getSubscription(),
   });
 
   const stats = slipStatsData?.data;
   const successRate = Math.round(stats?.success_rate ?? 0);
   const dailyUsage = usageData?.data?.usage_per_day ?? [];
   const maxDailyCount = Math.max(1, ...dailyUsage.map((d) => d.verified + d.failed));
-  const verifiedScans = stats?.verified_scans ?? 0;
-  const failedScans = stats?.failed_scans ?? 0;
+  // Sum from the same 7-day usage data as the chart above, not `stats` (which is all-time) —
+  // mixing periods made the Duplicate slice incomparable to Verified/Failed.
+  const recentVerifiedScans = dailyUsage.reduce((sum, d) => sum + d.verified, 0);
+  const recentFailedScans = dailyUsage.reduce((sum, d) => sum + d.failed, 0);
   const duplicateScans = usageData?.data?.failed_scan_reasons
     ?.find((item) => item.reason === 'DUPLICATE_SLIP')?.count ?? 0;
-  const maxResultCount = Math.max(1, verifiedScans, failedScans, duplicateScans);
+  const maxResultCount = Math.max(1, recentVerifiedScans, recentFailedScans, duplicateScans);
   const resultBreakdown = [
-    { label: 'Verified', value: verifiedScans, color: 'var(--blue)' },
-    { label: 'Failed', value: failedScans, color: '#FB7185' },
+    { label: 'Verified', value: recentVerifiedScans, color: 'var(--blue)' },
+    { label: 'Failed', value: recentFailedScans, color: '#FB7185' },
     { label: 'Duplicate', value: duplicateScans, color: '#F59E0B' },
   ];
 
@@ -58,7 +66,7 @@ export default function DashboardPage() {
     }
   };
 
-  if (quotaLoading) {
+  if (quotaLoading || statsLoading || usageLoading || subLoading) {
     return (
       <div className="flex h-[80vh] items-center justify-center">
         <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'var(--blue)' }} />
@@ -66,16 +74,23 @@ export default function DashboardPage() {
     );
   }
 
-  const usedPct = quota?.data ? Math.min((quota.data.used / quota.data.quota_limit) * 100, 100) : 0;
+  const usedPct = quota?.data && quota.data.quota_limit > 0
+    ? Math.min((quota.data.used / quota.data.quota_limit) * 100, 100)
+    : 0;
   const resetDate = quota?.data?.reset_date
     ? new Date(quota.data.reset_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })
     : '—';
+  const planName = subscriptionData?.data?.subscription?.plan?.name || 'Free';
+  const isNearLimit = usedPct >= 80 && !quota?.data?.is_blocked;
+  const peakTime = usageData?.data?.peak_time && usageData.data.peak_time !== 'N/A'
+    ? usageData.data.peak_time
+    : null;
 
   return (
     <div className="p-6 space-y-6" style={{ background: 'var(--bg)' }}>
 
       {/* Header */}
-      <div className="flex items-center justify-between pb-4" style={{ borderBottom: '1px solid var(--border)' }}>
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-4" style={{ borderBottom: '1px solid var(--border)' }}>
         <div>
           <p className="font-mono text-[10px] uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>
             / Overview
@@ -107,11 +122,11 @@ export default function DashboardPage() {
       )}
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <StatCard
           title="Slips Verified"
           value={(stats?.verified_scans ?? 0).toLocaleString()}
-          change="This month"
+          change="All time"
           isPositive={true}
           icon={ScanLine}
         />
@@ -150,10 +165,17 @@ export default function DashboardPage() {
 
         {/* Chart */}
         <div className="lg:col-span-8 bg-white" style={{ border: '1px solid var(--border)' }}>
-          <div className="px-6 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border)' }}>
-            <p className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-              Usage — Last 7 Days
-            </p>
+          <div className="px-6 py-3 flex flex-wrap items-center justify-between gap-2" style={{ borderBottom: '1px solid var(--border)' }}>
+            <div className="flex items-center gap-3">
+              <p className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+                Usage — Last 7 Days
+              </p>
+              {peakTime && (
+                <span className="font-mono text-[9px] uppercase tracking-widest px-2 py-0.5" style={{ color: 'var(--blue)', background: 'var(--blue-pale)' }}>
+                  Peak {peakTime}
+                </span>
+              )}
+            </div>
             <div className="flex items-center gap-4 font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 inline-block" style={{ background: 'var(--blue)' }} />
@@ -168,24 +190,20 @@ export default function DashboardPage() {
           <div className="p-6">
             <div className="h-48 flex items-end gap-2">
               {dailyUsage.length > 0 ? dailyUsage.map((data, i) => {
-                const successH = (data.verified / maxDailyCount) * 100;
-                const failH = (data.failed / maxDailyCount) * 100;
+                const chartPxHeight = 150;
+                const successPx = (data.verified / maxDailyCount) * chartPxHeight;
+                const failPx = (data.failed / maxDailyCount) * chartPxHeight;
                 const total = data.verified + data.failed;
                 return (
                   <div key={i} className="group relative flex flex-1 flex-col items-center gap-2">
                     <div className="w-full">
                       <div
-                        className="w-full transition-colors"
-                        style={{
-                          height: `${Math.max(successH, 4)}px`,
-                          background: 'var(--blue-pale)',
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--blue)')}
-                        onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--blue-pale)')}
+                        className="w-full transition-colors bg-[var(--blue-pale)] group-hover:bg-[var(--blue)]"
+                        style={{ height: `${Math.max(successPx, 4)}px` }}
                       />
-                      {failH > 0 && (
+                      {data.failed > 0 && (
                         <div className="w-full bg-rose-100 group-hover:bg-rose-400 transition-colors"
-                          style={{ height: `${Math.max(failH, 2)}px` }} />
+                          style={{ height: `${Math.max(failPx, 2)}px` }} />
                       )}
                     </div>
                     <div className="pointer-events-none absolute bottom-8 left-1/2 z-10 hidden min-w-28 -translate-x-1/2 border border-zinc-200 bg-white px-3 py-2 text-left shadow-lg group-hover:block">
@@ -224,8 +242,13 @@ export default function DashboardPage() {
           {/* Verification results */}
           <div className="bg-white p-6" style={{ border: '1px solid var(--border)' }}>
             <p className="font-mono text-[10px] uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>
-              Verification Results
+              Verification Results — Last 7 Days
             </p>
+            {recentVerifiedScans + recentFailedScans + duplicateScans === 0 ? (
+              <p className="font-mono text-[10px] uppercase tracking-widest py-4 text-center" style={{ color: 'var(--border-strong)' }}>
+                No data yet
+              </p>
+            ) : (
             <div className="space-y-4">
               {resultBreakdown.map((item) => (
                 <div key={item.label}>
@@ -247,19 +270,28 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
+            )}
           </div>
 
           {/* Plan usage */}
           <div className="bg-white p-6" style={{ border: '1px solid var(--border)' }}>
-            <p className="font-mono text-[10px] uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>
-              Plan Usage
-            </p>
+            <div className="flex items-center justify-between mb-4">
+              <p className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+                Plan Usage
+              </p>
+              <span
+                className="font-mono text-[9px] uppercase tracking-widest px-2 py-0.5"
+                style={{ color: 'var(--navy)', background: 'var(--bg-subtle)', border: '1px solid var(--border)' }}
+              >
+                {planName}
+              </span>
+            </div>
             <div className="mb-4">
               <div className="flex justify-between font-mono text-[10px] uppercase tracking-widest mb-2"
                 style={{ color: 'var(--text-muted)' }}>
                 <span>API Credits</span>
                 <span style={{ color: 'var(--navy)' }}>
-                  {quota?.data ? `${quota.data.used} / ${quota.data.quota_limit}` : '—'}
+                  {quota?.data ? `${quota.data.used.toLocaleString()} / ${quota.data.quota_limit.toLocaleString()}` : '—'}
                 </span>
               </div>
               <div className="h-1.5 w-full" style={{ background: 'var(--border)' }}>
@@ -267,22 +299,37 @@ export default function DashboardPage() {
                   className="h-full transition-all"
                   style={{
                     width: `${usedPct}%`,
-                    background: usedPct > 80 ? '#EF4444' : 'var(--blue)',
+                    background: quota?.data?.is_blocked ? '#EF4444' : isNearLimit ? '#F59E0B' : 'var(--blue)',
                   }}
                 />
+              </div>
+              <div className="flex justify-between font-mono text-[9px] uppercase tracking-widest mt-2" style={{ color: 'var(--text-muted)' }}>
+                <span>
+                  {quota?.data?.is_blocked
+                    ? 'Quota exhausted'
+                    : isNearLimit
+                      ? `${Math.round(usedPct)}% used — nearing limit`
+                      : `${(quota?.data?.remaining ?? 0).toLocaleString()} remaining`}
+                </span>
+                <span>Resets {resetDate}</span>
               </div>
             </div>
             <Link
               href="/dashboard/subscription"
               className="block w-full py-2.5 text-xs font-semibold text-center transition-all hover:opacity-90"
-              style={{ background: 'var(--navy)', color: '#fff' }}
+              style={{
+                background: quota?.data?.is_blocked ? '#EF4444' : 'var(--navy)',
+                color: '#fff',
+              }}
             >
-              Upgrade Plan
+              {quota?.data?.is_blocked ? 'Upgrade Now' : 'Upgrade Plan'}
             </Link>
           </div>
 
         </div>
       </div>
+
+      <RecentSlips />
     </div>
   );
 }

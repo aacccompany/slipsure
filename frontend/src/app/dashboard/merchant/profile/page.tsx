@@ -18,6 +18,9 @@ import { api } from '@/lib/api-client';
 import { toast } from 'sonner';
 import type { MerchantProfile } from '@/types/api';
 
+const inputClass = 'w-full px-4 py-3 text-sm transition-all focus:outline-none';
+const inputStyle = { border: '1px solid var(--border)', color: 'var(--navy)', background: '#fff' };
+
 export default function MerchantProfileDetailPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -98,21 +101,21 @@ export default function MerchantProfileDetailPage() {
   if (isLoading) {
     return (
       <div className="flex h-[80vh] items-center justify-center">
-        <Loader2 className="w-10 h-10 text-blue-800 animate-spin" />
+        <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'var(--blue)' }} />
       </div>
     );
   }
 
   const profile = merchantData?.data?.profile;
-  const initials = profile?.shop_name?.slice(0, 2).toUpperCase() || ' Shop';
+  const initials = profile?.shop_name?.slice(0, 2).toUpperCase() || 'SH';
 
   return (
-    <div className="p-8 space-y-8 max-w-4xl">
-      {/* Back Button */}
-      <div className="mb-8">
+    <div className="p-6 md:p-8 space-y-6 max-w-4xl" style={{ background: 'var(--bg)' }}>
+      <div>
         <Link
           href="/dashboard/merchant"
-          className="flex items-center gap-2 text-sm font-medium text-zinc-600 hover:text-zinc-900 transition-colors"
+          className="inline-flex items-center gap-2 text-sm font-medium transition-colors"
+          style={{ color: 'var(--text-muted)' }}
         >
           <ChevronLeft className="w-4 h-4" />
           Back to Merchant
@@ -120,142 +123,163 @@ export default function MerchantProfileDetailPage() {
       </div>
 
       <div>
-        <h1 className="text-3xl font-black text-zinc-900 tracking-tight mb-2">Shop Profile</h1>
-        <p className="text-sm font-medium text-zinc-500">จัดการข้อมูลร้านค้าและข้อมูลติดต่อ</p>
+        <p className="font-mono text-[10px] uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>
+          / Merchant / Shop Profile
+        </p>
+        <h1 className="font-bold tracking-tight" style={{ fontSize: '1.4rem', color: 'var(--navy)', letterSpacing: '-0.02em' }}>
+          Shop Profile
+        </h1>
+        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>จัดการข้อมูลร้านค้าและข้อมูลติดต่อ</p>
       </div>
 
-      <div className="space-y-8">
-        {/* Shop Logo & Basic Info */}
-        <section className="bg-white border border-zinc-200 rounded-2xl p-8">
-          <h3 className="text-sm font-bold text-zinc-900 mb-6 uppercase tracking-widest flex items-center gap-2">
-            <Store className="w-4 h-4 text-blue-700" />
-            Shop Information
-          </h3>
+      <section className="bg-white p-8" style={{ border: '1px solid var(--border)' }}>
+        <p className="font-mono text-[10px] uppercase tracking-widest mb-6 flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>
+          <Store className="w-3.5 h-3.5" /> Shop Information
+        </p>
 
-          <div className="mb-8">
-            <div className="flex items-center gap-6 mb-6">
-              <div className="relative group">
-                {profile?.logo_url ? (
-                  <img
-                    src={profile.logo_url}
-                    alt="Shop logo"
-                    className="w-24 h-24 rounded-3xl object-cover border-4 border-white shadow-lg"
-                  />
-                ) : (
-                  <div className="w-24 h-24 rounded-3xl bg-blue-50 flex items-center justify-center text-blue-900 text-2xl font-black border-4 border-white shadow-lg uppercase">
-                    {initials}
-                  </div>
-                )}
-              </div>
-              <div className="flex-1">
-                <h4 className="text-lg font-bold text-zinc-900 mb-1">{profile?.shop_name || 'Your Shop Name'}</h4>
-                <p className="text-sm text-zinc-500">Upload your shop logo to build brand recognition</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <input
-                type="file"
-                id="logo-upload"
-                className="hidden"
-                accept="image/*"
-                onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
+        <div className="mb-8">
+          <div className="flex items-center gap-6 mb-6">
+            {profile?.logo_url ? (
+              <img
+                src={profile.logo_url}
+                alt="Shop logo"
+                className="w-20 h-20 object-cover"
+                style={{ border: '1px solid var(--border)' }}
               />
-              <label
-                htmlFor="logo-upload"
-                className="flex-1 py-3 border-2 border-dashed border-zinc-200 rounded-xl text-sm font-medium text-zinc-600 hover:border-blue-400 hover:text-blue-700 transition-all text-center cursor-pointer"
+            ) : (
+              <div
+                className="w-20 h-20 flex items-center justify-center text-white text-xl font-bold uppercase"
+                style={{ background: 'var(--navy)' }}
               >
-                {logoFile ? logoFile.name : 'Choose new logo'}
-              </label>
-              {logoFile && (
-                <button
-                  onClick={handleLogoUpload}
-                  disabled={isUploadingLogo}
-                  className="px-6 py-3 bg-blue-800 text-white rounded-xl font-medium hover:bg-blue-900 flex items-center gap-2 disabled:opacity-50"
-                >
-                  {isUploadingLogo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                  Upload
-                </button>
-              )}
+                {initials}
+              </div>
+            )}
+            <div>
+              <h4 className="font-bold text-lg mb-0.5" style={{ color: 'var(--navy)' }}>{profile?.shop_name || 'Your Shop Name'}</h4>
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Upload your shop logo to build brand recognition</p>
             </div>
           </div>
 
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest px-1">Shop Name</label>
+          <div className="flex items-center gap-3">
+            <input
+              type="file"
+              id="logo-upload"
+              className="hidden"
+              accept="image/*"
+              onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
+            />
+            <label
+              htmlFor="logo-upload"
+              className="flex-1 py-3 text-sm font-medium text-center cursor-pointer transition-colors"
+              style={{ border: '1px dashed var(--border-strong)', color: 'var(--text-muted)' }}
+            >
+              {logoFile ? logoFile.name : 'Choose new logo'}
+            </label>
+            {logoFile && (
+              <button
+                onClick={handleLogoUpload}
+                disabled={isUploadingLogo}
+                className="px-6 py-3 text-sm font-semibold flex items-center gap-2 transition-all hover:opacity-90 disabled:opacity-60"
+                style={{ background: 'var(--navy)', color: '#fff' }}
+              >
+                {isUploadingLogo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                Upload
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <div>
+            <label className="block font-mono text-[9px] uppercase tracking-widest mb-1.5" style={{ color: 'var(--text-muted)' }}>Shop Name</label>
+            <input
+              type="text"
+              value={profileData.shop_name || ''}
+              onChange={(e) => setProfileData({ ...profileData, shop_name: e.target.value })}
+              className={inputClass}
+              style={inputStyle}
+              placeholder="Enter your shop name"
+              onFocus={(e) => (e.target.style.borderColor = 'var(--blue)')}
+              onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
+            />
+          </div>
+
+          <div>
+            <label className="block font-mono text-[9px] uppercase tracking-widest mb-1.5" style={{ color: 'var(--text-muted)' }}>Address</label>
+            <div className="relative">
+              <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-muted)' }} />
               <input
                 type="text"
-                value={profileData.shop_name || ''}
-                onChange={(e) => setProfileData({ ...profileData, shop_name: e.target.value })}
-                className="w-full px-4 py-3.5 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm font-bold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-700/20 transition-all"
-                placeholder="Enter your shop name"
+                value={profileData.address || ''}
+                onChange={(e) => setProfileData({ ...profileData, address: e.target.value })}
+                className={inputClass}
+                style={{ ...inputStyle, paddingLeft: '2.75rem' }}
+                placeholder="Enter your shop address"
+                onFocus={(e) => (e.target.style.borderColor = 'var(--blue)')}
+                onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
               />
             </div>
+          </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest px-1">Address</label>
+          <div className="grid md:grid-cols-2 gap-6">
+            <div>
+              <label className="block font-mono text-[9px] uppercase tracking-widest mb-1.5" style={{ color: 'var(--text-muted)' }}>Contact Email</label>
               <div className="relative">
-                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-muted)' }} />
                 <input
-                  type="text"
-                  value={profileData.address || ''}
-                  onChange={(e) => setProfileData({ ...profileData, address: e.target.value })}
-                  className="w-full pl-12 pr-4 py-3.5 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm font-bold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-700/20 transition-all"
-                  placeholder="Enter your shop address"
+                  type="email"
+                  value={profileData.contact_email || ''}
+                  onChange={(e) => setProfileData({ ...profileData, contact_email: e.target.value })}
+                  className={inputClass}
+                  style={{ ...inputStyle, paddingLeft: '2.75rem' }}
+                  placeholder="Enter contact email"
+                  onFocus={(e) => (e.target.style.borderColor = 'var(--blue)')}
+                  onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
                 />
               </div>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-8">
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest px-1">Contact Email</label>
-                <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-                  <input
-                    type="email"
-                    value={profileData.contact_email || ''}
-                    onChange={(e) => setProfileData({ ...profileData, contact_email: e.target.value })}
-                    className="w-full pl-12 pr-4 py-3.5 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm font-bold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-700/20 transition-all"
-                    placeholder="Enter contact email"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest px-1">Contact Phone</label>
-                <div className="relative">
-                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-                  <input
-                    type="tel"
-                    value={profileData.contact_phone || ''}
-                    onChange={(e) => setProfileData({ ...profileData, contact_phone: e.target.value })}
-                    className="w-full pl-12 pr-4 py-3.5 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm font-bold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-700/20 transition-all"
-                    placeholder="Enter contact phone"
-                  />
-                </div>
+            <div>
+              <label className="block font-mono text-[9px] uppercase tracking-widest mb-1.5" style={{ color: 'var(--text-muted)' }}>Contact Phone</label>
+              <div className="relative">
+                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-muted)' }} />
+                <input
+                  type="tel"
+                  value={profileData.contact_phone || ''}
+                  onChange={(e) => setProfileData({ ...profileData, contact_phone: e.target.value })}
+                  className={inputClass}
+                  style={{ ...inputStyle, paddingLeft: '2.75rem' }}
+                  placeholder="Enter contact phone"
+                  onFocus={(e) => (e.target.style.borderColor = 'var(--blue)')}
+                  onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
+                />
               </div>
             </div>
           </div>
-        </section>
+        </div>
 
-        {/* Save Button */}
-        <div className="flex items-center justify-end gap-4">
+        <div
+          className="flex items-center justify-end gap-3 pt-6 mt-6"
+          style={{ borderTop: '1px solid var(--border)' }}
+        >
           <button
             onClick={() => router.push('/dashboard/merchant')}
-            className="px-6 py-4 border border-zinc-200 text-zinc-700 rounded-2xl font-bold text-sm hover:bg-zinc-50 transition-all"
+            className="px-6 py-3 text-sm font-semibold transition-all hover:opacity-90"
+            style={{ border: '1px solid var(--border)', color: 'var(--navy)' }}
           >
             Cancel
           </button>
           <button
             onClick={handleSaveProfile}
             disabled={updateProfileMutation.isPending}
-            className="bg-zinc-900 text-white px-10 py-4 rounded-2xl font-bold text-sm hover:bg-black transition-all shadow-xl flex items-center gap-2 disabled:opacity-50"
+            className="flex items-center gap-2 px-8 py-3 text-sm font-semibold transition-all hover:opacity-90 disabled:opacity-60"
+            style={{ background: 'var(--navy)', color: '#fff' }}
           >
             {updateProfileMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Save Changes
           </button>
         </div>
-      </div>
+      </section>
     </div>
   );
 }
