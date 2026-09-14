@@ -1,11 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { LayoutDashboard, Store, User, LogOut, ReceiptText } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
+import { ConfirmModal } from '@/components/ConfirmModal';
 
 const menuItems = [
   { name: 'Overview',  href: '/dashboard',          icon: LayoutDashboard, exact: true },
@@ -22,17 +23,17 @@ interface DashboardSidebarProps {
 export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => {
   const pathname = usePathname();
   const { logout } = useAuth();
+  const [confirmingLogout, setConfirmingLogout] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
-    if (!window.confirm('Are you sure you want to log out?')) {
-      return;
-    }
-
+    setIsLoggingOut(true);
     localStorage.removeItem('isLoggedIn');
     await logout();
   };
 
   return (
+    <>
     <aside
       className={[
         'w-56 flex flex-col h-screen',
@@ -84,7 +85,7 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
       {/* Logout */}
       <div className="px-3 py-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
         <button
-          onClick={handleLogout}
+          onClick={() => setConfirmingLogout(true)}
           className="flex items-center gap-3 px-3 py-2.5 w-full text-sm font-medium transition-all"
           style={{ color: 'rgba(255,255,255,0.35)', borderLeft: '2px solid transparent' }}
           onMouseEnter={(e) => {
@@ -99,5 +100,17 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
         </button>
       </div>
     </aside>
+
+    <ConfirmModal
+      open={confirmingLogout}
+      title="Log out?"
+      message="You'll need to sign in again to access your dashboard."
+      confirmLabel="Log Out"
+      isLoading={isLoggingOut}
+      destructive
+      onConfirm={handleLogout}
+      onCancel={() => setConfirmingLogout(false)}
+    />
+    </>
   );
 };

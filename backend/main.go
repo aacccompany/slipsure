@@ -130,7 +130,7 @@ func main() {
 	transactionHandler := handlers.NewTransactionHandler(transactionRepo, slipRepo, merchantRepo)
 
 	// Initialize services with dependency injection
-	authService := services.NewAuthServiceWithOTP(userRepo, merchantRepo, otpService, lineOAuth)
+	authService := services.NewAuthServiceWithOTP(userRepo, merchantRepo, merchantService, otpService, lineOAuth)
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(authService)

@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
+import { ConfirmModal } from '@/components/ConfirmModal';
 
 export type AdminMenuItem = {
   name: string;
@@ -53,11 +54,10 @@ export function AdminShell({
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [confirmingLogout, setConfirmingLogout] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const handleLogout = async () => {
-    if (!window.confirm('Are you sure you want to log out?')) {
-      return;
-    }
-
+    setIsLoggingOut(true);
     await logout();
   };
 
@@ -115,7 +115,7 @@ export function AdminShell({
 
         <div className="px-3 py-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
           <button
-            onClick={handleLogout}
+            onClick={() => setConfirmingLogout(true)}
             className="flex w-full items-center gap-3 px-3 py-2.5 text-sm font-medium transition-all"
             style={{ color: 'rgba(255,255,255,0.35)', borderLeft: '2px solid transparent' }}
             onMouseEnter={(e) => {
@@ -130,6 +130,17 @@ export function AdminShell({
           </button>
         </div>
       </aside>
+
+      <ConfirmModal
+        open={confirmingLogout}
+        title="Log out?"
+        message="You'll need to sign in again to access the backoffice."
+        confirmLabel="Log Out"
+        isLoading={isLoggingOut}
+        destructive
+        onConfirm={handleLogout}
+        onCancel={() => setConfirmingLogout(false)}
+      />
 
       {sidebarOpen && (
         <div

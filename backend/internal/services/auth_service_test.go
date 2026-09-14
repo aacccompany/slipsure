@@ -117,7 +117,7 @@ func TestResetPasswordUpdatesPasswordHash(t *testing.T) {
 			Role:         models.RoleMerchant,
 		},
 	}
-	authService := NewAuthServiceWithOTP(userRepo, nil, fakeOTPService{valid: true}, nil)
+	authService := NewAuthServiceWithOTP(userRepo, nil, nil, fakeOTPService{valid: true}, nil)
 
 	err = authService.ResetPassword(&models.ResetPasswordRequest{
 		Email:       "unik@example.com",
@@ -155,7 +155,7 @@ func TestLoginAllowsUnverifiedEmail(t *testing.T) {
 			EmailVerified: false,
 		},
 	}
-	authService := NewAuthServiceWithOTP(userRepo, nil, fakeOTPService{valid: true}, nil)
+	authService := NewAuthServiceWithOTP(userRepo, nil, nil, fakeOTPService{valid: true}, nil)
 
 	response, err := authService.Login(&models.LoginRequest{
 		Email:    "unik@example.com",
