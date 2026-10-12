@@ -18,6 +18,9 @@ import { api } from '@/lib/api-client';
 import { toast } from 'sonner';
 import type { MerchantProfile } from '@/types/api';
 
+const inputClass = 'w-full px-4 py-3 text-sm transition-all focus:outline-none';
+const inputStyle = { border: '1px solid var(--border)', color: 'var(--navy)', background: '#fff' };
+
 export default function MerchantProfileDetailPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -114,7 +117,7 @@ export default function MerchantProfileDetailPage() {
   if (isLoading) {
     return (
       <div className="flex h-[80vh] items-center justify-center">
-        <Loader2 className="w-10 h-10 text-blue-800 animate-spin" />
+        <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'var(--blue)' }} />
       </div>
     );
   }

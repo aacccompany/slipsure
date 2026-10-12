@@ -29,10 +29,11 @@ type AuthService interface {
 
 // authService implements AuthService interface
 type authService struct {
-	userRepo     repositories.UserRepository
-	merchantRepo repositories.MerchantRepository
-	otpService   OTPService
-	lineOAuth    *LineOAuthService
+	userRepo        repositories.UserRepository
+	merchantRepo    repositories.MerchantRepository
+	merchantService *MerchantService
+	otpService      OTPService
+	lineOAuth       *LineOAuthService
 }
 
 // NewAuthService creates a new auth service instance with Redis OTP
@@ -42,12 +43,27 @@ func NewAuthService(userRepo repositories.UserRepository) AuthService {
 }
 
 // NewAuthServiceWithOTP creates a new auth service instance with custom OTP and LINE OAuth services
-func NewAuthServiceWithOTP(userRepo repositories.UserRepository, merchantRepo repositories.MerchantRepository, otpService OTPService, lineOAuth *LineOAuthService) AuthService {
+func NewAuthServiceWithOTP(userRepo repositories.UserRepository, merchantRepo repositories.MerchantRepository, merchantService *MerchantService, otpService OTPService, lineOAuth *LineOAuthService) AuthService {
 	return &authService{
-		userRepo:     userRepo,
-		merchantRepo: merchantRepo,
-		otpService:   otpService,
-		lineOAuth:    lineOAuth,
+		userRepo:        userRepo,
+		merchantRepo:    merchantRepo,
+		merchantService: merchantService,
+		otpService:      otpService,
+		lineOAuth:       lineOAuth,
+	}
+}
+
+// ensureMerchantProfile gives a newly created user account a default merchant
+// profile ("My Shop") so /quota, /subscription, /transactions etc. work
+// immediately, without forcing the user through the onboarding wizard first.
+// Non-fatal on failure: the user account was already created, and the
+// merchant/profile page still creates one lazily if this is ever missed.
+func (s *authService) ensureMerchantProfile(userID uuid.UUID) {
+	if _, err := s.merchantService.CreateProfile(userID, &models.CreateMerchantProfileRequest{
+		ShopName:   "My Shop",
+		StrictMode: true,
+	}); err != nil {
+		log.Printf("Warning: failed to create default merchant profile for user %s: %v", userID, err)
 	}
 }
 
@@ -94,6 +110,8 @@ func (s *authService) Register(req *models.RegisterRequest) (*models.RegisterRes
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
 	log.Printf("User created successfully with ID: %s", user.ID)
+
+	s.ensureMerchantProfile(user.ID)
 
 	// Generate and store OTP
 	log.Printf("Generating OTP for user %s", user.ID)
@@ -210,6 +228,8 @@ func (s *authService) LineLogin(req *models.LineLoginRequest) (*models.LineLogin
 			log.Printf("Error creating LINE user: %v", err)
 			return nil, errors.New("failed to create user account")
 		}
+
+		s.ensureMerchantProfile(user.ID)
 
 		log.Printf("New user created via LINE login: %s (LINE ID: %s)", user.ID, profile.UserID)
 	} else {

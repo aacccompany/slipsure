@@ -17,8 +17,8 @@ export default function AccountPage() {
   const [isConnectingLine, setIsConnectingLine] = useState(false);
   const [profileData, setProfileData] = useState({ name: '', phone: '' });
 
-  const { data: subscriptionData } = useQuery({ queryKey: ['subscription'], queryFn: () => api.getSubscription() });
-  const { data: quotaData } = useQuery({ queryKey: ['quota'], queryFn: () => api.getQuota() });
+  const { data: subscriptionData, isLoading: subscriptionLoading } = useQuery({ queryKey: ['subscription'], queryFn: () => api.getSubscription() });
+  const { data: quotaData, isLoading: quotaLoading } = useQuery({ queryKey: ['quota'], queryFn: () => api.getQuota() });
 
   useEffect(() => {
     if (user) setProfileData({ name: user.name || '', phone: user.phone || '' });
@@ -47,7 +47,7 @@ export default function AccountPage() {
   const subscription = subscriptionData?.data?.subscription;
   const quota = quotaData?.data;
 
-  if (!user) {
+  if (!user || subscriptionLoading || quotaLoading) {
     return (
       <div className="flex h-[80vh] items-center justify-center">
         <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'var(--blue)' }} />

@@ -22,7 +22,7 @@ type MerchantRepository interface {
 	UpdateLogo(merchantID uuid.UUID, logoURL string) error
 	HasUsedFreePlan(merchantID uuid.UUID) (bool, error)
 	MarkFreePlanUsed(merchantID uuid.UUID) error
-	ListAdminMerchants(status string, search string, limit int, offset int) ([]models.AdminMerchantListItem, int, error)
+	ListAdminMerchants(status string, search string, startDate *time.Time, endDate *time.Time, limit int, offset int) ([]models.AdminMerchantListItem, int, error)
 
 	// Subscription operations
 	CreateSubscription(subscription *models.Subscription) error
@@ -30,7 +30,7 @@ type MerchantRepository interface {
 	UpdateSubscription(subscription *models.Subscription) error
 	CancelSubscription(merchantID uuid.UUID, reason string) error
 	CreatePaymentLog(payment *models.PaymentLog) error
-	ListPaymentLogs(status string, limit, offset int) ([]models.PaymentLog, int, error)
+	ListPaymentLogs(status string, startDate *time.Time, endDate *time.Time, limit, offset int) ([]models.PaymentLog, int, error)
 	ListPaymentLogsByMerchant(merchantID uuid.UUID, limit int) ([]models.PaymentLog, error)
 	GetAdminMerchantUsage(merchantID uuid.UUID, periodStart time.Time, quota int, remaining int, resetDate time.Time) (models.AdminMerchantUsage, error)
 	GetAdminMerchantBillingSummary(merchantID uuid.UUID) (models.AdminMerchantBillingSummary, error)
@@ -74,8 +74,8 @@ func NewMerchantRepository(db *sql.DB) MerchantRepository {
 }
 
 // ListAdminMerchants retrieves merchant summaries for backoffice.
-func (r *merchantRepository) ListAdminMerchants(status string, search string, limit int, offset int) ([]models.AdminMerchantListItem, int, error) {
-	where, args := buildAdminMerchantWhere(status, search)
+func (r *merchantRepository) ListAdminMerchants(status string, search string, startDate *time.Time, endDate *time.Time, limit int, offset int) ([]models.AdminMerchantListItem, int, error) {
+	where, args := buildAdminMerchantWhere(status, search, startDate, endDate)
 
 	countQuery := fmt.Sprintf(`
 		SELECT COUNT(*)
@@ -150,7 +150,7 @@ func (r *merchantRepository) ListAdminMerchants(status string, search string, li
 	return merchants, total, nil
 }
 
-func buildAdminMerchantWhere(status string, search string) (string, []interface{}) {
+func buildAdminMerchantWhere(status string, search string, startDate *time.Time, endDate *time.Time) (string, []interface{}) {
 	conditions := make([]string, 0)
 	args := make([]interface{}, 0)
 
@@ -170,6 +170,16 @@ func buildAdminMerchantWhere(status string, search string) (string, []interface{
 	case "trial", "suspended", "cancelled", "expired", "pending":
 		args = append(args, status)
 		conditions = append(conditions, fmt.Sprintf("s.status = $%d", len(args)))
+	}
+
+	if startDate != nil {
+		args = append(args, *startDate)
+		conditions = append(conditions, fmt.Sprintf("m.created_at >= $%d", len(args)))
+	}
+
+	if endDate != nil {
+		args = append(args, endDate.AddDate(0, 0, 1))
+		conditions = append(conditions, fmt.Sprintf("m.created_at < $%d", len(args)))
 	}
 
 	if len(conditions) == 0 {
@@ -464,12 +474,24 @@ func (r *merchantRepository) CreatePaymentLog(payment *models.PaymentLog) error 
 }
 
 // ListPaymentLogs retrieves paginated payment history for admins.
-func (r *merchantRepository) ListPaymentLogs(status string, limit, offset int) ([]models.PaymentLog, int, error) {
-	where := ""
+func (r *merchantRepository) ListPaymentLogs(status string, startDate *time.Time, endDate *time.Time, limit, offset int) ([]models.PaymentLog, int, error) {
+	conditions := []string{}
 	args := []interface{}{}
 	if status != "" {
-		where = "WHERE p.status = $1"
 		args = append(args, status)
+		conditions = append(conditions, fmt.Sprintf("p.status = $%d", len(args)))
+	}
+	if startDate != nil {
+		args = append(args, *startDate)
+		conditions = append(conditions, fmt.Sprintf("p.created_at >= $%d", len(args)))
+	}
+	if endDate != nil {
+		args = append(args, endDate.AddDate(0, 0, 1))
+		conditions = append(conditions, fmt.Sprintf("p.created_at < $%d", len(args)))
+	}
+	where := ""
+	if len(conditions) > 0 {
+		where = "WHERE " + strings.Join(conditions, " AND ")
 	}
 
 	countQuery := "SELECT COUNT(*) FROM payment_logs p " + where

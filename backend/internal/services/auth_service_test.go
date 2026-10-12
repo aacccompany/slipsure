@@ -82,7 +82,7 @@ func (r *fakeUserRepository) FindByMerchantID(merchantID uuid.UUID) ([]*models.U
 	return nil, nil
 }
 
-func (r *fakeUserRepository) ListAdminUsers(search string, role string, limit int, offset int) ([]models.AdminUserListItem, int, error) {
+func (r *fakeUserRepository) ListAdminUsers(search string, role string, startDate *time.Time, endDate *time.Time, limit int, offset int) ([]models.AdminUserListItem, int, error) {
 	return nil, 0, nil
 }
 
@@ -117,7 +117,7 @@ func TestResetPasswordUpdatesPasswordHash(t *testing.T) {
 			Role:         models.RoleMerchant,
 		},
 	}
-	authService := NewAuthServiceWithOTP(userRepo, nil, fakeOTPService{valid: true}, nil)
+	authService := NewAuthServiceWithOTP(userRepo, nil, nil, fakeOTPService{valid: true}, nil)
 
 	err = authService.ResetPassword(&models.ResetPasswordRequest{
 		Email:       "unik@example.com",
@@ -155,7 +155,7 @@ func TestLoginAllowsUnverifiedEmail(t *testing.T) {
 			EmailVerified: false,
 		},
 	}
-	authService := NewAuthServiceWithOTP(userRepo, nil, fakeOTPService{valid: true}, nil)
+	authService := NewAuthServiceWithOTP(userRepo, nil, nil, fakeOTPService{valid: true}, nil)
 
 	response, err := authService.Login(&models.LoginRequest{
 		Email:    "unik@example.com",

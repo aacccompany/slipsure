@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ChevronLeft, Plus, Trash2, Loader2, Copy, MessageSquare, Key, Clock, CheckCircle } from 'lucide-react';
+import { ChevronLeft, Plus, Trash2, Loader2, Copy, MessageSquare, Key, Clock, CheckCircle, X } from 'lucide-react';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
@@ -11,6 +11,7 @@ export default function MerchantLinePage() {
   const queryClient = useQueryClient();
   const [isConfiguring, setIsConfiguring] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [configForm, setConfigForm] = useState({
     line_channel_id: '',
     line_channel_secret: '',
@@ -41,10 +42,12 @@ export default function MerchantLinePage() {
     mutationFn: () => api.deleteLINEWebhookConfig(),
     onSuccess: () => {
       toast.success('LINE webhook configuration deleted');
+      setIsDeleting(false);
       queryClient.invalidateQueries({ queryKey: ['line-webhook-config'] });
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : 'Failed to delete webhook config');
+      setIsDeleting(false);
     },
   });
 
@@ -54,12 +57,6 @@ export default function MerchantLinePage() {
       return;
     }
     configMutation.mutate(configForm);
-  };
-
-  const handleDelete = () => {
-    if (confirm('Are you sure you want to delete LINE webhook configuration?')) {
-      deleteMutation.mutate();
-    }
   };
 
   const copyToClipboard = (text: string) => {

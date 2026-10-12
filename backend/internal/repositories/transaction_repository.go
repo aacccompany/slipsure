@@ -8,8 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"slipsure-backend/internal/models"
+
+	"github.com/google/uuid"
 )
 
 // ErrDuplicateReferenceNo is returned when a transaction reference already exists.
@@ -173,7 +174,7 @@ func (r *transactionRepository) ListByMerchant(merchantID uuid.UUID, filters mod
 		%s
 		ORDER BY created_at DESC
 		LIMIT $%d OFFSET $%d
-	`, where, len(args)-1, len(args))
+	`, transactionColumns, where, len(args)-1, len(args))
 
 	rows, err := r.db.Query(query, args...)
 	if err != nil {

@@ -8,6 +8,7 @@ import {
   X,
 } from 'lucide-react';
 import { StatCard } from '@/components/dashboard/StatCard';
+import { RecentSlips } from '@/components/dashboard/RecentSlips';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
 import Link from 'next/link';
@@ -87,7 +88,7 @@ export default function DashboardPage() {
     queryFn: () => api.getQuota(),
   });
 
-  const { data: slipStatsData } = useQuery({
+  const { data: slipStatsData, isLoading: statsLoading } = useQuery({
     queryKey: ['merchant-analytics-dashboard'],
     queryFn: () => api.getMerchantAnalyticsDashboard(),
   });
@@ -109,6 +110,11 @@ export default function DashboardPage() {
   } = useQuery({
     queryKey: ['dashboard-transactions', appliedTransactionFilters],
     queryFn: () => api.getTransactions({ page: 1, limit: 5, ...transactionQueryParams(appliedTransactionFilters) }),
+  });
+
+  const { data: subscriptionData, isLoading: subLoading } = useQuery({
+    queryKey: ['subscription'],
+    queryFn: () => api.getSubscription(),
   });
 
   const stats = slipStatsData?.data;
@@ -266,7 +272,7 @@ export default function DashboardPage() {
     }
   };
 
-  if (quotaLoading) {
+  if (quotaLoading || statsLoading || usageLoading || subLoading) {
     return (
       <div className="flex h-[80vh] items-center justify-center">
         <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'var(--blue)' }} />
@@ -314,7 +320,7 @@ export default function DashboardPage() {
         <StatCard
           title="Slips Verified"
           value={(stats?.verified_scans ?? 0).toLocaleString()}
-          change="This month"
+          change="All time"
           isPositive={true}
           icon={ScanLine}
         />
@@ -693,6 +699,7 @@ export default function DashboardPage() {
                 <ArrowUpRight className="h-3.5 w-3.5" />
               </Link>
             </div>
+            )}
           </div>
 
           <form

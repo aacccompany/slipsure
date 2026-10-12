@@ -287,7 +287,16 @@ export default function SlipsPage() {
   const pagination = listData?.data?.pagination;
   const totalPages = Math.max(1, pagination?.total_pages ?? 1);
 
+  const clearFilters = () => {
+    setStatus('');
+    setStartDate('');
+    setEndDate('');
+    setSearch('');
+    setPage(1);
+  };
+
   const downloadTransactions = async () => {
+    setIsExporting(true);
     try {
       const blob = await api.exportTransactions({ format: 'csv', ...transactionQueryParams(appliedFilters) });
       const url = URL.createObjectURL(blob);
@@ -365,9 +374,10 @@ export default function SlipsPage() {
         <div className="flex gap-2">
           <button
             onClick={downloadTransactions}
-            className="inline-flex items-center gap-2 border border-zinc-200 bg-white px-4 py-2 text-xs font-semibold text-zinc-700 transition-colors hover:border-zinc-900 hover:text-zinc-900"
+            disabled={isExporting}
+            className="inline-flex items-center gap-2 border border-zinc-200 bg-white px-4 py-2 text-xs font-semibold text-zinc-700 transition-colors hover:border-zinc-900 hover:text-zinc-900 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <Download className="h-4 w-4" />
+            {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
             Export CSV
           </button>
           <button
@@ -547,11 +557,23 @@ export default function SlipsPage() {
               <ImageIcon className="h-5 w-5" style={{ color: 'var(--text-muted)' }} />
             </div>
             <p className="text-sm font-semibold" style={{ color: 'var(--navy)' }}>
-              No slips yet
+              {hasActiveFilters ? 'No matching slips' : 'No slips yet'}
             </p>
             <p className="max-w-sm text-sm" style={{ color: 'var(--text-muted)' }}>
-              Once a customer sends a slip to your connected LINE bot, it will appear here.
+              {hasActiveFilters
+                ? 'Try widening the date range or clearing filters.'
+                : 'Once a customer sends a slip to your connected LINE bot, it will appear here.'}
             </p>
+            {hasActiveFilters ? (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="mt-1 font-mono text-[10px] uppercase tracking-widest transition-colors"
+                style={{ color: 'var(--blue)' }}
+              >
+                Clear filters
+              </button>
+            ) : null}
           </div>
         ) : (
           transactions.map((transaction) => (
