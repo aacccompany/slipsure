@@ -343,6 +343,11 @@ class ApiClient {
     });
   }
 
+  async getMerchantPayments(params?: { limit?: number }): Promise<ApiResponse<{ items: PaymentLog[]; total: number }>> {
+    const queryString = toQueryString(params);
+    return this.request(`/v1/merchants/me/payments${queryString ? `?${queryString}` : ''}`);
+  }
+
   // Quota
   async getQuota(): Promise<ApiResponse<QuotaStatus>> {
     return this.request('/v1/merchants/me/quota');

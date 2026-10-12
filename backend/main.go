@@ -237,6 +237,7 @@ func main() {
 			// Subscription management
 			merchants.GET("/subscription", merchantHandler.GetSubscription)
 			merchants.POST("/subscription/cancel", merchantHandler.CancelSubscription)
+			merchants.GET("/payments", merchantHandler.GetMerchantPayments)
 
 			// Quota management
 			merchants.GET("/quota", merchantHandler.GetQuota)

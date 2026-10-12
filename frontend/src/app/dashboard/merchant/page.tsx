@@ -59,7 +59,7 @@ export default function MerchantProfilePage() {
         : { label: 'Not configured', ok: false },
     },
     {
-      href: '/dashboard/merchant/subscription',
+      href: '/dashboard/subscription',
       icon: CreditCard,
       title: 'Subscription',
       sub: 'แผนการใช้งาน',
@@ -192,7 +192,7 @@ export default function MerchantProfilePage() {
             ))}
           </div>
           <Link
-            href="/dashboard/merchant/subscription"
+            href="/dashboard/subscription"
             className="mt-4 block w-full py-2 text-center text-xs font-semibold transition-all hover:opacity-90"
             style={{ border: '1px solid var(--border)', color: 'var(--navy)' }}
           >
@@ -248,7 +248,7 @@ export default function MerchantProfilePage() {
           {[
             { href: '/dashboard/merchant/profile', icon: Store, label: 'Edit Shop Profile' },
             { href: '/dashboard/merchant/line',    icon: MessageSquare, label: 'LINE Webhook Setup' },
-            { href: '/dashboard/merchant/subscription', icon: CreditCard, label: 'Manage Subscription' },
+            { href: '/dashboard/subscription', icon: CreditCard, label: 'Manage Subscription' },
             { href: '/dashboard/account',          icon: User, label: 'Account Settings' },
           ].map((item, i, arr) => (
             <Link

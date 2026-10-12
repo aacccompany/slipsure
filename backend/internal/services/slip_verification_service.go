@@ -50,11 +50,21 @@ func (s *SlipVerificationService) SetVerificationCallback(callback func(slip *mo
 	s.verificationCallback = callback
 }
 
+func subscriptionAllowsVerification(subscription *models.Subscription) bool {
+	if subscription.Status == models.SubscriptionStatusActive {
+		return true
+	}
+
+	return subscription.Status == models.SubscriptionStatusCancelled &&
+		subscription.ExpiresAt != nil &&
+		subscription.ExpiresAt.After(time.Now())
+}
+
 // UploadAndVerify uploads a slip image and starts verification process
 func (s *SlipVerificationService) UploadAndVerify(ctx context.Context, merchantID uuid.UUID, imageData []byte, contentType string) (*models.Slip, error) {
 	// Check if merchant has active subscription
 	subscription, err := s.merchantRepo.FindByMerchantID(merchantID)
-	if err != nil || subscription == nil || subscription.Status != "active" {
+	if err != nil || subscription == nil || !subscriptionAllowsVerification(subscription) {
 		return nil, fmt.Errorf("merchant must have an active subscription to verify slips")
 	}
 

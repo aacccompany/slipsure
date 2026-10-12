@@ -96,11 +96,22 @@ func (s *MerchantService) activateFreePlan(userID uuid.UUID, planID string, bill
 		if err != nil {
 			return nil, fmt.Errorf("failed to create merchant profile: %w", err)
 		}
-		merchant = profileResp.Profile
+		expiresAt := time.Now().AddDate(100, 0, 0)
+		return &models.CheckoutResponse{
+			CheckoutSessionID: "free_plan_" + profileResp.Profile.ID.String(),
+			CheckoutURL:       "",
+			Amount:            0,
+			Currency:          "THB",
+			PlanID:            planID,
+			BillingCycle:      billingCycle,
+			ExpiresAt:         expiresAt,
+		}, nil
 	}
 
-	merchantID := merchant.ID
+	return s.activateFreePlanForMerchant(merchant.ID, planID, billingCycle)
+}
 
+func (s *MerchantService) activateFreePlanForMerchant(merchantID uuid.UUID, planID string, billingCycle models.BillingCycle) (*models.CheckoutResponse, error) {
 	usedFreePlan, err := s.merchantRepo.HasUsedFreePlan(merchantID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check free plan eligibility: %w", err)
@@ -189,13 +200,14 @@ func (s *MerchantService) CancelSubscription(merchantID uuid.UUID, req *models.C
 			return errors.New("stripe service is not available. please configure STRIPE_SECRET_KEY")
 		}
 
-		err := s.stripeService.CancelSubscription(*subscription.StripeSubscriptionID, !req.CancelImmediately)
+		err := s.stripeService.CancelSubscription(*subscription.StripeSubscriptionID, true)
 		if err != nil {
 			return err
 		}
 	}
 
-	// Update in database
+	// Keep the current paid period usable. Cancellation only disables renewal;
+	// access ends naturally when expires_at is reached.
 	err = s.merchantRepo.CancelSubscription(merchantID, req.Reason)
 	if err != nil {
 		return err
@@ -223,7 +235,7 @@ func (s *MerchantService) CreateProfile(ownerID uuid.UUID, req *models.CreateMer
 		ContactEmail:  req.ContactEmail,
 		ContactPhone:  req.ContactPhone,
 		BusinessHours: req.BusinessHours,
-		StrictMode:    req.StrictMode, // Direct boolean field
+		StrictMode:    true,
 		IsActive:      true,
 		CreatedAt:     time.Now(),
 		UpdatedAt:     time.Now(),
@@ -244,6 +256,10 @@ func (s *MerchantService) CreateProfile(ownerID uuid.UUID, req *models.CreateMer
 	user.MerchantID = profile.ID.String()
 	if err := s.userRepo.Update(user); err != nil {
 		return nil, errors.New("failed to associate merchant with user")
+	}
+
+	if _, err := s.activateFreePlanForMerchant(profile.ID, "plan-free", models.BillingCycleMonthly); err != nil {
+		return nil, fmt.Errorf("failed to activate free plan: %w", err)
 	}
 
 	return &models.MerchantProfileResponse{
@@ -276,9 +292,7 @@ func (s *MerchantService) UpdateProfile(merchantID uuid.UUID, req *models.Update
 	profile.ContactEmail = req.ContactEmail
 	profile.ContactPhone = req.ContactPhone
 	profile.BusinessHours = req.BusinessHours
-	if req.StrictMode != nil {
-		profile.StrictMode = *req.StrictMode
-	}
+	profile.StrictMode = true
 
 	// Save to database
 	return s.merchantRepo.UpdateMerchant(profile)

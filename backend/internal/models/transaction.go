@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -8,25 +9,34 @@ import (
 
 // Transaction represents a payment transaction extracted from slip
 type Transaction struct {
-	ID              uuid.UUID         `json:"id" db:"id"`
-	SlipID          uuid.UUID         `json:"slip_id" db:"slip_id"`
-	MerchantID      uuid.UUID         `json:"merchant_id" db:"merchant_id"`
-	ReferenceNo     string            `json:"reference_no" db:"reference_no"`
-	Amount          float64           `json:"amount" db:"amount"`
-	SenderBank      string            `json:"sender_bank" db:"sender_bank"`
-	SenderAccount   string            `json:"sender_account" db:"sender_account"`
-	ReceiverBank    string            `json:"receiver_bank" db:"receiver_bank"`
-	ReceiverAccount string            `json:"receiver_account" db:"receiver_account"`
-	TransferAt      *time.Time        `json:"transfer_at" db:"transfer_at"`
-	TransactionDate *time.Time        `json:"transaction_date" db:"transaction_date"`
-	TransactionTime *time.Time        `json:"transaction_time" db:"transaction_time"`
-	Status          TransactionStatus `json:"status" db:"status"`
-	IsDuplicate     bool              `json:"is_duplicate" db:"is_duplicate"`
-	FailReason      *string           `json:"fail_reason,omitempty" db:"fail_reason"`
-	RecheckCount    int               `json:"recheck_count" db:"recheck_count"`
-	LastRecheckedAt *time.Time        `json:"last_rechecked_at,omitempty" db:"last_rechecked_at"`
-	CreatedAt       time.Time         `json:"created_at" db:"created_at"`
-	UpdatedAt       time.Time         `json:"updated_at" db:"updated_at"`
+	ID                     uuid.UUID         `json:"id" db:"id"`
+	SlipID                 uuid.UUID         `json:"slip_id" db:"slip_id"`
+	MerchantID             uuid.UUID         `json:"merchant_id" db:"merchant_id"`
+	ReferenceNo            string            `json:"reference_no" db:"reference_no"`
+	Amount                 float64           `json:"amount" db:"amount"`
+	SenderBank             string            `json:"sender_bank" db:"sender_bank"`
+	SenderAccount          string            `json:"sender_account" db:"sender_account"`
+	ReceiverBank           string            `json:"receiver_bank" db:"receiver_bank"`
+	ReceiverAccount        string            `json:"receiver_account" db:"receiver_account"`
+	TransferAt             *time.Time        `json:"transfer_at" db:"transfer_at"`
+	TransactionDate        *time.Time        `json:"transaction_date" db:"transaction_date"`
+	TransactionTime        *time.Time        `json:"transaction_time" db:"transaction_time"`
+	Status                 TransactionStatus `json:"status" db:"status"`
+	IsDuplicate            bool              `json:"is_duplicate" db:"is_duplicate"`
+	FailReason             *string           `json:"fail_reason,omitempty" db:"fail_reason"`
+	RecheckCount           int               `json:"recheck_count" db:"recheck_count"`
+	LastRecheckedAt        *time.Time        `json:"last_rechecked_at,omitempty" db:"last_rechecked_at"`
+	Provider               string            `json:"provider,omitempty" db:"provider"`
+	ProviderVerificationID string            `json:"provider_verification_id,omitempty" db:"provider_verification_id"`
+	ProviderStatus         string            `json:"provider_status,omitempty" db:"provider_status"`
+	ProviderValid          bool              `json:"provider_valid" db:"provider_valid"`
+	ProviderCached         bool              `json:"provider_cached" db:"provider_cached"`
+	ProviderChargedCredits int               `json:"provider_charged_credits" db:"provider_charged_credits"`
+	SenderName             string            `json:"sender_name,omitempty" db:"sender_name"`
+	ReceiverName           string            `json:"receiver_name,omitempty" db:"receiver_name"`
+	ProviderResponse       json.RawMessage   `json:"provider_response,omitempty" db:"provider_response"`
+	CreatedAt              time.Time         `json:"created_at" db:"created_at"`
+	UpdatedAt              time.Time         `json:"updated_at" db:"updated_at"`
 
 	// Relations
 	Slip *Slip `json:"slip,omitempty"`

@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -13,6 +14,23 @@ import (
 
 // ErrDuplicateReferenceNo is returned when a transaction reference already exists.
 var ErrDuplicateReferenceNo = errors.New("duplicate transaction reference number")
+
+const transactionSelectColumns = `
+	id, slip_id, merchant_id, reference_no, amount,
+	sender_bank, sender_account, receiver_bank, receiver_account,
+	transfer_at, transaction_date, transaction_time,
+	status, is_duplicate, fail_reason, recheck_count, last_rechecked_at,
+	COALESCE(provider, '') AS provider,
+	COALESCE(provider_verification_id, '') AS provider_verification_id,
+	COALESCE(provider_status, '') AS provider_status,
+	COALESCE(provider_valid, FALSE) AS provider_valid,
+	COALESCE(provider_cached, FALSE) AS provider_cached,
+	COALESCE(provider_charged_credits, 0) AS provider_charged_credits,
+	COALESCE(sender_name, '') AS sender_name,
+	COALESCE(receiver_name, '') AS receiver_name,
+	COALESCE(provider_response, '{}'::jsonb) AS provider_response,
+	created_at, updated_at
+`
 
 // TransactionRepository handles transaction database operations
 type TransactionRepository interface {
@@ -46,12 +64,20 @@ func (r *transactionRepository) Create(transaction *models.Transaction) error {
 			sender_bank, sender_account, receiver_bank, receiver_account,
 			transfer_at, transaction_date, transaction_time,
 			status, is_duplicate, fail_reason,
+			provider, provider_verification_id, provider_status,
+			provider_valid, provider_cached, provider_charged_credits,
+			sender_name, receiver_name, provider_response,
 			created_at, updated_at
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
+			$16, $17, $18, $19, $20, $21, $22, $23, $24::jsonb, $25, $26)
 		ON CONFLICT (reference_no) DO NOTHING
 		RETURNING id
 	`
+	providerResponse := json.RawMessage("null")
+	if len(transaction.ProviderResponse) > 0 {
+		providerResponse = transaction.ProviderResponse
+	}
 
 	err := r.db.QueryRow(
 		query,
@@ -59,6 +85,9 @@ func (r *transactionRepository) Create(transaction *models.Transaction) error {
 		transaction.SenderBank, transaction.SenderAccount, transaction.ReceiverBank, transaction.ReceiverAccount,
 		transaction.TransferAt, transaction.TransactionDate, transaction.TransactionTime,
 		transaction.Status, transaction.IsDuplicate, transaction.FailReason,
+		transaction.Provider, transaction.ProviderVerificationID, transaction.ProviderStatus,
+		transaction.ProviderValid, transaction.ProviderCached, transaction.ProviderChargedCredits,
+		transaction.SenderName, transaction.ReceiverName, providerResponse,
 		transaction.CreatedAt, transaction.UpdatedAt,
 	).Scan(&transaction.ID)
 
@@ -75,24 +104,13 @@ func (r *transactionRepository) Create(transaction *models.Transaction) error {
 // FindByID retrieves a transaction by ID
 func (r *transactionRepository) FindByID(id uuid.UUID) (*models.Transaction, error) {
 	query := `
-		SELECT id, slip_id, merchant_id, reference_no, amount,
-			sender_bank, sender_account, receiver_bank, receiver_account,
-			transfer_at, transaction_date, transaction_time,
-			status, is_duplicate, fail_reason, recheck_count, last_rechecked_at,
-			created_at, updated_at
+		SELECT ` + transactionSelectColumns + `
 		FROM transactions
 		WHERE id = $1
 	`
 
 	transaction := &models.Transaction{}
-	err := r.db.QueryRow(query, id).Scan(
-		&transaction.ID, &transaction.SlipID, &transaction.MerchantID, &transaction.ReferenceNo, &transaction.Amount,
-		&transaction.SenderBank, &transaction.SenderAccount, &transaction.ReceiverBank, &transaction.ReceiverAccount,
-		&transaction.TransferAt, &transaction.TransactionDate, &transaction.TransactionTime,
-		&transaction.Status, &transaction.IsDuplicate, &transaction.FailReason,
-		&transaction.RecheckCount, &transaction.LastRecheckedAt,
-		&transaction.CreatedAt, &transaction.UpdatedAt,
-	)
+	err := scanTransaction(r.db.QueryRow(query, id), transaction)
 
 	if err != nil {
 		return nil, err
@@ -104,24 +122,13 @@ func (r *transactionRepository) FindByID(id uuid.UUID) (*models.Transaction, err
 // FindBySlipID retrieves a transaction by slip ID
 func (r *transactionRepository) FindBySlipID(slipID uuid.UUID) (*models.Transaction, error) {
 	query := `
-		SELECT id, slip_id, merchant_id, reference_no, amount,
-			sender_bank, sender_account, receiver_bank, receiver_account,
-			transfer_at, transaction_date, transaction_time,
-			status, is_duplicate, fail_reason, recheck_count, last_rechecked_at,
-			created_at, updated_at
+		SELECT ` + transactionSelectColumns + `
 		FROM transactions
 		WHERE slip_id = $1
 	`
 
 	transaction := &models.Transaction{}
-	err := r.db.QueryRow(query, slipID).Scan(
-		&transaction.ID, &transaction.SlipID, &transaction.MerchantID, &transaction.ReferenceNo, &transaction.Amount,
-		&transaction.SenderBank, &transaction.SenderAccount, &transaction.ReceiverBank, &transaction.ReceiverAccount,
-		&transaction.TransferAt, &transaction.TransactionDate, &transaction.TransactionTime,
-		&transaction.Status, &transaction.IsDuplicate, &transaction.FailReason,
-		&transaction.RecheckCount, &transaction.LastRecheckedAt,
-		&transaction.CreatedAt, &transaction.UpdatedAt,
-	)
+	err := scanTransaction(r.db.QueryRow(query, slipID), transaction)
 
 	if err != nil {
 		return nil, err
@@ -133,11 +140,7 @@ func (r *transactionRepository) FindBySlipID(slipID uuid.UUID) (*models.Transact
 // FindByReferenceNo retrieves a transaction by reference number
 func (r *transactionRepository) FindByReferenceNo(referenceNo string) (*models.Transaction, error) {
 	query := `
-		SELECT id, slip_id, merchant_id, reference_no, amount,
-			sender_bank, sender_account, receiver_bank, receiver_account,
-			transfer_at, transaction_date, transaction_time,
-			status, is_duplicate, fail_reason, recheck_count, last_rechecked_at,
-			created_at, updated_at
+		SELECT ` + transactionSelectColumns + `
 		FROM transactions
 		WHERE reference_no = $1
 		ORDER BY created_at DESC
@@ -145,14 +148,7 @@ func (r *transactionRepository) FindByReferenceNo(referenceNo string) (*models.T
 	`
 
 	transaction := &models.Transaction{}
-	err := r.db.QueryRow(query, referenceNo).Scan(
-		&transaction.ID, &transaction.SlipID, &transaction.MerchantID, &transaction.ReferenceNo, &transaction.Amount,
-		&transaction.SenderBank, &transaction.SenderAccount, &transaction.ReceiverBank, &transaction.ReceiverAccount,
-		&transaction.TransferAt, &transaction.TransactionDate, &transaction.TransactionTime,
-		&transaction.Status, &transaction.IsDuplicate, &transaction.FailReason,
-		&transaction.RecheckCount, &transaction.LastRecheckedAt,
-		&transaction.CreatedAt, &transaction.UpdatedAt,
-	)
+	err := scanTransaction(r.db.QueryRow(query, referenceNo), transaction)
 
 	if err != nil {
 		return nil, err
@@ -172,11 +168,7 @@ func (r *transactionRepository) ListByMerchant(merchantID uuid.UUID, filters mod
 	args = append(args, filters.Limit, filters.Offset)
 
 	query := fmt.Sprintf(`
-		SELECT id, slip_id, merchant_id, reference_no, amount,
-			sender_bank, sender_account, receiver_bank, receiver_account,
-			transfer_at, transaction_date, transaction_time,
-			status, is_duplicate, fail_reason, recheck_count, last_rechecked_at,
-			created_at, updated_at
+		SELECT `+transactionSelectColumns+`
 		FROM transactions
 		%s
 		ORDER BY created_at DESC
@@ -192,15 +184,7 @@ func (r *transactionRepository) ListByMerchant(merchantID uuid.UUID, filters mod
 	var transactions []*models.Transaction
 	for rows.Next() {
 		txn := &models.Transaction{}
-		err := rows.Scan(
-			&txn.ID, &txn.SlipID, &txn.MerchantID, &txn.ReferenceNo, &txn.Amount,
-			&txn.SenderBank, &txn.SenderAccount, &txn.ReceiverBank, &txn.ReceiverAccount,
-			&txn.TransferAt, &txn.TransactionDate, &txn.TransactionTime,
-			&txn.Status, &txn.IsDuplicate, &txn.FailReason,
-			&txn.RecheckCount, &txn.LastRecheckedAt,
-			&txn.CreatedAt, &txn.UpdatedAt,
-		)
-		if err != nil {
+		if err := scanTransaction(rows, txn); err != nil {
 			return nil, err
 		}
 		transactions = append(transactions, txn)
@@ -246,16 +230,39 @@ func buildTransactionFilterWhere(merchantID uuid.UUID, filters models.Transactio
 		args = append(args, "%"+strings.TrimSpace(filters.Search)+"%")
 		searchParam := len(args)
 		conditions = append(conditions, fmt.Sprintf(`(
+			id::text ILIKE $%d
+			OR slip_id::text ILIKE $%d
 			reference_no ILIKE $%d
+			OR provider_verification_id ILIKE $%d
+			OR sender_name ILIKE $%d
 			OR sender_bank ILIKE $%d
 			OR sender_account ILIKE $%d
+			OR receiver_name ILIKE $%d
 			OR receiver_bank ILIKE $%d
 			OR receiver_account ILIKE $%d
 			OR amount::text ILIKE $%d
-		)`, searchParam, searchParam, searchParam, searchParam, searchParam, searchParam))
+		)`, searchParam, searchParam, searchParam, searchParam, searchParam, searchParam, searchParam, searchParam, searchParam, searchParam, searchParam))
 	}
 
 	return "WHERE " + strings.Join(conditions, " AND "), args
+}
+
+type transactionScanner interface {
+	Scan(dest ...interface{}) error
+}
+
+func scanTransaction(scanner transactionScanner, transaction *models.Transaction) error {
+	return scanner.Scan(
+		&transaction.ID, &transaction.SlipID, &transaction.MerchantID, &transaction.ReferenceNo, &transaction.Amount,
+		&transaction.SenderBank, &transaction.SenderAccount, &transaction.ReceiverBank, &transaction.ReceiverAccount,
+		&transaction.TransferAt, &transaction.TransactionDate, &transaction.TransactionTime,
+		&transaction.Status, &transaction.IsDuplicate, &transaction.FailReason,
+		&transaction.RecheckCount, &transaction.LastRecheckedAt,
+		&transaction.Provider, &transaction.ProviderVerificationID, &transaction.ProviderStatus,
+		&transaction.ProviderValid, &transaction.ProviderCached, &transaction.ProviderChargedCredits,
+		&transaction.SenderName, &transaction.ReceiverName, &transaction.ProviderResponse,
+		&transaction.CreatedAt, &transaction.UpdatedAt,
+	)
 }
 
 // UpdateStatus updates the status of a transaction
@@ -295,11 +302,7 @@ func (r *transactionRepository) IncrementRecheckCount(id uuid.UUID) error {
 // CheckDuplicate checks if a duplicate transaction exists
 func (r *transactionRepository) CheckDuplicate(merchantID uuid.UUID, referenceNo string, amount float64, withinHours int) (*models.Transaction, error) {
 	query := `
-		SELECT id, slip_id, merchant_id, reference_no, amount,
-			sender_bank, sender_account, receiver_bank, receiver_account,
-			transfer_at, transaction_date, transaction_time,
-			status, is_duplicate, fail_reason, recheck_count, last_rechecked_at,
-			created_at, updated_at
+		SELECT ` + transactionSelectColumns + `
 		FROM transactions
 		WHERE merchant_id = $1
 			AND reference_no = $2
@@ -310,14 +313,7 @@ func (r *transactionRepository) CheckDuplicate(merchantID uuid.UUID, referenceNo
 	`
 
 	transaction := &models.Transaction{}
-	err := r.db.QueryRow(query, merchantID, referenceNo, amount, withinHours).Scan(
-		&transaction.ID, &transaction.SlipID, &transaction.MerchantID, &transaction.ReferenceNo, &transaction.Amount,
-		&transaction.SenderBank, &transaction.SenderAccount, &transaction.ReceiverBank, &transaction.ReceiverAccount,
-		&transaction.TransferAt, &transaction.TransactionDate, &transaction.TransactionTime,
-		&transaction.Status, &transaction.IsDuplicate, &transaction.FailReason,
-		&transaction.RecheckCount, &transaction.LastRecheckedAt,
-		&transaction.CreatedAt, &transaction.UpdatedAt,
-	)
+	err := scanTransaction(r.db.QueryRow(query, merchantID, referenceNo, amount, withinHours), transaction)
 
 	if err != nil {
 		return nil, nil // No duplicate found

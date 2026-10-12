@@ -6,11 +6,9 @@ import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
 import { toast } from 'sonner';
-import type { LINEWebhookConfig } from '@/types/api';
 
 export default function MerchantLinePage() {
   const queryClient = useQueryClient();
-
   const [isConfiguring, setIsConfiguring] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [configForm, setConfigForm] = useState({
@@ -19,7 +17,6 @@ export default function MerchantLinePage() {
     line_access_token: '',
   });
 
-  // Fetch LINE webhook config
   const { data: configData, isLoading } = useQuery({
     queryKey: ['line-webhook-config'],
     queryFn: () => api.getLINEWebhookConfig(),
@@ -73,333 +70,236 @@ export default function MerchantLinePage() {
   if (isLoading) {
     return (
       <div className="flex h-[80vh] items-center justify-center">
-        <Loader2 className="w-10 h-10 text-blue-800 animate-spin" />
+        <Loader2 className="h-10 w-10 animate-spin text-blue-800" />
       </div>
     );
   }
 
   const config = configData?.data?.config;
-  const hasSavedConfig = Boolean(
-    config?.is_configured ||
-    config?.line_channel_id ||
-    config?.webhook_url ||
-    config?.webhook_reference_id
-  );
+  const hasSavedConfig = Boolean(config?.is_configured || config?.line_channel_id || config?.webhook_url || config?.webhook_reference_id);
 
-  // Handle edit button click - populate form with existing config
   const handleEditClick = () => {
     if (config && hasSavedConfig) {
       setConfigForm({
         line_channel_id: config.line_channel_id || '',
-        line_channel_secret: '', // Don't pre-fill secret for security
-        line_access_token: '', // Don't pre-fill token for security
+        line_channel_secret: '',
+        line_access_token: '',
       });
     }
     setIsEditing(true);
   };
 
-  return (
-    <div className="p-8 space-y-8 max-w-4xl">
-      <div className="mb-8">
-        <Link
-          href="/dashboard/merchant"
-          className="flex items-center gap-2 text-sm font-medium text-zinc-600 hover:text-zinc-900 transition-colors"
+  const configFormView = (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        handleSaveConfig();
+      }}
+      className="space-y-5"
+    >
+      <label className="space-y-2">
+        <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">LINE Channel ID</span>
+        <input
+          type="text"
+          value={configForm.line_channel_id}
+          onChange={(event) => setConfigForm({ ...configForm, line_channel_id: event.target.value })}
+          placeholder="Enter from LINE Developers"
+          className="h-11 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-950 outline-none transition-colors placeholder:text-zinc-400 focus:border-blue-500"
+          required
+        />
+      </label>
+
+      <label className="space-y-2">
+        <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">LINE Channel Secret</span>
+        <input
+          type="password"
+          value={configForm.line_channel_secret}
+          onChange={(event) => setConfigForm({ ...configForm, line_channel_secret: event.target.value })}
+          placeholder="Enter from LINE Developers"
+          className="h-11 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-950 outline-none transition-colors placeholder:text-zinc-400 focus:border-blue-500"
+          required
+        />
+        {isEditing && <span className="block text-xs text-zinc-400">Current secret will be replaced.</span>}
+      </label>
+
+      <label className="space-y-2">
+        <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">Channel Access Token</span>
+        <input
+          type="password"
+          value={configForm.line_access_token}
+          onChange={(event) => setConfigForm({ ...configForm, line_access_token: event.target.value })}
+          placeholder="Enter from LINE Developers"
+          className="h-11 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-950 outline-none transition-colors placeholder:text-zinc-400 focus:border-blue-500"
+          required
+        />
+        {isEditing && <span className="block text-xs text-zinc-400">Current token will be replaced.</span>}
+      </label>
+
+      <div className="flex flex-col gap-2 pt-2 sm:flex-row">
+        <button
+          type="submit"
+          disabled={configMutation.isPending}
+          className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-md bg-zinc-950 px-5 text-sm font-bold text-white transition-colors hover:bg-zinc-800 disabled:cursor-wait disabled:opacity-60"
         >
-          <ChevronLeft className="w-4 h-4" />
-          Back to Merchant
-        </Link>
+          {configMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+          {isEditing ? 'Update Configuration' : 'Save Configuration'}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setIsConfiguring(false);
+            setIsEditing(false);
+          }}
+          className="h-11 rounded-md border border-zinc-200 bg-white px-5 text-sm font-bold text-zinc-700 transition-colors hover:border-zinc-900"
+        >
+          Cancel
+        </button>
       </div>
+    </form>
+  );
 
-      <div>
-        <h1 className="text-3xl font-black text-zinc-900 tracking-tight mb-2">LINE Integration</h1>
-        <p className="text-sm font-medium text-zinc-500">ตั้งค่าการเชื่อมต่อ LINE Official Account ของคุณ</p>
-      </div>
-
-      {!hasSavedConfig ? (
-        <div className="max-w-2xl">
-          <div className="bg-white border border-zinc-200 rounded-2xl p-8">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center">
-                <MessageSquare className="w-6 h-6 text-green-700" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-zinc-900">Setup LINE Webhook</h3>
-                <p className="text-sm text-zinc-500">
-                  Connect your LINE Official Account to enable slip verification via LINE.
-                </p>
-              </div>
-            </div>
-
-            {isConfiguring ? (
-              <form onSubmit={(e) => { e.preventDefault(); handleSaveConfig(); }} className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-2">
-                    LINE Channel ID
-                  </label>
-                  <input
-                    type="text"
-                    value={configForm.line_channel_id}
-                    onChange={(e) => setConfigForm({ ...configForm, line_channel_id: e.target.value })}
-                    placeholder="Enter from LINE Developers"
-                    className="w-full px-4 py-3 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-700/20"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-2">
-                    LINE Channel Secret
-                  </label>
-                  <input
-                    type="password"
-                    value={configForm.line_channel_secret}
-                    onChange={(e) => setConfigForm({ ...configForm, line_channel_secret: e.target.value })}
-                    placeholder="Enter from LINE Developers"
-                    className="w-full px-4 py-3 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-700/20"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-2">
-                    LINE Access Token (Channel Access Token)
-                  </label>
-                  <input
-                    type="password"
-                    value={configForm.line_access_token}
-                    onChange={(e) => setConfigForm({ ...configForm, line_access_token: e.target.value })}
-                    placeholder="Enter from LINE Developers"
-                    className="w-full px-4 py-3 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-700/20"
-                    required
-                  />
-                </div>
-
-                <div className="flex gap-3">
-                  <button
-                    type="submit"
-                    disabled={configMutation.isPending}
-                    className="flex-1 bg-blue-800 text-white py-3 rounded-xl font-medium hover:bg-blue-900 flex items-center justify-center gap-2 disabled:opacity-50"
-                  >
-                    {configMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Configuration'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsConfiguring(false)}
-                    className="px-6 py-3 border border-zinc-200 text-zinc-700 rounded-xl font-medium hover:bg-zinc-50"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <button
-                onClick={() => setIsConfiguring(true)}
-                className="w-full py-4 border-2 border-dashed border-zinc-200 rounded-2xl text-sm font-bold text-zinc-500 hover:border-blue-400 hover:text-blue-700 transition-all flex items-center justify-center gap-2"
-              >
-                <Plus className="w-5 h-5" />
-                Configure LINE Webhook
-              </button>
-            )}
-          </div>
+  return (
+    <div className="min-h-full px-6 py-6 md:px-8" style={{ background: 'var(--bg)' }}>
+      <div className="mx-auto max-w-6xl space-y-6">
+        <div className="border-b border-zinc-200 pb-5">
+          <Link href="/dashboard/merchant" className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-zinc-500 transition-colors hover:text-zinc-900">
+            <ChevronLeft className="h-4 w-4" />
+            Back to Merchant
+          </Link>
+          <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-400">Messaging channel</p>
+          <h1 className="mt-1 text-3xl font-black tracking-tight text-zinc-950">LINE Integration</h1>
+          <p className="mt-2 max-w-2xl text-sm text-zinc-500">
+            Connect your LINE Official Account so customers can send slips directly to your bot.
+          </p>
         </div>
-      ) : (
-        <>
-          {/* Status Overview */}
-          <div className="grid lg:grid-cols-3 gap-6 mb-8">
-            <div className="bg-white border border-zinc-100 rounded-2xl p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-green-50 rounded-full flex items-center justify-center">
-                  <CheckCircle className="w-5 h-5 text-green-700" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Status</p>
-                  <p className={`text-sm font-bold ${config?.is_configured ? 'text-green-700' : 'text-amber-700'}`}>
-                    {config?.is_configured ? 'Active' : 'Saved, needs update'}
-                  </p>
-                </div>
-              </div>
-            </div>
 
-            <div className="bg-white border border-zinc-100 rounded-2xl p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center">
-                  <Key className="w-5 h-5 text-blue-700" />
+        {!hasSavedConfig ? (
+          <section className="overflow-hidden rounded-lg border border-zinc-200 bg-white">
+            <div className="grid lg:grid-cols-[340px_1fr]">
+              <aside className="border-b border-zinc-200 bg-emerald-50 p-6 lg:border-b-0 lg:border-r">
+                <div className="flex h-12 w-12 items-center justify-center rounded-md bg-white">
+                  <MessageSquare className="h-6 w-6 text-emerald-700" />
                 </div>
-                <div>
-                  <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Reference ID</p>
-                  <p className="text-sm font-bold text-zinc-900 font-mono">{config?.webhook_reference_id || '-'}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white border border-zinc-100 rounded-2xl p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-purple-50 rounded-full flex items-center justify-center">
-                  <Clock className="w-5 h-5 text-purple-700" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Configured</p>
-                  <p className="text-sm font-bold text-zinc-900">
-                    {config?.updated_at ? new Date(config.updated_at).toLocaleDateString('th-TH') : '-'}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Webhook URL */}
-          <div className="bg-white border border-zinc-200 rounded-2xl p-8 mb-6">
-            <h3 className="text-lg font-bold text-zinc-900 mb-4 flex items-center gap-2">
-              <Key className="w-5 h-5 text-blue-700" />
-              Your Webhook URL
-            </h3>
-            <div className="flex items-center gap-4 p-4 bg-zinc-50 rounded-xl">
-              <code className="flex-1 text-sm font-mono text-blue-800 truncate">
-                {config?.webhook_url}
-              </code>
-              <button
-                onClick={() => config?.webhook_url && copyToClipboard(config.webhook_url)}
-                className="p-2 hover:bg-zinc-100 rounded-lg transition-colors"
-              >
-                <Copy className="w-4 h-4 text-zinc-500" />
-              </button>
-            </div>
-            <p className="text-xs text-zinc-500 mt-3">
-              📌 Add this URL to your LINE Developers Console → Messaging API → Webhook settings
-            </p>
-          </div>
-
-          {/* Edit Configuration Form */}
-          {isEditing ? (
-            <div className="bg-white border border-zinc-200 rounded-2xl p-8 mb-6">
-              <h3 className="text-lg font-bold text-zinc-900 mb-6">Edit LINE Configuration</h3>
-              <form onSubmit={(e) => { e.preventDefault(); handleSaveConfig(); }} className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-2">
-                    LINE Channel ID
-                  </label>
-                  <input
-                    type="text"
-                    value={configForm.line_channel_id}
-                    onChange={(e) => setConfigForm({ ...configForm, line_channel_id: e.target.value })}
-                    placeholder="Enter from LINE Developers"
-                    className="w-full px-4 py-3 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-700/20"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-2">
-                    LINE Channel Secret
-                  </label>
-                  <input
-                    type="password"
-                    value={configForm.line_channel_secret}
-                    onChange={(e) => setConfigForm({ ...configForm, line_channel_secret: e.target.value })}
-                    placeholder="Enter from LINE Developers"
-                    className="w-full px-4 py-3 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-700/20"
-                    required
-                  />
-                  <p className="text-xs text-zinc-500 mt-1">Current secret will be replaced</p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-2">
-                    LINE Access Token (Channel Access Token)
-                  </label>
-                  <input
-                    type="password"
-                    value={configForm.line_access_token}
-                    onChange={(e) => setConfigForm({ ...configForm, line_access_token: e.target.value })}
-                    placeholder="Enter from LINE Developers"
-                    className="w-full px-4 py-3 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-700/20"
-                    required
-                  />
-                  <p className="text-xs text-zinc-500 mt-1">Current token will be replaced</p>
-                </div>
-
-                <div className="flex gap-3">
-                  <button
-                    type="submit"
-                    disabled={configMutation.isPending}
-                    className="flex-1 bg-blue-800 text-white py-3 rounded-xl font-medium hover:bg-blue-900 flex items-center justify-center gap-2 disabled:opacity-50"
-                  >
-                    {configMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Update Configuration'}
-                  </button>
+                <h2 className="mt-5 text-xl font-black text-zinc-950">Setup LINE Webhook</h2>
+                <p className="mt-2 text-sm text-zinc-600">
+                  Add your LINE credentials, then copy the generated webhook URL into LINE Developers.
+                </p>
+                {!isConfiguring && (
                   <button
                     type="button"
-                    onClick={() => setIsEditing(false)}
-                    className="px-6 py-3 border border-zinc-200 text-zinc-700 rounded-xl font-medium hover:bg-zinc-50"
+                    onClick={() => setIsConfiguring(true)}
+                    className="mt-6 inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-zinc-950 text-sm font-bold text-white transition-colors hover:bg-zinc-800"
                   >
-                    Cancel
+                    <Plus className="h-4 w-4" />
+                    Configure LINE Webhook
+                  </button>
+                )}
+              </aside>
+              <div className="p-6 md:p-8">
+                {isConfiguring ? configFormView : (
+                  <div className="flex min-h-64 items-center justify-center rounded-lg border border-dashed border-zinc-300 bg-slate-50 p-8 text-center">
+                    <div>
+                      <p className="text-sm font-bold text-zinc-950">No LINE webhook configured yet</p>
+                      <p className="mt-1 text-sm text-zinc-500">Start by adding your channel ID, secret, and access token.</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+        ) : (
+          <>
+            <section className="grid gap-4 md:grid-cols-3">
+              {[
+                { icon: CheckCircle, label: 'Status', value: config?.is_configured ? 'Active' : 'Saved, needs update', tone: config?.is_configured ? 'text-emerald-700' : 'text-amber-700' },
+                { icon: Key, label: 'Reference ID', value: config?.webhook_reference_id || '-', tone: 'text-zinc-950' },
+                { icon: Clock, label: 'Configured', value: config?.updated_at ? new Date(config.updated_at).toLocaleDateString('th-TH') : '-', tone: 'text-zinc-950' },
+              ].map(({ icon: Icon, label, value, tone }) => (
+                <div key={label} className="rounded-lg border border-zinc-200 bg-white p-5">
+                  <div className="mb-4 flex items-center justify-between">
+                    <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">{label}</p>
+                    <Icon className="h-4 w-4 text-zinc-400" />
+                  </div>
+                  <p className={`text-lg font-black ${tone}`}>{value}</p>
+                </div>
+              ))}
+            </section>
+
+            <section className="overflow-hidden rounded-lg border border-zinc-200 bg-white">
+              <div className="border-b border-zinc-200 px-6 py-4">
+                <h2 className="flex items-center gap-2 text-base font-black text-zinc-950">
+                  <Key className="h-4 w-4 text-blue-700" />
+                  Webhook URL
+                </h2>
+              </div>
+              <div className="p-6">
+                <div className="flex items-center gap-3 rounded-md border border-zinc-200 bg-slate-50 p-3">
+                  <code className="min-w-0 flex-1 truncate text-sm font-semibold text-blue-800">{config?.webhook_url}</code>
+                  <button
+                    type="button"
+                    onClick={() => config?.webhook_url && copyToClipboard(config.webhook_url)}
+                    className="rounded-md border border-zinc-200 bg-white p-2 text-zinc-500 transition-colors hover:text-zinc-950"
+                    aria-label="Copy webhook URL"
+                  >
+                    <Copy className="h-4 w-4" />
                   </button>
                 </div>
-              </form>
-            </div>
-          ) : (
-            <div className="flex gap-4 mb-6">
-              <button
-                onClick={handleEditClick}
-                className="flex-1 bg-blue-800 text-white py-4 rounded-xl font-medium hover:bg-blue-900 transition-all flex items-center justify-center gap-2"
-              >
-                Edit Configuration
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={deleteMutation.isPending}
-                className="flex-1 px-6 py-4 border-2 border-rose-200 text-rose-600 rounded-xl font-medium hover:bg-rose-50 flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {deleteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                Delete
-              </button>
-            </div>
-          )}
-
-          {/* Instructions */}
-          <div className="bg-green-50 border border-green-100 rounded-2xl p-8">
-            <h3 className="text-lg font-bold text-zinc-900 mb-4 flex items-center gap-2">
-              <MessageSquare className="w-5 h-5 text-green-700" />
-              Setup Instructions
-            </h3>
-            <div className="space-y-4 text-sm text-zinc-700">
-              <div className="flex gap-4">
-                <span className="flex-shrink-0 w-6 h-6 bg-green-800 text-white rounded-full flex items-center justify-center font-bold">
-                  1
-                </span>
-                <p>
-                  Go to{' '}
-                  <a
-                    href="https://developers.line.biz/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-green-800 font-medium underline"
-                  >
-                    LINE Developers Console
-                  </a>
+                <p className="mt-3 text-xs text-zinc-500">
+                  Add this URL in LINE Developers Console, Messaging API, Webhook settings.
                 </p>
               </div>
-              <div className="flex gap-4">
-                <span className="flex-shrink-0 w-6 h-6 bg-green-800 text-white rounded-full flex items-center justify-center font-bold">
-                  2
-                </span>
-                <p>Select your Messaging API channel</p>
+            </section>
+
+            {isEditing ? (
+              <section className="rounded-lg border border-zinc-200 bg-white p-6 md:p-8">
+                <h2 className="mb-5 text-base font-black text-zinc-950">Edit LINE Configuration</h2>
+                {configFormView}
+              </section>
+            ) : (
+              <div className="grid gap-3 md:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={handleEditClick}
+                  className="inline-flex h-12 items-center justify-center rounded-md bg-blue-700 text-sm font-bold text-white transition-colors hover:bg-blue-800"
+                >
+                  Edit Configuration
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={deleteMutation.isPending}
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-md border border-rose-200 bg-white text-sm font-bold text-rose-600 transition-colors hover:bg-rose-50 disabled:cursor-wait disabled:opacity-60"
+                >
+                  {deleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                  Delete
+                </button>
               </div>
-              <div className="flex gap-4">
-                <span className="flex-shrink-0 w-6 h-6 bg-green-800 text-white rounded-full flex items-center justify-center font-bold">
-                  3
+            )}
+          </>
+        )}
+
+        <section className="rounded-lg border border-emerald-200 bg-emerald-50 p-6">
+          <h2 className="flex items-center gap-2 text-base font-black text-zinc-950">
+            <MessageSquare className="h-4 w-4 text-emerald-700" />
+            Setup Instructions
+          </h2>
+          <div className="mt-5 grid gap-3 md:grid-cols-2">
+            {[
+              'Go to LINE Developers Console',
+              'Select your Messaging API channel',
+              'Open Messaging API, then Webhook settings',
+              'Paste the webhook URL and enable Use webhook',
+            ].map((step, index) => (
+              <div key={step} className="flex gap-3 rounded-md bg-white/70 p-3 text-sm text-zinc-700">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-xs font-bold text-white">
+                  {index + 1}
                 </span>
-                <p>Go to "Messaging API" tab → "Webhook settings" and add the webhook URL above</p>
+                <span>{step}</span>
               </div>
-              <div className="flex gap-4">
-                <span className="flex-shrink-0 w-6 h-6 bg-green-800 text-white rounded-full flex items-center justify-center font-bold">
-                  4
-                </span>
-                <p>Enable "Use webhook" checkbox and verify your channel secret</p>
-              </div>
-            </div>
+            ))}
           </div>
-        </>
-      )}
+        </section>
+      </div>
     </div>
   );
 }

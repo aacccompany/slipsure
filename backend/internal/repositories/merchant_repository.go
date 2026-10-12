@@ -1248,11 +1248,17 @@ func (r *merchantRepository) UpdateSubscription(subscription *models.Subscriptio
 	return nil
 }
 
-// CancelSubscription cancels a subscription
+// CancelSubscription schedules a subscription to end at the current period end.
 func (r *merchantRepository) CancelSubscription(merchantID uuid.UUID, reason string) error {
 	query := `
 		UPDATE subscriptions
-		SET status = 'cancelled', cancelled_at = CURRENT_TIMESTAMP, auto_renew = false, updated_at = CURRENT_TIMESTAMP
+		SET status = CASE
+				WHEN expires_at IS NOT NULL AND expires_at <= CURRENT_TIMESTAMP THEN 'cancelled'::subscription_status
+				ELSE 'active'::subscription_status
+			END,
+			cancelled_at = CURRENT_TIMESTAMP,
+			auto_renew = false,
+			updated_at = CURRENT_TIMESTAMP
 		WHERE merchant_id = $1
 	`
 

@@ -50,11 +50,25 @@ func NewStripeService() (*StripeService, error) {
 
 	// Build price ID mapping
 	priceIDMapping := map[string]string{
-		"plan-free":           os.Getenv("STRIPE_PRICE_ID_FREE"),
-		"plan-starter":        os.Getenv("STRIPE_PRICE_ID_STARTER_MONTHLY"),
-		"plan-starter-yearly": os.Getenv("STRIPE_PRICE_ID_STARTER_YEARLY"),
-		"plan-pro":            os.Getenv("STRIPE_PRICE_ID_PRO_MONTHLY"),
-		"plan-pro-yearly":     os.Getenv("STRIPE_PRICE_ID_PRO_YEARLY"),
+		"plan-free":                  os.Getenv("STRIPE_PRICE_ID_FREE"),
+		"plan-havenovid":             os.Getenv("STRIPE_PRICE_ID_HAVENOVID_MONTHLY"),
+		"plan-havenovid-yearly":      os.Getenv("STRIPE_PRICE_ID_HAVENOVID_YEARLY"),
+		"plan-havestart":             firstEnv("STRIPE_PRICE_ID_HAVESTART_MONTHLY", "STRIPE_PRICE_ID_STARTER_MONTHLY"),
+		"plan-havestart-yearly":      firstEnv("STRIPE_PRICE_ID_HAVESTART_YEARLY", "STRIPE_PRICE_ID_STARTER_YEARLY"),
+		"plan-havesme":               firstEnv("STRIPE_PRICE_ID_HAVESME_MONTHLY", "STRIPE_PRICE_ID_PRO_MONTHLY"),
+		"plan-havesme-yearly":        firstEnv("STRIPE_PRICE_ID_HAVESME_YEARLY", "STRIPE_PRICE_ID_PRO_YEARLY"),
+		"plan-haveenterprise":        firstEnv("STRIPE_PRICE_ID_HAVEENTERPRISE_MONTHLY", "STRIPE_PRICE_ID_ENTERPRISE_MONTHLY"),
+		"plan-haveenterprise-yearly": firstEnv("STRIPE_PRICE_ID_HAVEENTERPRISE_YEARLY", "STRIPE_PRICE_ID_ENTERPRISE_YEARLY"),
+		"plan-havegold":              os.Getenv("STRIPE_PRICE_ID_HAVEGOLD_MONTHLY"),
+		"plan-havegold-yearly":       os.Getenv("STRIPE_PRICE_ID_HAVEGOLD_YEARLY"),
+		"plan-havebusiness":          os.Getenv("STRIPE_PRICE_ID_HAVEBUSINESS_MONTHLY"),
+		"plan-havebusiness-yearly":   os.Getenv("STRIPE_PRICE_ID_HAVEBUSINESS_YEARLY"),
+		"plan-starter":               os.Getenv("STRIPE_PRICE_ID_STARTER_MONTHLY"),
+		"plan-starter-yearly":        os.Getenv("STRIPE_PRICE_ID_STARTER_YEARLY"),
+		"plan-pro":                   os.Getenv("STRIPE_PRICE_ID_PRO_MONTHLY"),
+		"plan-pro-yearly":            os.Getenv("STRIPE_PRICE_ID_PRO_YEARLY"),
+		"plan-enterprise":            os.Getenv("STRIPE_PRICE_ID_ENTERPRISE_MONTHLY"),
+		"plan-enterprise-yearly":     os.Getenv("STRIPE_PRICE_ID_ENTERPRISE_YEARLY"),
 	}
 
 	successURL := os.Getenv("STRIPE_SUCCESS_URL")
@@ -74,6 +88,15 @@ func NewStripeService() (*StripeService, error) {
 		successURL:     successURL,
 		cancelURL:      cancelURL,
 	}, nil
+}
+
+func firstEnv(keys ...string) string {
+	for _, key := range keys {
+		if value := os.Getenv(key); value != "" {
+			return value
+		}
+	}
+	return ""
 }
 
 // CreateCheckoutSession creates a Stripe checkout session for subscription
@@ -296,7 +319,7 @@ func (s *StripeService) getPriceID(planID, billingCycle string) (string, error) 
 	}
 
 	priceID, exists := s.priceIDMapping[key]
-	if !exists {
+	if !exists || strings.TrimSpace(priceID) == "" {
 		return "", fmt.Errorf("no Stripe price ID found for plan: %s, billing: %s", planID, billingCycle)
 	}
 
@@ -307,11 +330,25 @@ func (s *StripeService) calculateAmount(planID, billingCycle string) float64 {
 	// Calculate amount based on plan and billing cycle
 	// In production, you'd fetch this from Stripe price API or your database
 	amounts := map[string]float64{
-		"plan-free":           0,
-		"plan-starter":        299,
-		"plan-starter-yearly": 2990,
-		"plan-pro":            799,
-		"plan-pro-yearly":     7990,
+		"plan-free":                  0,
+		"plan-havenovid":             35.99,
+		"plan-havenovid-yearly":      359.90,
+		"plan-havestart":             77,
+		"plan-havestart-yearly":      770,
+		"plan-havesme":               200,
+		"plan-havesme-yearly":        2000,
+		"plan-haveenterprise":        720,
+		"plan-haveenterprise-yearly": 7200,
+		"plan-havegold":              2400,
+		"plan-havegold-yearly":       24000,
+		"plan-havebusiness":          5599.99,
+		"plan-havebusiness-yearly":   55999.90,
+		"plan-starter":               299,
+		"plan-starter-yearly":        2990,
+		"plan-pro":                   799,
+		"plan-pro-yearly":            7990,
+		"plan-enterprise":            999,
+		"plan-enterprise-yearly":     9990,
 	}
 
 	key := planID

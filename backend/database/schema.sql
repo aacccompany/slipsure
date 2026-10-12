@@ -186,6 +186,15 @@ CREATE TABLE transactions (
     fail_reason TEXT,
     recheck_count INTEGER DEFAULT 0,
     last_rechecked_at TIMESTAMP WITH TIME ZONE,
+    provider VARCHAR(50),
+    provider_verification_id VARCHAR(120),
+    provider_status VARCHAR(50),
+    provider_valid BOOLEAN DEFAULT FALSE,
+    provider_cached BOOLEAN DEFAULT FALSE,
+    provider_charged_credits INTEGER DEFAULT 0,
+    sender_name VARCHAR(255),
+    receiver_name VARCHAR(255),
+    provider_response JSONB,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -333,7 +342,8 @@ CREATE INDEX idx_system_logs_created_at ON system_logs(created_at);
 INSERT INTO subscription_plans (id, name, description, price_monthly, price_yearly, quota_per_month, features, is_popular) VALUES
 ('plan-free', 'Free', 'Perfect for trying out SlipSure', 0, 0, 50, '["slip_verify", "line_notify", "csv_export", "analytics"]'::jsonb, FALSE),
 ('plan-starter', 'Starter', 'For small businesses', 299, 2990, 200, '["slip_verify", "line_notify", "csv_export", "analytics"]'::jsonb, FALSE),
-('plan-pro', 'Pro', 'For growing businesses', 799, 7990, 1000, '["slip_verify", "line_notify", "csv_export", "analytics", "priority_support"]'::jsonb, TRUE)
+('plan-pro', 'Pro', 'For growing businesses', 799, 7990, 1000, '["slip_verify", "line_notify", "csv_export", "analytics", "priority_support"]'::jsonb, TRUE),
+('plan-enterprise', 'Enterprise', 'For high-volume businesses', 999, 9990, 4000, '["slip_verify", "line_notify", "csv_export", "analytics", "priority_support", "higher_quota"]'::jsonb, FALSE)
 ON CONFLICT (id) DO UPDATE SET
   name = EXCLUDED.name,
   description = EXCLUDED.description,

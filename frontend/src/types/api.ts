@@ -199,6 +199,15 @@ export interface Transaction {
   is_duplicate: boolean;
   fail_reason?: string;
   recheck_count?: number;
+  provider?: string;
+  provider_verification_id?: string;
+  provider_status?: string;
+  provider_valid?: boolean;
+  provider_cached?: boolean;
+  provider_charged_credits?: number;
+  sender_name?: string;
+  receiver_name?: string;
+  provider_response?: Record<string, any>;
   created_at: string;
   updated_at: string;
   slip?: Pick<Slip, 'id' | 'image_url'>;

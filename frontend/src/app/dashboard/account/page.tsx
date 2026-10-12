@@ -57,203 +57,186 @@ export default function AccountPage() {
 
   const initials = user.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U';
 
-  const inputClass = "w-full px-4 py-3 text-sm transition-all focus:outline-none";
-  const inputStyle = { border: '1px solid var(--border)', color: 'var(--navy)', background: '#fff' };
-  const disabledStyle = { border: '1px solid var(--border)', color: 'var(--text-muted)', background: 'var(--bg-subtle)' };
-
   return (
-    <div className="p-8 space-y-8 max-w-4xl" style={{ background: 'var(--bg)' }}>
-      <div>
-        <p className="font-mono text-[10px] uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>/ Account</p>
-        <h1 className="font-bold tracking-tight" style={{ fontSize: '1.4rem', color: 'var(--navy)', letterSpacing: '-0.02em' }}>
-          Account Settings
-        </h1>
-        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>จัดการข้อมูลส่วนตัวและแผนการใช้งานของคุณ</p>
-      </div>
-
-      <div className="space-y-6">
-
-        {/* Profile section */}
-        <section className="bg-white p-8" style={{ border: '1px solid var(--border)' }}>
-          <p className="font-mono text-[10px] uppercase tracking-widest mb-6 flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>
-            <User className="w-3.5 h-3.5" /> Personal Information
+    <div className="min-h-full px-6 py-6 md:px-8" style={{ background: 'var(--bg)' }}>
+      <div className="mx-auto max-w-6xl space-y-6">
+        <div className="border-b border-zinc-200 pb-5">
+          <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-400">/ Account</p>
+          <h1 className="mt-1 text-3xl font-black tracking-tight text-zinc-950">Account Settings</h1>
+          <p className="mt-2 max-w-2xl text-sm text-zinc-500">
+            Manage your personal profile, sign-in connection, and current usage plan.
           </p>
+        </div>
 
-          {/* Avatar row */}
-          <div className="flex items-center gap-6 mb-8">
-            <div
-              className="w-16 h-16 flex items-center justify-center text-white text-xl font-bold"
-              style={{ background: 'var(--navy)' }}
-            >
-              {initials}
-            </div>
-            <div>
-              <h3 className="font-bold text-lg mb-0.5" style={{ color: 'var(--navy)' }}>{user.name}</h3>
-              <p className="text-sm mb-2" style={{ color: 'var(--text-muted)' }}>{user.email}</p>
-              <div className="flex flex-wrap gap-2">
+        <section className="overflow-hidden rounded-lg border border-zinc-200 bg-white">
+          <div className="grid lg:grid-cols-[320px_1fr]">
+            <aside className="border-b border-zinc-200 bg-slate-50 p-6 lg:border-b-0 lg:border-r">
+              <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-500">Identity</p>
+              <div className="mt-7 flex flex-col items-center text-center">
+                <div className="flex h-24 w-24 items-center justify-center rounded-lg bg-zinc-950 text-3xl font-black text-white">
+                  {initials}
+                </div>
+                <h2 className="mt-5 max-w-full truncate text-xl font-black text-zinc-950">{profileData.name || user.name}</h2>
+                <p className="mt-1 max-w-full truncate text-sm text-zinc-500">{user.email}</p>
+              </div>
+              <div className="mt-6 flex flex-wrap justify-center gap-2">
                 <span
-                  className="font-mono text-[9px] px-2 py-1 uppercase tracking-widest"
+                  className="rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-widest"
                   style={{
                     background: user.email_verified ? '#ECFDF5' : '#FFF7ED',
                     color: user.email_verified ? '#059669' : '#D97706',
-                    border: `1px solid ${user.email_verified ? '#A7F3D0' : '#FCD34D'}`,
+                    borderColor: user.email_verified ? '#A7F3D0' : '#FCD34D',
                   }}
                 >
-                  {user.email_verified ? '✓ Verified' : '⚠ Not Verified'}
+                  {user.email_verified ? 'Verified' : 'Not Verified'}
                 </span>
                 <span
-                  className="font-mono text-[9px] px-2 py-1 uppercase tracking-widest"
+                  className="rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-widest"
                   style={{
-                    background: user.line_linked ? '#ECFDF5' : 'var(--bg-subtle)',
-                    color: user.line_linked ? '#059669' : 'var(--text-muted)',
-                    border: `1px solid ${user.line_linked ? '#A7F3D0' : 'var(--border)'}`,
+                    background: user.line_linked ? '#ECFDF5' : '#fff',
+                    color: user.line_linked ? '#059669' : '#64748B',
+                    borderColor: user.line_linked ? '#A7F3D0' : '#CBD5E1',
                   }}
                 >
                   {user.line_linked ? 'LINE Connected' : 'LINE Not Connected'}
                 </span>
               </div>
-            </div>
-          </div>
 
-          {/* Form grid */}
-          <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <label className="block font-mono text-[9px] uppercase tracking-widest mb-1.5" style={{ color: 'var(--text-muted)' }}>Full Name</label>
-              <div className="relative">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-muted)' }} />
-                <input type="text" value={profileData.name}
-                  onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                  className={inputClass}
-                  style={{ ...inputStyle, paddingLeft: '2.75rem' }}
-                  onFocus={(e) => (e.target.style.borderColor = 'var(--blue)')}
-                  onBlur={(e) => (e.target.style.borderColor = 'var(--border)')} />
+              {!user.line_linked && (
+                <button
+                  type="button"
+                  onClick={handleConnectLine}
+                  disabled={isConnectingLine}
+                  className="mt-6 inline-flex h-10 w-full items-center justify-center gap-2 rounded-md text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-60"
+                  style={{ background: '#06C755' }}
+                >
+                  {isConnectingLine ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
+                  Connect LINE
+                </button>
+              )}
+            </aside>
+
+            <div className="p-6 md:p-8">
+              <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h3 className="text-base font-black text-zinc-950">Personal Information</h3>
+                  <p className="mt-1 text-sm text-zinc-500">Update the profile details used inside FlowSlip.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSaveProfile}
+                  disabled={isSaving}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-zinc-950 px-5 text-sm font-bold text-white transition-colors hover:bg-zinc-800 disabled:cursor-wait disabled:opacity-60"
+                >
+                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  Save Changes
+                </button>
+              </div>
+
+              <div className="grid gap-5 md:grid-cols-2">
+                <label className="space-y-2">
+                  <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">Full Name</span>
+                  <span className="relative block">
+                    <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                    <input
+                      type="text"
+                      value={profileData.name}
+                      onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+                      className="h-11 w-full rounded-md border border-zinc-200 bg-white pl-10 pr-3 text-sm font-semibold text-zinc-950 outline-none transition-colors focus:border-blue-500"
+                    />
+                  </span>
+                </label>
+
+                <label className="space-y-2">
+                  <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">Email Address</span>
+                  <span className="relative block">
+                    <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                    <input
+                      type="email"
+                      value={user.email || ''}
+                      disabled
+                      className="h-11 w-full rounded-md border border-zinc-200 bg-slate-50 pl-10 pr-3 text-sm font-semibold text-zinc-500 outline-none"
+                    />
+                  </span>
+                  <span className="block text-xs text-zinc-400">Email cannot be changed</span>
+                </label>
+
+                <label className="space-y-2">
+                  <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">Phone Number</span>
+                  <span className="relative block">
+                    <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                    <input
+                      type="tel"
+                      value={profileData.phone}
+                      onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                      placeholder="+66812345678"
+                      className="h-11 w-full rounded-md border border-zinc-200 bg-white pl-10 pr-3 text-sm font-semibold text-zinc-950 outline-none transition-colors placeholder:text-zinc-400 focus:border-blue-500"
+                    />
+                  </span>
+                </label>
+
+                <label className="space-y-2">
+                  <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">Account Created</span>
+                  <span className="relative block">
+                    <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                    <input
+                      type="text"
+                      value={user.created_at ? new Date(user.created_at).toLocaleDateString('th-TH') : ''}
+                      disabled
+                      className="h-11 w-full rounded-md border border-zinc-200 bg-slate-50 pl-10 pr-3 text-sm font-semibold text-zinc-500 outline-none"
+                    />
+                  </span>
+                </label>
               </div>
             </div>
-
-            <div>
-              <label className="block font-mono text-[9px] uppercase tracking-widest mb-1.5" style={{ color: 'var(--text-muted)' }}>Email Address</label>
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-muted)' }} />
-                <input type="email" value={user.email || ''} disabled className={inputClass}
-                  style={{ ...disabledStyle, paddingLeft: '2.75rem' }} />
-              </div>
-              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Email cannot be changed</p>
-            </div>
-
-            <div>
-              <label className="block font-mono text-[9px] uppercase tracking-widest mb-1.5" style={{ color: 'var(--text-muted)' }}>Phone Number</label>
-              <div className="relative">
-                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-muted)' }} />
-                <input type="tel" value={profileData.phone}
-                  onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                  placeholder="+66812345678" className={inputClass}
-                  style={{ ...inputStyle, paddingLeft: '2.75rem' }}
-                  onFocus={(e) => (e.target.style.borderColor = 'var(--blue)')}
-                  onBlur={(e) => (e.target.style.borderColor = 'var(--border)')} />
-              </div>
-            </div>
-
-            <div>
-              <label className="block font-mono text-[9px] uppercase tracking-widest mb-1.5" style={{ color: 'var(--text-muted)' }}>Account Created</label>
-              <div className="relative">
-                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-muted)' }} />
-                <input type="text"
-                  value={user.created_at ? new Date(user.created_at).toLocaleDateString('th-TH') : ''}
-                  disabled className={inputClass}
-                  style={{ ...disabledStyle, paddingLeft: '2.75rem' }} />
-              </div>
-            </div>
-          </div>
-
-          <div
-            className="flex items-center justify-end gap-3 pt-6 mt-6"
-            style={{ borderTop: '1px solid var(--border)' }}
-          >
-            {!user.line_linked && (
-              <button onClick={handleConnectLine} disabled={isConnectingLine}
-                className="flex items-center gap-2 px-6 py-3 text-sm font-semibold transition-all hover:opacity-90 disabled:opacity-60"
-                style={{ background: '#06C755', color: '#fff' }}>
-                {isConnectingLine ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageSquare className="w-4 h-4" />}
-                Connect LINE
-              </button>
-            )}
-            <button onClick={handleSaveProfile} disabled={isSaving}
-              className="flex items-center gap-2 px-8 py-3 text-sm font-semibold transition-all hover:opacity-90 disabled:opacity-60"
-              style={{ background: 'var(--navy)', color: '#fff' }}>
-              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              Save Changes
-            </button>
           </div>
         </section>
 
-        {/* Plan overview */}
-        <section className="bg-white" style={{ border: '1px solid var(--border)' }}>
-          <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border)' }}>
-            <p className="font-mono text-[10px] uppercase tracking-widest flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>
-              <Crown className="w-3.5 h-3.5" /> Current Plan
-            </p>
-            <Link href="/dashboard/subscription"
-              className="text-sm font-medium transition-colors"
-              style={{ color: 'var(--blue)' }}>
+        <section className="grid gap-4 lg:grid-cols-3">
+          {[
+            { icon: CreditCard, label: 'Current Plan', value: subscription?.plan?.name || 'Free', sub: `Status: ${subscription?.status || 'trial'}` },
+            { icon: Shield, label: 'Quota', value: `${quota?.used ?? 0} / ${quota?.quota_limit ?? 50}`, sub: `${quota?.remaining ?? 0} remaining` },
+            { icon: Calendar, label: 'Next Reset', value: quota?.reset_date ? new Date(quota.reset_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }) : '-', sub: 'Monthly quota reset' },
+          ].map(({ icon: Icon, label, value, sub }) => (
+            <div key={label} className="rounded-lg border border-zinc-200 bg-white p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">{label}</p>
+                <Icon className="h-4 w-4 text-zinc-400" />
+              </div>
+              <h4 className="text-2xl font-black text-zinc-950">{value}</h4>
+              <p className="mt-1 text-sm text-zinc-500">{sub}</p>
+            </div>
+          ))}
+        </section>
+
+        <section className="rounded-lg border border-zinc-200 bg-white p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">Quick Actions</p>
+            <Link href="/dashboard/subscription" className="text-sm font-bold text-blue-700 hover:text-blue-800">
               Manage Plan →
             </Link>
           </div>
-
-          <div className="grid md:grid-cols-3 divide-x" style={{ borderColor: 'var(--border)' }}>
-            {[
-              { icon: CreditCard, label: 'Plan', value: subscription?.plan?.name || 'Free', sub: `Status: ${subscription?.status || 'trial'}` },
-              { icon: Shield, label: 'Quota', value: `${quota?.used ?? 0} / ${quota?.quota_limit ?? 50}`, sub: `${quota?.remaining ?? 0} remaining` },
-              { icon: Calendar, label: 'Resets', value: quota?.reset_date ? new Date(quota.reset_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }) : '—', sub: 'Next quota reset' },
-            ].map(({ icon: Icon, label, value, sub }) => (
-              <div key={label} className="p-6">
-                <div className="flex items-center gap-3 mb-3">
-                  <Icon className="w-4 h-4" style={{ color: 'var(--text-muted)' }} />
-                  <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{label}</p>
-                </div>
-                <h4 className="font-bold text-lg mb-1" style={{ color: 'var(--navy)' }}>{value}</h4>
-                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{sub}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Quick actions */}
-        <section className="bg-white" style={{ border: '1px solid var(--border)' }}>
-          <div className="px-5 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
-            <p className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Quick Actions</p>
-          </div>
-          <div className="grid md:grid-cols-2 gap-0 divide-x divide-y" style={{ borderColor: 'var(--border)' }}>
-            <Link href="/dashboard/subscription"
-              className="p-5 group transition-colors"
-              onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-subtle)')}
-              onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}>
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 flex items-center justify-center" style={{ background: 'var(--blue-pale)' }}>
-                  <Crown className="w-4 h-4" style={{ color: 'var(--blue)' }} />
-                </div>
-                <div>
-                  <h4 className="font-semibold text-sm" style={{ color: 'var(--navy)' }}>Upgrade Plan</h4>
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>View pricing & features</p>
-                </div>
-              </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <Link href="/dashboard/subscription" className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 transition-colors hover:border-blue-300 hover:bg-blue-50">
+              <span className="flex h-10 w-10 items-center justify-center rounded-md bg-blue-50">
+                <Crown className="h-4 w-4 text-blue-700" />
+              </span>
+              <span>
+                <span className="block text-sm font-bold text-zinc-950">Upgrade Plan</span>
+                <span className="text-xs text-zinc-500">View pricing and features</span>
+              </span>
             </Link>
-            <Link href="/forgot-password"
-              className="p-5 group transition-colors"
-              onMouseEnter={(e) => (e.currentTarget.style.background = '#FEF2F2')}
-              onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}>
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 flex items-center justify-center bg-rose-50">
-                  <Shield className="w-4 h-4 text-rose-500" />
-                </div>
-                <div>
-                  <h4 className="font-semibold text-sm" style={{ color: 'var(--navy)' }}>Change Password</h4>
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Update your password</p>
-                </div>
-              </div>
+            <Link href="/forgot-password" className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 transition-colors hover:border-rose-200 hover:bg-rose-50">
+              <span className="flex h-10 w-10 items-center justify-center rounded-md bg-rose-50">
+                <Shield className="h-4 w-4 text-rose-500" />
+              </span>
+              <span>
+                <span className="block text-sm font-bold text-zinc-950">Change Password</span>
+                <span className="text-xs text-zinc-500">Update your password</span>
+              </span>
             </Link>
           </div>
         </section>
-
       </div>
     </div>
   );

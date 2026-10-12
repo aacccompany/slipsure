@@ -971,6 +971,43 @@ func (h *MerchantHandler) GetAdminPayments(c *gin.Context) {
 	})
 }
 
+// GetMerchantPayments returns recent subscription payment history for the current merchant.
+func (h *MerchantHandler) GetMerchantPayments(c *gin.Context) {
+	merchantID, err := getMerchantID(c, h.merchantRepo)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"success": false,
+			"error":   "MERCHANT_NOT_FOUND",
+			"message": "Merchant profile not found",
+		})
+		return
+	}
+
+	limit := 50
+	if value, err := strconv.Atoi(c.DefaultQuery("limit", "50")); err == nil && value > 0 && value <= 100 {
+		limit = value
+	}
+
+	payments, err := h.merchantRepo.ListPaymentLogsByMerchant(merchantID, limit)
+	if err != nil {
+		log.Printf("Failed to list merchant payments for %s: %v", merchantID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "DATABASE_ERROR",
+			"message": "Failed to retrieve payment history",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data": gin.H{
+			"items": payments,
+			"total": len(payments),
+		},
+	})
+}
+
 // GetAdminUsers returns all platform users with merchant association for administrators.
 func (h *MerchantHandler) GetAdminUsers(c *gin.Context) {
 	page, limit := readPagination(c, 20)
