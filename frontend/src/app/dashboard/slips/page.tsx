@@ -275,6 +275,7 @@ export default function SlipsPage() {
   const [page, setPage] = useState(1);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [detailLoadingId, setDetailLoadingId] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
   const [appliedFilters, setAppliedFilters] = useState<FilterState>(EMPTY_FILTERS);
 
@@ -286,14 +287,7 @@ export default function SlipsPage() {
   const transactions = listData?.data?.items ?? [];
   const pagination = listData?.data?.pagination;
   const totalPages = Math.max(1, pagination?.total_pages ?? 1);
-
-  const clearFilters = () => {
-    setStatus('');
-    setStartDate('');
-    setEndDate('');
-    setSearch('');
-    setPage(1);
-  };
+  const hasActiveFilters = JSON.stringify(appliedFilters) !== JSON.stringify(EMPTY_FILTERS);
 
   const downloadTransactions = async () => {
     setIsExporting(true);
@@ -309,6 +303,8 @@ export default function SlipsPage() {
       URL.revokeObjectURL(url);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to export transactions');
+    } finally {
+      setIsExporting(false);
     }
   };
 

@@ -263,7 +263,7 @@ export default function MerchantLinePage() {
                 </button>
                 <button
                   type="button"
-                  onClick={handleDelete}
+                  onClick={() => setIsDeleting(true)}
                   disabled={deleteMutation.isPending}
                   className="inline-flex h-12 items-center justify-center gap-2 rounded-md border border-rose-200 bg-white text-sm font-bold text-rose-600 transition-colors hover:bg-rose-50 disabled:cursor-wait disabled:opacity-60"
                 >
@@ -273,6 +273,48 @@ export default function MerchantLinePage() {
               </div>
             )}
           </>
+        )}
+
+        {isDeleting && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="text-xl font-black text-zinc-950">Delete LINE Configuration?</h3>
+                  <p className="mt-2 text-sm text-zinc-600">
+                    Your webhook URL will stop working until you configure LINE again.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsDeleting(false)}
+                  className="rounded-md p-2 text-zinc-500 hover:bg-zinc-100"
+                  aria-label="Close delete confirmation"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="mt-6 space-y-2">
+                <button
+                  type="button"
+                  onClick={() => deleteMutation.mutate()}
+                  disabled={deleteMutation.isPending}
+                  className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-rose-600 text-sm font-bold text-white transition-colors hover:bg-rose-700 disabled:cursor-wait disabled:opacity-60"
+                >
+                  {deleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                  Yes, Delete
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsDeleting(false)}
+                  disabled={deleteMutation.isPending}
+                  className="h-11 w-full rounded-md border border-zinc-200 bg-white text-sm font-bold text-zinc-700 transition-colors hover:border-zinc-900"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         <section className="rounded-lg border border-emerald-200 bg-emerald-50 p-6">

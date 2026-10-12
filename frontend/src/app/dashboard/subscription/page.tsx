@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { Check, Zap, ArrowRight, CreditCard, Clock, History, Loader2, X } from 'lucide-react';
-import { Check, Zap, ArrowRight, CreditCard, Clock, History, Loader2, X } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
 import { toast } from 'sonner';

@@ -93,7 +93,7 @@ export default function DashboardPage() {
     queryFn: () => api.getMerchantAnalyticsDashboard(),
   });
 
-  const { data: usageData, refetch: refetchUsage, isFetching: usageFetching } = useQuery({
+  const { data: usageData, refetch: refetchUsage, isLoading: usageLoading, isFetching: usageFetching } = useQuery({
     queryKey: ['merchant-analytics-usage', apiPeriod],
     queryFn: () => api.getMerchantAnalyticsUsage({ period: apiPeriod }),
   });
@@ -699,7 +699,6 @@ export default function DashboardPage() {
                 <ArrowUpRight className="h-3.5 w-3.5" />
               </Link>
             </div>
-            )}
           </div>
 
           <form

@@ -133,11 +133,10 @@ export function AdminShell({
 
       <ConfirmModal
         open={confirmingLogout}
-        title="Log out?"
-        message="You'll need to sign in again to access the backoffice."
-        confirmLabel="Log Out"
+        title="Confirm logout"
+        message="Are you sure you want to log out?"
+        confirmLabel="OK"
         isLoading={isLoggingOut}
-        destructive
         onConfirm={handleLogout}
         onCancel={() => setConfirmingLogout(false)}
       />

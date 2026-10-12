@@ -103,11 +103,10 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
 
     <ConfirmModal
       open={confirmingLogout}
-      title="Log out?"
-      message="You'll need to sign in again to access your dashboard."
-      confirmLabel="Log Out"
+      title="Confirm logout"
+      message="Are you sure you want to log out?"
+      confirmLabel="OK"
       isLoading={isLoggingOut}
-      destructive
       onConfirm={handleLogout}
       onCancel={() => setConfirmingLogout(false)}
     />
