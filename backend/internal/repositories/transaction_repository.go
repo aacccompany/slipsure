@@ -174,7 +174,7 @@ func (r *transactionRepository) ListByMerchant(merchantID uuid.UUID, filters mod
 		%s
 		ORDER BY created_at DESC
 		LIMIT $%d OFFSET $%d
-	`, transactionColumns, where, len(args)-1, len(args))
+	`, where, len(args)-1, len(args))
 
 	rows, err := r.db.Query(query, args...)
 	if err != nil {
