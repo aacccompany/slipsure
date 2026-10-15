@@ -144,7 +144,8 @@ export default function AdminMerchantDetailPage() {
           </div>
         </div>
 
-        <section className="bg-white p-6" style={{ border: '1px solid var(--border)', borderLeft: '4px solid var(--blue)' }}>
+        <section className="relative overflow-hidden bg-white p-6" style={{ border: '1px solid var(--border)' }}>
+          <span aria-hidden className="absolute inset-y-0 left-0 w-1" style={{ background: 'var(--blue)' }} />
           <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
             <div className="flex items-start gap-4">
               <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg text-2xl font-black shadow-sm" style={{ background: 'var(--bg-subtle)', color: 'var(--blue)' }}>

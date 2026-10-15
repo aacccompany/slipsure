@@ -1,6 +1,11 @@
-@import url('https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=IBM+Plex+Mono:wght@400;500&display=swap');
-
 @import "tailwindcss";
+
+/* Fonts are self-hosted via next/font (see layout.tsx). Plus Jakarta Sans
+   covers Latin/numerals, Anuphan covers Thai, so mixed text stays consistent. */
+@theme inline {
+  --font-sans: var(--font-jakarta), var(--font-anuphan), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), var(--font-anuphan), ui-monospace, monospace;
+}
 
 /* ── Logo-Referenced Color System ──────────────────────────
    Extracted directly from logo.png:
@@ -43,14 +48,14 @@
 body {
   color: var(--text);
   background: var(--bg);
-  font-family: 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* font-display now uses Sarabun heavy weights for large headings */
+/* font-display: same family, heavier weights for large headings */
 .font-display {
-  font-family: 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--font-sans);
   letter-spacing: -0.01em;
 }
 
@@ -115,6 +120,122 @@ body {
   border-radius: 50%;
   background: var(--blue);
   animation: pulse-ring 2s ease-out infinite;
+}
+
+/* ── Soft UI (whole app) ────────────────────────────────────
+   Rounded, softly-elevated surfaces. Scoped to `.soft-ui`, which
+   wraps <body>. Lives in @layer components so Tailwind utilities
+   (e.g. rounded-full status dots, progress bars) still win.
+   Cards/controls are matched by their inline styles. Selectors
+   list both "prop: value" and "prop:value": server-rendered HTML
+   serialises inline styles without the space, client-rendered
+   (CSSOM) with it.
+───────────────────────────────────────────────────────── */
+@layer components {
+  .soft-ui {
+    --radius-card: 18px;
+    --radius-control: 12px;
+    --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 10px 28px -14px rgba(15, 23, 42, 0.10);
+    --shadow-card-hover: 0 2px 4px rgba(15, 23, 42, 0.05), 0 16px 36px -14px rgba(0, 82, 255, 0.18);
+  }
+
+  /* Cards / panels: anything with a full 1px border */
+  .soft-ui :is([style*="border: 1px solid"], [style*="border:1px solid"]) {
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+    transition: box-shadow 0.2s ease, background-color 0.2s ease;
+  }
+
+  /* Keep table header backgrounds inside the rounded corners */
+  .soft-ui :is([style*="border: 1px solid"], [style*="border:1px solid"]):has(table) {
+    overflow: clip;
+  }
+
+  .soft-ui :is([style*="border: 1px solid"], [style*="border:1px solid"]):hover:not(:has(table)) {
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  /* Controls: inputs, selects, buttons styled with a border colour */
+  .soft-ui input,
+  .soft-ui select,
+  .soft-ui textarea,
+  .soft-ui button[style*="border"],
+  .soft-ui [style*="border-color"]:not(.border-t, .border-b, .border-l, .border-r, .border-x, .border-y) {
+    border-radius: var(--radius-control);
+  }
+
+  /* Solid filled buttons (navy / blue backgrounds) */
+  .soft-ui :is(button, a):is(
+    [style*="background: var(--navy)"], [style*="background:var(--navy)"],
+    [style*="background: var(--blue)"], [style*="background:var(--blue)"]
+  ) {
+    border-radius: var(--radius-control);
+  }
+
+  /* Emphasised cards (e.g. highlighted pricing plan) */
+  .soft-ui :is([style*="border: 2px solid"], [style*="border:2px solid"]) {
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  /* Outlined links/buttons styled via the Tailwind `border` utility */
+  .soft-ui a.border,
+  .soft-ui button.border {
+    border-radius: var(--radius-control);
+  }
+
+  /* Small nested tiles (soft-tinted blocks inside cards) */
+  .soft-ui :is(
+    [style*="background: var(--bg-subtle)"], [style*="background:var(--bg-subtle)"],
+    [style*="background: var(--blue-pale)"], [style*="background:var(--blue-pale)"]
+  ):not(section, main, header, footer) {
+    border-radius: var(--radius-control);
+  }
+
+  /* Progress / usage bars: an overflow-hidden track filled with the border colour */
+  .soft-ui [class*="overflow-hidden"]:is(
+    [style*="background: var(--border)"], [style*="background:var(--border)"]
+  ) {
+    border-radius: 9999px;
+  }
+
+  /* Modal surface gets a larger radius */
+  .soft-ui .fixed > .max-w-md {
+    border-radius: 22px;
+    overflow: clip;
+  }
+}
+/* One radius scale: the older pages use Tailwind's small radii
+   (rounded / -md / -lg = 4-8px). Map them to the soft scale so cards,
+   inputs and chips match everywhere. Unlayered so it overrides utilities. */
+.soft-ui .rounded-sm { border-radius: 8px; }
+.soft-ui .rounded,
+.soft-ui .rounded-md { border-radius: 12px; }
+.soft-ui .rounded-lg { border-radius: 16px; }
+
+/* One ink colour: near-black zinc utilities -> brand navy. */
+.soft-ui .text-zinc-950,
+.soft-ui .text-zinc-900 { color: var(--navy); }
+.soft-ui .bg-zinc-950,
+.soft-ui .bg-zinc-900 { background-color: var(--navy); }
+.soft-ui .hover\:bg-zinc-800:hover { background-color: var(--navy-light); }
+
+/* Readable labels: the dashboards use many tiny `font-mono uppercase
+   tracking-widest` captions (9-10px). Unlayered on purpose, so it
+   overrides those Tailwind utilities. Plain IDs/codes that use only
+   `font-mono` (no uppercase + tracking) are left untouched. */
+.soft-ui .font-mono.uppercase.tracking-widest {
+  font-family: inherit;
+  text-transform: none;
+  letter-spacing: 0.01em;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* The loaded families top out at 800 (Anuphan at 700); `font-black` (900)
+   would render a synthetic heavy face, so cap it at 800 inside the dashboards. */
+.soft-ui .font-black {
+  font-weight: 800;
 }
 
 /* ── Scrollbar ──────────────────────────────────────────── */

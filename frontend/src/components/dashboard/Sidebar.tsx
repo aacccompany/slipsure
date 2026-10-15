@@ -62,11 +62,10 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
               key={item.href}
               href={item.href}
               onClick={onClose}
-              className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-all"
+              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all"
               style={{
                 color: isActive ? '#fff' : 'rgba(255,255,255,0.45)',
-                background: isActive ? 'rgba(0,82,255,0.25)' : 'transparent',
-                borderLeft: `2px solid ${isActive ? 'var(--blue)' : 'transparent'}`,
+                background: isActive ? 'rgba(0,82,255,0.35)' : 'transparent',
               }}
               onMouseEnter={(e) => {
                 if (!isActive) (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.8)';
@@ -86,8 +85,8 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
       <div className="px-3 py-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
         <button
           onClick={() => setConfirmingLogout(true)}
-          className="flex items-center gap-3 px-3 py-2.5 w-full text-sm font-medium transition-all"
-          style={{ color: 'rgba(255,255,255,0.35)', borderLeft: '2px solid transparent' }}
+          className="flex items-center gap-3 rounded-xl px-3 py-2.5 w-full text-sm font-medium transition-all"
+          style={{ color: 'rgba(255,255,255,0.35)' }}
           onMouseEnter={(e) => {
             (e.currentTarget as HTMLElement).style.color = '#FCA5A5';
           }}

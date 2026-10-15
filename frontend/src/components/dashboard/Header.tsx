@@ -54,7 +54,7 @@ export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
 
         <div className="flex items-center gap-2.5">
           <div
-            className="w-7 h-7 flex items-center justify-center text-white text-[11px] font-bold font-mono"
+            className="w-8 h-8 flex items-center justify-center rounded-xl text-white text-[11px] font-bold font-mono"
             style={{ background: 'var(--navy)' }}
           >
             {initials}

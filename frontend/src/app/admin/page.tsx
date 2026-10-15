@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { api } from '@/lib/api-client';
 import { useAuth } from '@/contexts/auth-context';
 import { AdminShell } from '@/components/admin/AdminShell';
+import { EmptyState } from '@/components/dashboard/EmptyState';
 import type { AdminAnalyticsDashboard, AdminBankStatus, AdminMerchantPerformanceAnalytics, AdminPaymentDetail, AdminRevenueAnalytics, PaymentLog, SubscriptionPlan } from '@/types/api';
 
 type Tab = 'merchants' | 'users' | 'billing' | 'analytics' | 'transactions';
@@ -122,7 +123,7 @@ function BillingMetricCard({
           <p className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{label}</p>
           <p className="mt-4 text-2xl font-black tracking-tight" style={{ color: colors.accent }}>{value}</p>
         </div>
-        <span className="flex h-9 w-9 items-center justify-center" style={{ background: colors.soft, color: colors.accent }}>
+        <span className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: colors.soft, color: colors.accent }}>
           {icon}
         </span>
       </div>
@@ -707,22 +708,21 @@ function AdminAnalyticsOverview({
             <div className="mb-2 flex flex-wrap gap-2 font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
               <span>Core Infrastructure</span>
               <span style={{ color: 'var(--blue)' }}>/ Live Operational Telemetry</span>
-              <span>/ v1/admin/analytics/dashboard</span>
             </div>
             <h2 className="text-2xl font-black tracking-tight" style={{ color: 'var(--navy)' }}>
               Platform Operations & Analytics
             </h2>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="inline-flex items-center gap-2 px-3 py-2 font-semibold" style={{ background: '#ECFDF5', color: '#047857' }}>
+            <span className="inline-flex items-center gap-2 rounded-full px-3.5 py-2 font-semibold" style={{ background: '#ECFDF5', color: '#047857' }}>
               <CheckCircle2 className="h-3.5 w-3.5" />
               HaveSLIP Gateway: {isGatewayHealthy ? `${gatewayLatency}ms latency` : 'Needs attention'}
             </span>
-            <span className="inline-flex items-center gap-2 px-3 py-2 font-semibold" style={{ background: 'var(--bg-subtle)', color: 'var(--navy)' }}>
+            <span className="inline-flex items-center gap-2 rounded-full px-3.5 py-2 font-semibold" style={{ background: 'var(--bg-subtle)', color: 'var(--navy)' }}>
               <Bot className="h-3.5 w-3.5" />
               LINE Webhooks: {dashboard?.connected_bots ?? 0}
             </span>
-            <span className="inline-flex items-center gap-2 px-3 py-2 font-semibold" style={{ background: '#FEF2F2', color: '#B91C1C' }}>
+            <span className="inline-flex items-center gap-2 rounded-full px-3.5 py-2 font-semibold" style={{ background: '#FEF2F2', color: '#B91C1C' }}>
               <AlertTriangle className="h-3.5 w-3.5" />
               Rejections: {todayRejected.toLocaleString()}
             </span>
@@ -730,7 +730,7 @@ function AdminAnalyticsOverview({
         </div>
       </section>
 
-      <section className="flex flex-col gap-3 px-4 py-3 text-xs lg:flex-row lg:items-center lg:justify-between" style={{ background: '#0F1E35', color: 'white' }}>
+      <section className="flex flex-col gap-3 rounded-2xl px-5 py-3.5 text-xs lg:flex-row lg:items-center lg:justify-between" style={{ background: 'linear-gradient(135deg, #0F1E35 0%, #12305C 100%)', color: 'white' }}>
         <div className="flex flex-wrap items-center gap-3">
           <span className="inline-flex items-center gap-2 font-bold">
             <span className="h-2 w-2 rounded-full" style={{ background: isGatewayHealthy ? '#10B981' : '#EF4444' }} />
@@ -743,7 +743,7 @@ function AdminAnalyticsOverview({
         </div>
         <div className="flex flex-wrap gap-2 font-mono text-[9px] uppercase tracking-widest">
           {(bankItems.length > 0 ? bankItems.slice(0, 3) : [{ bank_code: 'haveslip', bank_name: 'HaveSLIP', status: isGatewayHealthy ? 'operational' : 'unknown' }]).map((bank) => (
-            <span key={bank.bank_code} className="px-2 py-1" style={{ background: 'rgba(255,255,255,0.09)', color: '#DCEBFF' }}>
+            <span key={bank.bank_code} className="rounded-full px-3 py-1" style={{ background: 'rgba(255,255,255,0.12)', color: '#DCEBFF' }}>
               {bank.bank_name}: {bank.status === 'operational' ? 'OK' : 'Check'}
             </span>
           ))}
@@ -781,33 +781,41 @@ function AdminAnalyticsOverview({
             tone: '#EA580C',
           },
         ].map((metric) => (
-          <section key={metric.label} className="bg-white p-4" style={{ border: '1px solid var(--border)' }}>
-            <div className="mb-3 flex items-center justify-between">
-              <span className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-                {metric.label}
-              </span>
-              <metric.icon className="h-4 w-4" style={{ color: metric.tone }} />
-            </div>
-            <p className="text-2xl font-black tracking-tight" style={{ color: 'var(--navy)' }}>{metric.value}</p>
-            <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>{metric.sub}</p>
+          <section key={metric.label} className="bg-white p-5" style={{ border: '1px solid var(--border)' }}>
+            <span
+              className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl"
+              style={{ background: `${metric.tone}1A` }}
+            >
+              <metric.icon className="h-5 w-5" style={{ color: metric.tone }} />
+            </span>
+            <p className="mb-1 text-[13px] font-medium" style={{ color: 'var(--text-muted)' }}>
+              {metric.label}
+            </p>
+            <p className="text-3xl font-extrabold tracking-tight" style={{ color: 'var(--navy)', letterSpacing: '-0.02em' }}>{metric.value}</p>
+            <p className="mt-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>{metric.sub}</p>
           </section>
         ))}
       </div>
 
       <div className="grid gap-4 xl:grid-cols-12">
-        <section className="bg-white p-5 xl:col-span-7" style={{ border: '1px solid var(--border)' }}>
-          <div className="mb-5 flex items-center justify-between">
-            <div>
+        <section className="min-w-0 bg-white p-5 xl:col-span-7" style={{ border: '1px solid var(--border)' }}>
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
               <h3 className="text-sm font-bold" style={{ color: 'var(--navy)' }}>Slip Velocity & Verification Health</h3>
               <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Merchant scan activity from the current platform data</p>
             </div>
             <div className="flex items-center gap-4 font-mono text-[9px] uppercase tracking-widest">
-              <span className="inline-flex items-center gap-1" style={{ color: '#059669' }}><span className="h-2 w-2" style={{ background: '#059669' }} />Verified</span>
-              <span className="inline-flex items-center gap-1" style={{ color: '#EF4444' }}><span className="h-2 w-2" style={{ background: '#EF4444' }} />Rejected</span>
+              <span className="inline-flex items-center gap-1.5" style={{ color: '#059669' }}><span className="h-2 w-2 rounded-full" style={{ background: '#059669' }} />Verified</span>
+              <span className="inline-flex items-center gap-1.5" style={{ color: '#EF4444' }}><span className="h-2 w-2 rounded-full" style={{ background: '#EF4444' }} />Rejected</span>
             </div>
           </div>
           {merchantLoad.length === 0 ? (
-            <p className="py-16 text-center text-sm" style={{ color: 'var(--text-muted)' }}>No scan activity yet.</p>
+            <EmptyState
+              compact
+              icon={ReceiptText}
+              title="No scan activity yet"
+              description="Merchant scan volume will appear here once slips start coming in."
+            />
           ) : (
             <div className="flex h-56 items-end gap-3 border-b border-l px-4 pt-4" style={{ borderColor: 'var(--border)' }}>
               {merchantLoad.map((merchant) => {
@@ -819,7 +827,7 @@ function AdminAnalyticsOverview({
                     <div className="flex h-44 w-full items-end justify-center">
                       <div
                         title={`${merchant.shop_name}: ${merchant.verified_scans} verified, ${merchant.failed_scans} rejected`}
-                        className="flex w-full max-w-9 flex-col-reverse overflow-hidden transition-all hover:opacity-80"
+                        className="flex w-full max-w-9 flex-col-reverse overflow-hidden rounded-t-xl transition-all hover:opacity-80"
                         style={{ height: `${height}%`, background: 'var(--border)' }}
                       >
                         <div style={{ height: `${verifiedPercent}%`, background: '#059669' }} />
@@ -849,7 +857,7 @@ function AdminAnalyticsOverview({
           </div>
         </section>
 
-        <section className="bg-white p-5 xl:col-span-5" style={{ border: '1px solid var(--border)' }}>
+        <section className="min-w-0 bg-white p-5 xl:col-span-5" style={{ border: '1px solid var(--border)' }}>
           <div className="mb-5 flex items-center justify-between">
             <div>
               <h3 className="text-sm font-bold" style={{ color: 'var(--navy)' }}>Merchant Subscriptions & MRR</h3>
@@ -859,7 +867,7 @@ function AdminAnalyticsOverview({
               {dashboard?.active_merchants ?? 0} Shops
             </span>
           </div>
-          <div className="mb-5 flex items-center justify-between rounded-sm p-4" style={{ background: 'var(--bg-subtle)' }}>
+          <div className="mb-5 flex items-center justify-between rounded-2xl p-5" style={{ background: 'var(--bg-subtle)' }}>
             <div>
               <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Monthly Recurring Revenue</p>
               <p className="mt-1 text-2xl font-black" style={{ color: 'var(--blue)' }}>{formatMoney(revenue?.mrr)}</p>
@@ -875,8 +883,8 @@ function AdminAnalyticsOverview({
                   <span className="text-xs font-semibold" style={{ color: 'var(--navy)' }}>{item.plan}</span>
                   <span className="font-mono text-[10px]" style={{ color: 'var(--text-muted)' }}>{formatMoney(item.revenue)}</span>
                 </div>
-                <div className="h-2" style={{ background: 'var(--border)' }}>
-                  <div className="h-full" style={{ width: `${Math.max(4, (item.revenue / maxPlanRevenue) * 100)}%`, background: 'var(--blue)' }} />
+                <div className="h-2 overflow-hidden rounded-full" style={{ background: 'var(--border)' }}>
+                  <div className="h-full rounded-full" style={{ width: `${Math.max(4, (item.revenue / maxPlanRevenue) * 100)}%`, background: 'var(--blue)' }} />
                 </div>
               </div>
             ))}
@@ -895,8 +903,8 @@ function AdminAnalyticsOverview({
       </div>
 
       <div className="grid gap-4 xl:grid-cols-12">
-        <section className="bg-white xl:col-span-8" style={{ border: '1px solid var(--border)' }}>
-          <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
+        <section className="min-w-0 bg-white xl:col-span-8" style={{ border: '1px solid var(--border)' }}>
+          <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
             <div>
               <h3 className="text-sm font-bold" style={{ color: 'var(--navy)' }}>Live Verification Stream</h3>
               <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Latest merchant activity summary from HaveSLIP and LINE webhook usage</p>
@@ -919,7 +927,7 @@ function AdminAnalyticsOverview({
               <tbody>
                 {recentVerifications.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center" style={{ color: 'var(--text-muted)' }}>No live merchant activity yet.</td>
+                    <td colSpan={7} className="px-4 py-12 text-center" style={{ color: 'var(--text-muted)' }}>No live merchant activity yet.</td>
                   </tr>
                 ) : recentVerifications.map((item) => {
                   const verified = isVerifiedStatus(item.status);
@@ -947,7 +955,7 @@ function AdminAnalyticsOverview({
                     </td>
                     <td className="px-4 py-3">
                       <span
-                        className="inline-flex items-center gap-1 px-2 py-1 font-semibold"
+                        className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-semibold"
                         style={{
                           background: verified ? '#ECFDF5' : '#FEF2F2',
                           color: verified ? '#047857' : '#B91C1C',
@@ -973,7 +981,7 @@ function AdminAnalyticsOverview({
           </div>
         </section>
 
-        <section className="bg-white p-5 xl:col-span-4" style={{ border: '1px solid var(--border)' }}>
+        <section className="min-w-0 bg-white p-5 xl:col-span-4" style={{ border: '1px solid var(--border)' }}>
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-sm font-bold" style={{ color: 'var(--navy)' }}>Bank & HaveSLIP Status</h3>
             {bankStatusLoading ? <Loader2 className="h-4 w-4 animate-spin" style={{ color: 'var(--blue)' }} /> : null}
@@ -1230,12 +1238,15 @@ function AdminBackofficeContent() {
               { label: 'LINE Webhooks Active', value: lineConnectedCount, sub: `${merchants.length - lineConnectedCount} missing setup`, icon: Bot, color: '#047857' },
             ].map((item) => (
               <section key={item.label} className="bg-white p-5" style={{ border: '1px solid var(--border)' }}>
-                <div className="flex items-center justify-between">
-                  <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{item.label}</p>
-                  <item.icon className="h-4 w-4" style={{ color: item.color }} />
-                </div>
-                <p className="mt-3 text-3xl font-black tracking-tight" style={{ color: 'var(--navy)' }}>{item.value.toLocaleString()}</p>
-                <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>{item.sub}</p>
+                <span
+                  className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl"
+                  style={{ background: 'var(--bg-subtle)' }}
+                >
+                  <item.icon className="h-5 w-5" style={{ color: item.color }} />
+                </span>
+                <p className="mb-1 text-[13px] font-medium" style={{ color: 'var(--text-muted)' }}>{item.label}</p>
+                <p className="text-3xl font-extrabold tracking-tight" style={{ color: 'var(--navy)', letterSpacing: '-0.02em' }}>{item.value.toLocaleString()}</p>
+                <p className="mt-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>{item.sub}</p>
               </section>
             ))}
           </div>
@@ -1451,7 +1462,10 @@ function AdminBackofficeContent() {
           </section>
         ) : null}
 
-        <div className="overflow-hidden bg-white" style={{ border: '1px solid var(--border)' }}>
+        <div
+          className={tab === 'analytics' ? '' : 'overflow-hidden bg-white'}
+          style={tab === 'analytics' ? undefined : { border: '1px solid var(--border)' }}
+        >
           {tab === 'transactions' ? (
             transactionsQuery.isLoading ? (
               <div className="flex h-64 items-center justify-center">
@@ -1559,7 +1573,7 @@ function AdminBackofficeContent() {
               />
             )
           ) : tab === 'analytics' ? (
-            <div className="p-5">
+            <div>
               <AdminAnalyticsOverview
                 dashboard={adminAnalyticsQuery.data?.data}
                 revenue={adminRevenueQuery.data?.data}

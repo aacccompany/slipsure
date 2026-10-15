@@ -39,7 +39,7 @@ export const Footer = () => {
           </div>
 
           {/* Links */}
-          <div className="grid grid-cols-3 gap-10 text-sm">
+          <div className="grid grid-cols-2 gap-x-8 gap-y-8 text-sm sm:grid-cols-3 sm:gap-10">
             <div className="space-y-3">
               <p
                 className="font-mono text-[10px] uppercase tracking-widest mb-4"
@@ -95,7 +95,7 @@ export const Footer = () => {
               >
                 ติดต่อ
               </p>
-              <p className="text-sm" style={{ color: 'rgba(248,250,252,0.45)' }}>hello@flowslip.ai</p>
+              <p className="break-all text-sm" style={{ color: 'rgba(248,250,252,0.45)' }}>hello@flowslip.ai</p>
             </div>
           </div>
         </div>
