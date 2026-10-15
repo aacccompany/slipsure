@@ -65,6 +65,14 @@ func (r *fakeUserRepository) UpdateEmailVerification(userID uuid.UUID, verified 
 	return nil
 }
 
+func (r *fakeUserRepository) UpdateActiveStatus(userID uuid.UUID, isActive bool) error {
+	if r.user == nil || r.user.ID != userID {
+		return errors.New("user not found")
+	}
+	r.user.IsActive = isActive
+	return nil
+}
+
 func (r *fakeUserRepository) EmailExists(email string) (bool, error) {
 	return r.user != nil && r.user.Email == email, nil
 }
@@ -82,7 +90,7 @@ func (r *fakeUserRepository) FindByMerchantID(merchantID uuid.UUID) ([]*models.U
 	return nil, nil
 }
 
-func (r *fakeUserRepository) ListAdminUsers(search string, role string, startDate *time.Time, endDate *time.Time, limit int, offset int) ([]models.AdminUserListItem, int, error) {
+func (r *fakeUserRepository) ListAdminUsers(search string, role string, status string, startDate *time.Time, endDate *time.Time, limit int, offset int) ([]models.AdminUserListItem, int, error) {
 	return nil, 0, nil
 }
 
@@ -115,6 +123,7 @@ func TestResetPasswordUpdatesPasswordHash(t *testing.T) {
 			Email:        "unik@example.com",
 			PasswordHash: oldHash,
 			Role:         models.RoleMerchant,
+			IsActive:     true,
 		},
 	}
 	authService := NewAuthServiceWithOTP(userRepo, nil, nil, fakeOTPService{valid: true}, nil)
@@ -153,6 +162,7 @@ func TestLoginAllowsUnverifiedEmail(t *testing.T) {
 			PasswordHash:  passwordHash,
 			Role:          models.RoleMerchant,
 			EmailVerified: false,
+			IsActive:      true,
 		},
 	}
 	authService := NewAuthServiceWithOTP(userRepo, nil, nil, fakeOTPService{valid: true}, nil)

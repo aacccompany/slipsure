@@ -924,6 +924,25 @@ func (h *MerchantHandler) activateSubscription(userID uuid.UUID, checkoutSession
 	if err := h.merchantRepo.CreatePaymentLog(payment); err != nil {
 		return fmt.Errorf("failed to record subscription payment: %w", err)
 	}
+	if payment.ID != uuid.Nil {
+		plan, err := h.merchantRepo.GetPlanByID(planID)
+		if err != nil {
+			return fmt.Errorf("failed to load plan credits: %w", err)
+		}
+		lot := &models.CreditLot{
+			MerchantID:       merchant.ID,
+			SubscriptionID:   &subscription.ID,
+			PaymentLogID:     &payment.ID,
+			PlanID:           planID,
+			CreditsTotal:     plan.QuotaPerMonth,
+			CreditsRemaining: plan.QuotaPerMonth,
+			StartedAt:        startedAt,
+			ExpiresAt:        expiresAt,
+		}
+		if err := h.merchantRepo.CreateCreditLot(lot); err != nil {
+			return fmt.Errorf("failed to record credit lot: %w", err)
+		}
+	}
 
 	fmt.Printf("Subscription created for merchant %s, plan %s (%s), expires %s\n", merchant.ID, planID, billingCycle, expiresAt)
 	return nil
@@ -1028,13 +1047,26 @@ func (h *MerchantHandler) GetAdminUsers(c *gin.Context) {
 		})
 		return
 	}
+	status := c.Query("status")
+	validStatuses := map[string]bool{
+		"": true, "active": true, "blocked": true, "verified": true,
+		"unverified": true, "line_linked": true, "line_unlinked": true,
+	}
+	if !validStatuses[status] {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "INVALID_STATUS",
+			"message": "Status must be active, blocked, verified, unverified, line_linked, or line_unlinked",
+		})
+		return
+	}
 
 	startDate, endDate, ok := readAdminDateRange(c)
 	if !ok {
 		return
 	}
 
-	users, total, err := h.userRepo.ListAdminUsers(c.Query("search"), role, startDate, endDate, limit, (page-1)*limit)
+	users, total, err := h.userRepo.ListAdminUsers(c.Query("search"), role, status, startDate, endDate, limit, (page-1)*limit)
 	if err != nil {
 		log.Printf("Failed to list admin users: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -1051,6 +1083,104 @@ func (h *MerchantHandler) GetAdminUsers(c *gin.Context) {
 			Items:      users,
 			Pagination: buildPagination(page, limit, total),
 		},
+	})
+}
+
+// UpdateAdminUserStatus blocks or unblocks a platform user.
+func (h *MerchantHandler) UpdateAdminUserStatus(c *gin.Context) {
+	userID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "VALIDATION_ERROR",
+			"message": "Invalid user ID",
+		})
+		return
+	}
+
+	currentUserIDValue, _ := c.Get("user_id")
+	if currentUserID, ok := currentUserIDValue.(string); ok && currentUserID == userID.String() {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "VALIDATION_ERROR",
+			"message": "You cannot block your own admin account",
+		})
+		return
+	}
+
+	var req struct {
+		IsActive bool `json:"is_active"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "VALIDATION_ERROR",
+			"message": "Invalid request data",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	if err := h.userRepo.UpdateActiveStatus(userID, req.IsActive); err != nil {
+		log.Printf("Failed to update admin user status for %s: %v", userID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "DATABASE_ERROR",
+			"message": "Failed to update user status",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data": gin.H{
+			"user_id":   userID,
+			"is_active": req.IsActive,
+		},
+	})
+}
+
+// GetAdminPaymentDetail returns local payment data enriched with Stripe Checkout details.
+func (h *MerchantHandler) GetAdminPaymentDetail(c *gin.Context) {
+	paymentID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "VALIDATION_ERROR",
+			"message": "Invalid payment ID",
+		})
+		return
+	}
+
+	payment, err := h.merchantRepo.FindPaymentLogByID(paymentID)
+	if err != nil {
+		status := http.StatusInternalServerError
+		message := "Failed to retrieve payment"
+		if err.Error() == "payment log not found" {
+			status = http.StatusNotFound
+			message = "Payment not found"
+		}
+		c.JSON(status, gin.H{
+			"success": false,
+			"error":   "PAYMENT_NOT_FOUND",
+			"message": message,
+		})
+		return
+	}
+
+	detail := models.AdminPaymentDetail{Payment: *payment}
+	if h.stripeService != nil && payment.Gateway == "stripe" && payment.GatewayReferenceID != "" {
+		stripeDetail, err := h.stripeService.GetCheckoutSessionDetail(payment.GatewayReferenceID)
+		if err != nil {
+			log.Printf("Failed to retrieve Stripe detail for payment %s (%s): %v", payment.ID, payment.GatewayReferenceID, err)
+		} else {
+			detail.Stripe = stripeDetail
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    detail,
 	})
 }
 
@@ -1109,7 +1239,17 @@ func (h *MerchantHandler) ExportAdminUsers(c *gin.Context) {
 		return
 	}
 
-	users, _, err := h.userRepo.ListAdminUsers(c.Query("search"), role, startDate, endDate, 100000, 0)
+	status := c.Query("status")
+	validStatuses := map[string]bool{
+		"": true, "active": true, "blocked": true, "verified": true,
+		"unverified": true, "line_linked": true, "line_unlinked": true,
+	}
+	if !validStatuses[status] {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "INVALID_STATUS", "message": "Status must be active, blocked, verified, unverified, line_linked, or line_unlinked"})
+		return
+	}
+
+	users, _, err := h.userRepo.ListAdminUsers(c.Query("search"), role, status, startDate, endDate, 100000, 0)
 	if err != nil {
 		log.Printf("Failed to export admin users: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "DATABASE_ERROR", "message": "Failed to export users"})
@@ -1123,12 +1263,12 @@ func (h *MerchantHandler) ExportAdminUsers(c *gin.Context) {
 	writer := csv.NewWriter(c.Writer)
 	defer writer.Flush()
 
-	_ = writer.Write([]string{"id", "name", "email", "role", "merchant_name", "line_linked", "email_verified", "created_at"})
+	_ = writer.Write([]string{"id", "name", "email", "role", "merchant_name", "line_linked", "email_verified", "is_active", "created_at"})
 	for _, u := range users {
 		merchantName := u.MerchantName
 		_ = writer.Write([]string{
 			u.ID.String(), u.Name, u.Email, string(u.Role), merchantName,
-			strconv.FormatBool(u.LineLinked), strconv.FormatBool(u.EmailVerified), u.CreatedAt.Format(time.RFC3339),
+			strconv.FormatBool(u.LineLinked), strconv.FormatBool(u.EmailVerified), strconv.FormatBool(u.IsActive), u.CreatedAt.Format(time.RFC3339),
 		})
 	}
 }
@@ -1302,6 +1442,50 @@ func (h *MerchantHandler) GetAdminMerchantTransactions(c *gin.Context) {
 	})
 }
 
+// GetAdminTransactions returns transaction logs across all merchants for administrators.
+func (h *MerchantHandler) GetAdminTransactions(c *gin.Context) {
+	page, limit := readPagination(c, 20)
+	filters, ok := readAdminTransactionFilters(c, limit, (page-1)*limit)
+	if !ok {
+		return
+	}
+
+	transactions, err := h.transactionRepo.ListAll(filters)
+	if err != nil {
+		log.Printf("Failed to list admin transactions: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "DATABASE_ERROR",
+			"message": "Failed to retrieve transactions",
+		})
+		return
+	}
+
+	total, err := h.transactionRepo.CountAll(filters)
+	if err != nil {
+		log.Printf("Failed to count admin transactions: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "DATABASE_ERROR",
+			"message": "Failed to count transactions",
+		})
+		return
+	}
+
+	items := make([]models.Transaction, 0, len(transactions))
+	for _, transaction := range transactions {
+		items = append(items, *transaction)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data": models.TransactionListResponse{
+			Items:      items,
+			Pagination: buildPagination(page, limit, total),
+		},
+	})
+}
+
 // GetAdminAnalyticsDashboard returns platform-level KPI analytics.
 func (h *MerchantHandler) GetAdminAnalyticsDashboard(c *gin.Context) {
 	dashboard, err := h.merchantRepo.GetAdminAnalyticsDashboard()
@@ -1398,7 +1582,11 @@ func (h *MerchantHandler) GetAdminMerchantDetail(c *gin.Context) {
 		periodStart, resetDate := models.QuotaPeriodFor(sub.StartedAt, time.Now())
 		quota := 0
 		remaining := 0
-		if sub.Plan != nil {
+		if quotaStatus, quotaErr := h.merchantRepo.GetQuotaStatus(merchantID); quotaErr == nil {
+			quota = quotaStatus.QuotaLimit
+			remaining = quotaStatus.Remaining
+			resetDate = quotaStatus.ResetDate
+		} else if sub.Plan != nil {
 			quota = sub.Plan.QuotaPerMonth
 			remaining = sub.RemainingQuota
 		}
@@ -1462,6 +1650,80 @@ func (h *MerchantHandler) GetAdminMerchantDetail(c *gin.Context) {
 			LineWebhook:   lineConfig,
 			Payments:      payments,
 			Users:         users,
+		},
+	})
+}
+
+// UpdateAdminMerchantQuota lets an administrator add extra monthly quota for one merchant.
+func (h *MerchantHandler) UpdateAdminMerchantQuota(c *gin.Context) {
+	merchantID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "VALIDATION_ERROR",
+			"message": "Invalid merchant ID",
+		})
+		return
+	}
+
+	var req struct {
+		QuotaExtra    *int `json:"quota_extra"`
+		QuotaPerMonth *int `json:"quota_per_month"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "VALIDATION_ERROR",
+			"message": "Invalid request body",
+		})
+		return
+	}
+	quotaExtra := 0
+	if req.QuotaExtra != nil {
+		quotaExtra = *req.QuotaExtra
+	} else if req.QuotaPerMonth != nil {
+		quotaExtra = *req.QuotaPerMonth
+	}
+	if quotaExtra < 0 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "VALIDATION_ERROR",
+			"message": "Extra quota cannot be negative",
+		})
+		return
+	}
+
+	if _, err := h.merchantRepo.FindByID(merchantID); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"success": false,
+			"error":   "NOT_FOUND",
+			"message": "Merchant not found",
+		})
+		return
+	}
+
+	if err := h.merchantRepo.UpdateAdminMerchantQuota(merchantID, quotaExtra); err != nil {
+		status := http.StatusInternalServerError
+		message := "Failed to update merchant quota"
+		if err.Error() == "subscription not found" {
+			status = http.StatusNotFound
+			message = "Merchant does not have a subscription yet"
+		}
+		c.JSON(status, gin.H{
+			"success": false,
+			"error":   "DATABASE_ERROR",
+			"message": message,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Merchant quota updated",
+		"data": gin.H{
+			"merchant_id":  merchantID,
+			"quota_extra":  quotaExtra,
+			"quota_action": "extra_monthly_quota",
 		},
 	})
 }

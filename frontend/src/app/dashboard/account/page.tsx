@@ -46,6 +46,12 @@ export default function AccountPage() {
 
   const subscription = subscriptionData?.data?.subscription;
   const quota = quotaData?.data;
+  const isSubscriptionExpired = Boolean(subscription?.expires_at && new Date(subscription.expires_at).getTime() <= Date.now());
+  const effectivePlanStatus = isSubscriptionExpired
+    ? 'expired'
+    : quota?.is_blocked
+      ? 'blocked'
+      : subscription?.status || 'trial';
 
   if (!user || subscriptionLoading || quotaLoading) {
     return (
@@ -194,7 +200,7 @@ export default function AccountPage() {
 
         <section className="grid gap-4 lg:grid-cols-3">
           {[
-            { icon: CreditCard, label: 'Current Plan', value: subscription?.plan?.name || 'Free', sub: `Status: ${subscription?.status || 'trial'}` },
+            { icon: CreditCard, label: 'Current Plan', value: subscription?.plan?.name || 'Free', sub: `Status: ${effectivePlanStatus}` },
             { icon: Shield, label: 'Quota', value: `${quota?.used ?? 0} / ${quota?.quota_limit ?? 50}`, sub: `${quota?.remaining ?? 0} remaining` },
             { icon: Calendar, label: 'Next Reset', value: quota?.reset_date ? new Date(quota.reset_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }) : '-', sub: 'Monthly quota reset' },
           ].map(({ icon: Icon, label, value, sub }) => (

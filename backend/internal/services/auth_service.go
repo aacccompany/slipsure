@@ -159,6 +159,10 @@ func (s *authService) Login(req *models.LoginRequest) (*models.AuthResponse, err
 		log.Printf("Error finding user by email: %v", err)
 		return nil, errors.New("invalid email or password")
 	}
+	if !user.IsActive {
+		log.Printf("Login blocked for inactive user %s", req.Email)
+		return nil, errors.New("user account is blocked")
+	}
 
 	// Verify password
 	if !utils.CheckPassword(req.Password, user.PasswordHash) {
@@ -233,6 +237,9 @@ func (s *authService) LineLogin(req *models.LineLoginRequest) (*models.LineLogin
 
 		log.Printf("New user created via LINE login: %s (LINE ID: %s)", user.ID, profile.UserID)
 	} else {
+		if !user.IsActive {
+			return nil, errors.New("user account is blocked")
+		}
 		// Existing user found, update LINE link status
 		if !user.LineLinked {
 			user.LineLinked = true

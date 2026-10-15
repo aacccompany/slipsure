@@ -33,6 +33,7 @@ type LINEWebhookService struct {
 	lineUserIDsMutex        sync.RWMutex         // Protect lineUserIDs map from concurrent access
 	processedLineMessages   map[string]time.Time
 	processedMessagesMutex  sync.Mutex
+	jobQueue                *LINEWebhookJobQueue
 }
 
 // NewLINEWebhookService creates a new LINE webhook service
@@ -52,6 +53,11 @@ func NewLINEWebhookService(merchantRepo repositories.MerchantRepository, cryptoS
 	}
 
 	return service
+}
+
+// SetJobQueue attaches a background queue for LINE image verification work.
+func (s *LINEWebhookService) SetJobQueue(queue *LINEWebhookJobQueue) {
+	s.jobQueue = queue
 }
 
 // GetLINEWebhookConfig retrieves LINE webhook configuration for a merchant
@@ -174,8 +180,42 @@ func (s *LINEWebhookService) ProcessWebhook(webhookRefID string, signature strin
 		}
 	}
 
-	// Process each event
+	// Process each event. Image verification is queued so LINE webhooks return quickly.
 	for _, event := range webhookEvent.Events {
+		if s.shouldQueueImageEvent(event) {
+			if !s.claimLineImageMessage(merchant.ID, event) {
+				log.Printf("Skipping duplicate LINE image event before acknowledgement for merchant %s: message_id=%s", merchant.ID, eventMessageID(event))
+				continue
+			}
+
+			s.recordLineBotClient(merchant.ID, event.Source.UserID, true)
+
+			if err := s.acknowledgeLineImageEvent(event, accessToken); err != nil {
+				log.Printf("Failed to acknowledge LINE image event for merchant %s: %v", merchant.ID, err)
+			}
+
+			if s.jobQueue != nil {
+				if err := s.jobQueue.Enqueue(context.Background(), merchant.ID, event, true); err != nil {
+					log.Printf("Failed to enqueue LINE image event for merchant %s, processing in background goroutine: %v", merchant.ID, err)
+					tokenCopy := accessToken
+					go func(e LINEEvent) {
+						if err := s.processLineImageMessageWithAck(merchant, e, tokenCopy, true); err != nil {
+							log.Printf("Failed to process LINE image fallback for merchant %s: %v", merchant.ID, err)
+						}
+					}(event)
+				}
+				continue
+			}
+
+			tokenCopy := accessToken
+			go func(e LINEEvent) {
+				if err := s.processLineImageMessageWithAck(merchant, e, tokenCopy, true); err != nil {
+					log.Printf("Failed to process LINE image fallback for merchant %s: %v", merchant.ID, err)
+				}
+			}(event)
+			continue
+		}
+
 		if err := s.processEvent(merchant, event, accessToken); err != nil {
 			log.Printf("Failed to process event for merchant %s: %v", merchant.ID, err)
 			// Continue processing other events
@@ -183,6 +223,24 @@ func (s *LINEWebhookService) ProcessWebhook(webhookRefID string, signature strin
 	}
 
 	return nil
+}
+
+// ProcessQueuedImageJob processes a LINE image job from the background queue.
+func (s *LINEWebhookService) ProcessQueuedImageJob(job LINEWebhookImageJob) error {
+	merchant, err := s.merchantRepo.FindByID(job.MerchantID)
+	if err != nil {
+		return fmt.Errorf("find merchant for queued LINE job: %w", err)
+	}
+
+	_, accessToken, err := s.decryptMerchantCredentials(merchant)
+	if err != nil {
+		return fmt.Errorf("decrypt LINE credentials for queued job: %w", err)
+	}
+	defer func() {
+		accessToken = ""
+	}()
+
+	return s.processLineImageMessageWithAck(merchant, job.Event, accessToken, job.Acknowledged)
 }
 
 // Helper methods
@@ -284,7 +342,7 @@ func (s *LINEWebhookService) processMessageEvent(merchant *models.MerchantProfil
 	s.recordLineBotClient(merchant.ID, event.Source.UserID, true)
 
 	if event.Message.Type == "image" {
-		return s.processLineImageMessage(merchant, event, accessToken)
+		return s.processLineImageMessageWithAck(merchant, event, accessToken, false)
 	} else if event.Message.Type == "text" {
 		return s.processTextMessage(merchant, event)
 	}
@@ -293,6 +351,10 @@ func (s *LINEWebhookService) processMessageEvent(merchant *models.MerchantProfil
 }
 
 func (s *LINEWebhookService) processLineImageMessage(merchant *models.MerchantProfile, event LINEEvent, accessToken string) error {
+	return s.processLineImageMessageWithAck(merchant, event, accessToken, false)
+}
+
+func (s *LINEWebhookService) processLineImageMessageWithAck(merchant *models.MerchantProfile, event LINEEvent, accessToken string, acknowledged bool) error {
 	if event.Message.ID == "" {
 		return errors.New("image message ID is missing")
 	}
@@ -307,7 +369,7 @@ func (s *LINEWebhookService) processLineImageMessage(merchant *models.MerchantPr
 		isRedelivery,
 	)
 
-	if !s.markLineMessageProcessing(merchant.ID, event.Message.ID) {
+	if !acknowledged && !s.markLineMessageProcessing(merchant.ID, event.Message.ID) {
 		log.Printf("Skipping duplicate LINE image message for merchant %s: message_id=%s", merchant.ID, event.Message.ID)
 		return nil
 	}
@@ -326,23 +388,54 @@ func (s *LINEWebhookService) processLineImageMessage(merchant *models.MerchantPr
 
 	log.Printf("Successfully downloaded image from LINE for merchant %s: %d bytes, content-type: %s", merchant.ID, len(imageData), contentType)
 
+	if !acknowledged {
+		if err := s.acknowledgeLineImageEvent(event, accessToken); err != nil {
+			log.Printf("Failed to acknowledge LINE image message for merchant %s: %v", merchant.ID, err)
+		}
+	}
+
+	go s.verifyDownloadedLineImage(merchant, event.Source.UserID, imageData, contentType, accessToken)
+	return nil
+}
+
+func (s *LINEWebhookService) shouldQueueImageEvent(event LINEEvent) bool {
+	return event.Type == "message" && event.Message != nil && event.Message.Type == "image"
+}
+
+func (s *LINEWebhookService) claimLineImageMessage(merchantID uuid.UUID, event LINEEvent) bool {
+	if event.Message == nil || strings.TrimSpace(event.Message.ID) == "" {
+		return false
+	}
+
+	if s.jobQueue != nil && s.jobQueue.HasRedis() {
+		claimed, err := s.jobQueue.ClaimMessage(context.Background(), merchantID, event.Message.ID)
+		if err != nil {
+			log.Printf("Failed Redis LINE message claim for merchant %s message %s, using local fallback: %v", merchantID, event.Message.ID, err)
+			return s.markLineMessageProcessing(merchantID, event.Message.ID)
+		}
+		return claimed
+	}
+
+	return s.markLineMessageProcessing(merchantID, event.Message.ID)
+}
+
+func (s *LINEWebhookService) acknowledgeLineImageEvent(event LINEEvent, accessToken string) error {
 	receiptMsg := "Received your slip. Verifying now..."
 	if s.canUseReplyToken(event) {
 		if err := s.ReplyMessage(event.ReplyToken, []LINEMessage{BuildTextMessage(receiptMsg)}, accessToken); err != nil {
 			log.Printf("Failed to send receipt reply, falling back to push: %v", err)
 			if event.Source.UserID != "" {
-				if pushErr := s.PushMessage(event.Source.UserID, []LINEMessage{BuildTextMessage(receiptMsg)}, accessToken); pushErr != nil {
-					log.Printf("Failed to send receipt push fallback: %v", pushErr)
-				}
+				return s.PushMessage(event.Source.UserID, []LINEMessage{BuildTextMessage(receiptMsg)}, accessToken)
 			}
+			return err
 		}
-	} else if event.Source.UserID != "" {
-		if err := s.PushMessage(event.Source.UserID, []LINEMessage{BuildTextMessage(receiptMsg)}, accessToken); err != nil {
-			log.Printf("Failed to send receipt push for redelivered/dummy reply token: %v", err)
-		}
+		return nil
 	}
 
-	go s.verifyDownloadedLineImage(merchant, event.Source.UserID, imageData, contentType, accessToken)
+	if event.Source.UserID != "" {
+		return s.PushMessage(event.Source.UserID, []LINEMessage{BuildTextMessage(receiptMsg)}, accessToken)
+	}
+
 	return nil
 }
 

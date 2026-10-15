@@ -283,7 +283,6 @@ export default function DashboardPage() {
   const resetDate = quota?.data?.reset_date
     ? new Date(quota.data.reset_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })
     : '-';
-
   return (
     <div className="p-6 space-y-6" style={{ background: 'var(--bg)' }}>
       <div className="flex items-center justify-between pb-4" style={{ borderBottom: '1px solid var(--border)' }}>

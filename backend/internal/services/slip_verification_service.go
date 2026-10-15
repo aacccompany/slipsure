@@ -51,13 +51,12 @@ func (s *SlipVerificationService) SetVerificationCallback(callback func(slip *mo
 }
 
 func subscriptionAllowsVerification(subscription *models.Subscription) bool {
-	if subscription.Status == models.SubscriptionStatusActive {
-		return true
+	if subscription.ExpiresAt != nil && !subscription.ExpiresAt.After(time.Now()) {
+		return false
 	}
 
-	return subscription.Status == models.SubscriptionStatusCancelled &&
-		subscription.ExpiresAt != nil &&
-		subscription.ExpiresAt.After(time.Now())
+	return subscription.Status == models.SubscriptionStatusActive ||
+		subscription.Status == models.SubscriptionStatusCancelled
 }
 
 // UploadAndVerify uploads a slip image and starts verification process
@@ -211,6 +210,9 @@ func (s *SlipVerificationService) verifySlipAsync(slip *models.Slip) {
 
 func (s *SlipVerificationService) incrementVerificationUsage(subscription *models.Subscription, merchantID uuid.UUID) error {
 	periodStart, _ := models.QuotaPeriodFor(subscription.StartedAt, time.Now())
+	if err := s.merchantRepo.ConsumeCreditFIFO(merchantID); err != nil {
+		return err
+	}
 	return s.usageRepo.IncrementUsage(merchantID, periodStart.Year(), int(periodStart.Month()))
 }
 

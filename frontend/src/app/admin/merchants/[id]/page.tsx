@@ -2,37 +2,17 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import type { ReactNode } from 'react';
 import { useParams } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Loader2, ReceiptText, Store, Users } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { Activity, ArrowLeft, Bot, Clipboard, CreditCard, Loader2, Mail, MapPin, Phone, ReceiptText, Settings, ShieldCheck } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { useAuth } from '@/contexts/auth-context';
 import { AdminShell } from '@/components/admin/AdminShell';
-
-type DetailTab = 'overview' | 'usage' | 'billing' | 'transactions';
-
-const detailTabs: Array<{ id: DetailTab; label: string }> = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'usage', label: 'Usage' },
-  { id: 'billing', label: 'Billing' },
-  { id: 'transactions', label: 'Transactions' },
-];
+import { AdminMerchantTransactions } from '@/components/admin/AdminMerchantTransactions';
 
 function formatMoney(value?: number) {
   return `THB ${(value ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
-}
-
-function formatDate(value?: string) {
-  if (!value) return '-';
-  return new Date(value).toLocaleString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
 }
 
 function formatShortDate(value?: string) {
@@ -44,31 +24,19 @@ function formatShortDate(value?: string) {
   });
 }
 
-function formatPercent(used: number, total: number) {
-  if (!total) return '0.0%';
-  return `${((used / total) * 100).toFixed(1)}%`;
-}
-
-function StatBox({ icon: Icon, label, value, hint }: { icon: LucideIcon; label: string; value: ReactNode; hint?: string }) {
-  return (
-    <div className="bg-white p-5" style={{ border: '1px solid var(--border)' }}>
-      <div className="mb-3 flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>
-        <Icon className="h-4 w-4" style={{ color: 'var(--blue)' }} />
-        <span className="font-mono text-[10px] uppercase tracking-widest">{label}</span>
-      </div>
-      <p className="text-xl font-bold tracking-tight" style={{ color: 'var(--navy)' }}>{value}</p>
-      {hint && <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>{hint}</p>}
-    </div>
-  );
+function quotaTone(percent: number) {
+  if (percent >= 100) return { text: '#DC2626', bar: '#DC2626', label: 'Blocked' };
+  if (percent >= 80) return { text: '#D97706', bar: '#F59E0B', label: 'Near quota' };
+  return { text: '#047857', bar: '#10B981', label: 'Healthy' };
 }
 
 export default function AdminMerchantDetailPage() {
   const params = useParams<{ id: string }>();
   const merchantId = params.id;
   const { user, isLoading } = useAuth();
-  const [txnPage, setTxnPage] = useState(1);
-  const [tab, setTab] = useState<DetailTab>('overview');
-  const [planRevenuePage, setPlanRevenuePage] = useState(1);
+  const [quotaModalOpen, setQuotaModalOpen] = useState(false);
+  const [quotaInput, setQuotaInput] = useState('');
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -86,10 +54,17 @@ export default function AdminMerchantDetailPage() {
     enabled: Boolean(merchantId) && user?.role === 'admin',
   });
 
-  const transactionsQuery = useQuery({
-    queryKey: ['admin-merchant-transactions', merchantId, txnPage],
-    queryFn: () => api.getAdminMerchantTransactions(merchantId, { page: txnPage, limit: 20 }),
-    enabled: Boolean(merchantId) && user?.role === 'admin',
+  const updateQuotaMutation = useMutation({
+    mutationFn: (quotaExtra: number) => api.updateAdminMerchantQuota(merchantId, quotaExtra),
+    onSuccess: () => {
+      toast.success('Extra quota updated');
+      setQuotaModalOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['admin-merchant-detail', merchantId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-merchant-performance'] });
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Failed to update quota');
+    },
   });
 
   if (isLoading || !user || user.role !== 'admin' || detailQuery.isLoading) {
@@ -101,8 +76,6 @@ export default function AdminMerchantDetailPage() {
   }
 
   const detail = detailQuery.data?.data;
-  const transactions = transactionsQuery.data?.data?.items ?? [];
-  const pagination = transactionsQuery.data?.data?.pagination;
 
   if (!detail) {
     return (
@@ -120,13 +93,25 @@ export default function AdminMerchantDetailPage() {
 
   const usage = detail.usage;
   const billing = detail.billing;
-  const planRevenueLimit = 5;
-  const planRevenueTotalPages = Math.max(1, Math.ceil(billing.revenue_by_plan.length / planRevenueLimit));
-  const visiblePlanRevenue = billing.revenue_by_plan.slice(
-    (planRevenuePage - 1) * planRevenueLimit,
-    planRevenuePage * planRevenueLimit
-  );
-
+  const quotaExtra = detail.subscription?.quota_override ?? 0;
+  const packageQuota = Math.max(0, usage.quota - quotaExtra);
+  const quotaPercent = usage.quota > 0 ? Math.min(100, (usage.this_month / usage.quota) * 100) : 0;
+  const quota = quotaTone(quotaPercent);
+  const initials = detail.merchant.shop_name.slice(0, 2).toUpperCase();
+  const planName = detail.subscription?.plan?.name || detail.subscription?.plan_id || 'No plan';
+  const renewsAt = detail.subscription?.expires_at || detail.usage.next_reset;
+  const openQuotaModal = () => {
+    setQuotaInput(String(quotaExtra));
+    setQuotaModalOpen(true);
+  };
+  const submitQuota = () => {
+    const nextExtra = Number(quotaInput);
+    if (!Number.isInteger(nextExtra) || nextExtra < 0) {
+      toast.error('Extra quota must be a whole number zero or greater');
+      return;
+    }
+    updateQuotaMutation.mutate(nextExtra);
+  };
   return (
     <AdminShell activeTab="merchants">
       <div className="p-6 space-y-6" style={{ background: 'var(--bg)' }}>
@@ -159,233 +144,315 @@ export default function AdminMerchantDetailPage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2 pb-3" style={{ borderBottom: '1px solid var(--border)' }}>
-          {detailTabs.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setTab(item.id)}
-              className="px-3 py-2 text-sm font-semibold transition-colors"
-              style={
-                tab === item.id
-                  ? { background: 'var(--navy)', color: '#fff' }
-                  : { background: '#fff', color: 'var(--text-muted)', border: '1px solid var(--border)' }
-              }
-            >
-              {item.label}
-            </button>
-          ))}
+        <section className="bg-white p-6" style={{ border: '1px solid var(--border)', borderLeft: '4px solid var(--blue)' }}>
+          <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+            <div className="flex items-start gap-4">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg text-2xl font-black shadow-sm" style={{ background: 'var(--bg-subtle)', color: 'var(--blue)' }}>
+                {detail.merchant.logo_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={detail.merchant.logo_url} alt={detail.merchant.shop_name} className="h-full w-full rounded-lg object-cover" />
+                ) : initials}
+              </div>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-2xl font-black tracking-tight" style={{ color: 'var(--navy)' }}>{detail.merchant.shop_name}</h2>
+                  <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-bold uppercase" style={{ background: detail.merchant.is_active ? '#DCFCE7' : '#FEE2E2', color: detail.merchant.is_active ? '#047857' : '#DC2626' }}>
+                    <ShieldCheck className="h-3 w-3" />
+                    {detail.merchant.is_active ? 'Active' : 'Inactive'}
+                  </span>
+                  <span className="px-2 py-1 font-mono text-[10px] uppercase tracking-widest" style={{ background: 'var(--bg-subtle)', color: 'var(--blue)' }}>
+                    ID: {detail.merchant.id?.slice(0, 8)}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm" style={{ color: 'var(--text-muted)' }}>
+                  {planName} - Registered {formatShortDate(detail.merchant.created_at)} - Strict duplicate checks always on
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold text-white"
+                style={{ background: 'var(--blue)' }}
+                type="button"
+                onClick={openQuotaModal}
+              >
+                <Settings className="h-4 w-4" />
+                Adjust Quota
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-6 grid grid-cols-1 gap-3 border-t pt-5 sm:grid-cols-2 xl:grid-cols-4" style={{ borderColor: 'var(--border)' }}>
+            {[
+              { icon: Mail, label: 'Primary Contact', value: detail.merchant.contact_email || 'No email' },
+              { icon: Phone, label: 'Phone Number', value: detail.merchant.contact_phone || 'No phone' },
+              { icon: MapPin, label: 'Address', value: detail.merchant.address || 'No address' },
+              { icon: Bot, label: 'LINE Webhook', value: detail.line_connected ? `Connected${detail.line_webhook?.webhook_reference_id ? ` (${detail.line_webhook.webhook_reference_id})` : ''}` : 'Not configured' },
+            ].map((item) => (
+              <div key={item.label} className="flex min-w-0 items-center gap-3 p-3" style={{ background: 'var(--bg-subtle)' }}>
+                <item.icon className="h-4 w-4 shrink-0" style={{ color: 'var(--blue)' }} />
+                <div className="min-w-0">
+                  <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{item.label}</p>
+                  <p className="truncate text-sm font-semibold" style={{ color: 'var(--navy)' }}>{item.value}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <div className="grid gap-4 xl:grid-cols-3">
+          <section className="bg-white p-5" style={{ border: '1px solid var(--border)' }}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Quota Utilization</p>
+                <p className="mt-1 text-2xl font-black" style={{ color: 'var(--navy)' }}>{usage.this_month.toLocaleString()} / {usage.quota.toLocaleString()}</p>
+              </div>
+              <Activity className="h-6 w-6" style={{ color: quota.text }} />
+            </div>
+            <div className="mt-4 h-2 overflow-hidden rounded-full" style={{ background: 'var(--border)' }}>
+              <div className="h-full rounded-full" style={{ width: `${quotaPercent}%`, background: quota.bar }} />
+            </div>
+            <div className="mt-2 flex justify-between text-xs">
+              <span style={{ color: 'var(--text-muted)' }}>{usage.remaining.toLocaleString()} slips remaining</span>
+              <span className="font-bold" style={{ color: quota.text }}>{quota.label}</span>
+            </div>
+          </section>
+
+          <section className="bg-white p-5" style={{ border: '1px solid var(--border)' }}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Billing & Revenue</p>
+                <p className="mt-1 text-2xl font-black" style={{ color: 'var(--navy)' }}>{formatMoney(billing.total_revenue)}</p>
+              </div>
+              <CreditCard className="h-6 w-6" style={{ color: 'var(--blue)' }} />
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+              <div className="p-2" style={{ background: 'var(--bg-subtle)' }}>
+                <p style={{ color: 'var(--text-muted)' }}>Plan</p>
+                <p className="font-bold" style={{ color: 'var(--navy)' }}>{planName}</p>
+              </div>
+              <div className="p-2" style={{ background: 'var(--bg-subtle)' }}>
+                <p style={{ color: 'var(--text-muted)' }}>Renews</p>
+                <p className="font-bold" style={{ color: 'var(--navy)' }}>{formatShortDate(renewsAt)}</p>
+              </div>
+            </div>
+          </section>
+
+          <section className="bg-white p-5" style={{ border: '1px solid var(--border)' }}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Verification Health</p>
+                <p className="mt-1 text-2xl font-black" style={{ color: 'var(--navy)' }}>{usage.total_slips.toLocaleString()} slips</p>
+              </div>
+              <ReceiptText className="h-6 w-6" style={{ color: '#047857' }} />
+            </div>
+            <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+              <div className="p-2" style={{ background: '#ECFDF5', color: '#047857' }}>
+                <p className="font-bold">{usage.verified_slips}</p>
+                <p>Verified</p>
+              </div>
+              <div className="p-2" style={{ background: '#FEF2F2', color: '#DC2626' }}>
+                <p className="font-bold">{usage.failed_slips}</p>
+                <p>Failed</p>
+              </div>
+              <div className="p-2" style={{ background: '#FEF3C7', color: '#D97706' }}>
+                <p className="font-bold">{usage.duplicate_slips}</p>
+                <p>Duplicate</p>
+              </div>
+            </div>
+          </section>
         </div>
 
-        {(tab === 'overview' || tab === 'usage') && (
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <StatBox
-              icon={Store}
-              label="Current Plan"
-              value={detail.subscription?.plan?.name || detail.subscription?.plan_id || 'No plan'}
-              hint={detail.subscription?.status || 'none'}
-            />
-            <StatBox
-              icon={ReceiptText}
-              label="Lifetime Usage"
-              value={detail.usage.lifetime}
-              hint={`${detail.usage.total_transactions} transactions`}
-            />
-            <StatBox
-              icon={ReceiptText}
-              label="Total Amount"
-              value={formatMoney(detail.usage.total_amount)}
-              hint={`${detail.usage.verified_slips} verified slips`}
-            />
-            <StatBox icon={Users} label="Users" value={detail.users.length} hint="attached to merchant" />
-          </div>
-        )}
-
-        {tab === 'usage' && (
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-            <StatBox icon={ReceiptText} label="Current Usage" value={`${usage.this_month} / ${usage.quota}`} hint={`${formatPercent(usage.this_month, usage.quota)} of plan quota`} />
-            <StatBox icon={ReceiptText} label="Remaining" value={usage.remaining} hint="credits left" />
-            <StatBox icon={ReceiptText} label="Total Slips" value={usage.total_slips} hint={`${usage.verified_slips} verified / ${usage.failed_slips} failed`} />
-            <StatBox icon={ReceiptText} label="Duplicates" value={usage.duplicate_slips} hint="blocked by strict checks" />
-            <StatBox icon={ReceiptText} label="Reset Window" value={formatShortDate(usage.next_reset)} hint={`from ${formatShortDate(usage.current_period_start)}`} />
-          </div>
-        )}
-
-        {tab === 'billing' && (
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-            <StatBox icon={ReceiptText} label="Plan Activations" value={billing.plan_activations} hint="free + paid activations" />
-            <StatBox icon={ReceiptText} label="Paid Activations" value={billing.paid_activations} hint={`${billing.successful_payments} successful payments`} />
-            <StatBox icon={ReceiptText} label="Collected" value={formatMoney(billing.total_revenue)} hint="from this merchant" />
-            <StatBox icon={ReceiptText} label="Free Plan" value={billing.free_plan_used ? 'Used' : 'Not used'} hint="one-time free activation" />
-            <StatBox icon={ReceiptText} label="Last Paid" value={billing.last_paid_at ? formatShortDate(billing.last_paid_at) : '-'} hint={`${billing.failed_payments} failed payments`} />
-          </div>
-        )}
-
-        {tab === 'overview' && (
-          <div className="grid gap-4 lg:grid-cols-2">
-            <section className="bg-white" style={{ border: '1px solid var(--border)' }}>
-              <div className="px-5 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
-                <h2 className="text-sm font-bold" style={{ color: 'var(--navy)' }}>Merchant Users</h2>
+        <div className="grid gap-4 xl:grid-cols-2">
+          <section className="bg-white p-6" style={{ border: '1px solid var(--border)' }}>
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg" style={{ background: 'var(--bg-subtle)', color: 'var(--blue)' }}>
+                  <ReceiptText className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-black" style={{ color: 'var(--navy)' }}>Quota & Subscription</h2>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Real-time slip allocations and plan lifecycle</p>
+                </div>
               </div>
-              <div>
-                {detail.users.length === 0 ? (
-                  <p className="p-5 text-sm" style={{ color: 'var(--text-muted)' }}>No users attached.</p>
-                ) : detail.users.map((item) => (
-                  <div key={item.id} className="px-5 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
-                    <p className="font-semibold" style={{ color: 'var(--navy)' }}>{item.name}</p>
-                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{item.email} · {item.role}</p>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            <section className="bg-white" style={{ border: '1px solid var(--border)' }}>
-              <div className="px-5 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
-                <h2 className="text-sm font-bold" style={{ color: 'var(--navy)' }}>Recent Payments</h2>
-              </div>
-              <div>
-                {detail.payments.length === 0 ? (
-                  <p className="p-5 text-sm" style={{ color: 'var(--text-muted)' }}>No payments yet.</p>
-                ) : detail.payments.map((payment) => (
-                  <div key={payment.id} className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
-                    <div>
-                      <p className="font-semibold" style={{ color: 'var(--navy)' }}>{formatMoney(payment.amount)}</p>
-                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{payment.gateway_reference_id}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-semibold" style={{ color: 'var(--navy)' }}>{payment.status}</p>
-                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{formatDate(payment.paid_at || payment.created_at)}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          </div>
-        )}
-
-        {tab === 'billing' && (
-          <section className="bg-white" style={{ border: '1px solid var(--border)' }}>
-            <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
-              <h2 className="text-sm font-bold" style={{ color: 'var(--navy)' }}>Plan Revenue & Activations</h2>
-              <span className="font-mono text-[10px]" style={{ color: 'var(--text-muted)' }}>{billing.plan_activations} total activations</span>
-            </div>
-            {billing.revenue_by_plan.length === 0 ? (
-              <p className="p-5 text-sm" style={{ color: 'var(--text-muted)' }}>No plan activations recorded yet.</p>
-            ) : (
-              <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-subtle)' }}>
-                  <tr>
-                    {['Plan', 'Activations', 'Revenue'].map((header) => (
-                      <th key={header} className="px-4 py-3 font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-                        {header}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {visiblePlanRevenue.map((item) => (
-                    <tr key={item.plan_id} style={{ borderBottom: '1px solid var(--border)' }}>
-                      <td className="px-4 py-3">
-                        <p className="font-semibold" style={{ color: 'var(--navy)' }}>{item.plan}</p>
-                        <p className="font-mono text-[10px]" style={{ color: 'var(--text-muted)' }}>{item.plan_id}</p>
-                      </td>
-                      <td className="px-4 py-3 font-semibold" style={{ color: 'var(--navy)' }}>{item.activations}</td>
-                      <td className="px-4 py-3 font-semibold" style={{ color: 'var(--navy)' }}>{formatMoney(item.revenue)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              </div>
-            )}
-            <div className="flex items-center justify-between px-5 py-4" style={{ borderTop: '1px solid var(--border)' }}>
-              <button
-                disabled={planRevenuePage <= 1}
-                onClick={() => setPlanRevenuePage((page) => page - 1)}
-                className="border border-zinc-200 px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-zinc-700 disabled:opacity-30"
-              >
-                Previous
-              </button>
-              <span className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-                Page {planRevenuePage} / {planRevenueTotalPages}
+              <span className="px-2 py-1 font-mono text-[10px] uppercase tracking-widest" style={{ background: 'var(--bg-subtle)', color: quota.text }}>
+                {quota.label}
               </span>
-              <button
-                disabled={planRevenuePage >= planRevenueTotalPages}
-                onClick={() => setPlanRevenuePage((page) => page + 1)}
-                className="border border-zinc-200 px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-zinc-700 disabled:opacity-30"
-              >
-                Next
-              </button>
             </div>
-          </section>
-        )}
 
-        {tab === 'transactions' && (
-          <section className="bg-white" style={{ border: '1px solid var(--border)' }}>
-            <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
-              <h2 className="text-sm font-bold" style={{ color: 'var(--navy)' }}>Transaction Logs</h2>
-              {pagination && (
-                <span className="font-mono text-[10px]" style={{ color: 'var(--text-muted)' }}>
-                  Page {pagination.page} / {Math.max(1, pagination.total_pages)} · {pagination.total} total
-                </span>
-              )}
+            <div className="grid gap-4 md:grid-cols-[160px_1fr]">
+              <div className="flex flex-col items-center justify-center rounded-lg p-4" style={{ background: 'var(--bg-subtle)' }}>
+                <div className="relative flex h-28 w-28 items-center justify-center rounded-full" style={{ background: `conic-gradient(${quota.bar} ${quotaPercent * 3.6}deg, #E5E7EB 0deg)` }}>
+                  <div className="absolute h-20 w-20 rounded-full bg-white" />
+                  <span className="relative text-2xl font-black" style={{ color: 'var(--navy)' }}>{quotaPercent.toFixed(0)}%</span>
+                </div>
+                <p className="mt-3 text-sm font-bold" style={{ color: 'var(--navy)' }}>{usage.remaining.toLocaleString()} slips remaining</p>
+                <p className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Resets {formatShortDate(usage.next_reset)}</p>
+              </div>
+
+              <div className="space-y-3">
+                {[
+                  { label: 'Verified bank slips', value: `${usage.verified_slips.toLocaleString()} slips`, tone: '#047857' },
+                  { label: 'Rejected slips', value: `${usage.failed_slips.toLocaleString()} slips`, tone: '#DC2626' },
+                  { label: 'Duplicate rejections', value: `${usage.duplicate_slips.toLocaleString()} slips`, tone: '#D97706' },
+                  { label: 'Billing cycle', value: detail.subscription?.billing_cycle || 'free', tone: 'var(--blue)' },
+                ].map((item) => (
+                  <div key={item.label} className="flex items-center justify-between gap-3 border-b pb-3 last:border-b-0 last:pb-0" style={{ borderColor: 'var(--border)' }}>
+                    <span className="text-sm" style={{ color: 'var(--text-muted)' }}>{item.label}</span>
+                    <span className="text-sm font-bold" style={{ color: item.tone }}>{item.value}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-            {transactionsQuery.isLoading ? (
-              <div className="flex h-48 items-center justify-center">
-                <Loader2 className="h-5 w-5 animate-spin" style={{ color: 'var(--blue)' }} />
-              </div>
-            ) : transactions.length === 0 ? (
-              <p className="p-5 text-sm" style={{ color: 'var(--text-muted)' }}>No transaction logs yet.</p>
-            ) : (
-              <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-subtle)' }}>
-                  <tr>
-                    {['Reference', 'Amount', 'Status', 'Banks', 'Created'].map((header) => (
-                      <th key={header} className="px-4 py-3 font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-                        {header}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {transactions.map((transaction) => (
-                    <tr key={transaction.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                      <td className="px-4 py-3">
-                        <p className="font-mono text-xs" style={{ color: 'var(--navy)' }}>{transaction.reference_no || transaction.id}</p>
-                        {transaction.is_duplicate && <p className="mt-1 text-xs text-amber-700">Duplicate</p>}
-                      </td>
-                      <td className="px-4 py-3 font-semibold" style={{ color: 'var(--navy)' }}>{formatMoney(transaction.amount)}</td>
-                      <td className="px-4 py-3" style={{ color: 'var(--navy)' }}>{transaction.status}</td>
-                      <td className="px-4 py-3" style={{ color: 'var(--text-muted)' }}>{transaction.sender_bank || '-'} to {transaction.receiver_bank || '-'}</td>
-                      <td className="px-4 py-3" style={{ color: 'var(--text-muted)' }}>{formatDate(transaction.created_at)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              </div>
-            )}
-            {pagination && (
-              <div className="flex items-center justify-between px-5 py-4" style={{ borderTop: '1px solid var(--border)' }}>
-                <button
-                  disabled={txnPage <= 1}
-                  onClick={() => setTxnPage((page) => page - 1)}
-                  className="border border-zinc-200 px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-zinc-700 disabled:opacity-30"
-                >
-                  Previous
-                </button>
-                <span className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-                  Page {pagination.page} / {pagination.total_pages}
-                </span>
-                <button
-                  disabled={txnPage >= Math.max(1, pagination.total_pages)}
-                  onClick={() => setTxnPage((page) => page + 1)}
-                  className="border border-zinc-200 px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-zinc-700 disabled:opacity-30"
-                >
-                  Next
-                </button>
-              </div>
-            )}
           </section>
+
+          <section className="bg-white p-6" style={{ border: '1px solid var(--border)' }}>
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg" style={{ background: 'var(--bg-subtle)', color: 'var(--blue)' }}>
+                  <Bot className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-black" style={{ color: 'var(--navy)' }}>LINE Webhook Integration</h2>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Inbound OCR pipe and instant customer replies</p>
+                </div>
+              </div>
+              <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-bold uppercase" style={{ background: detail.line_connected ? '#DCFCE7' : '#FEE2E2', color: detail.line_connected ? '#047857' : '#DC2626' }}>
+                <span className="h-1.5 w-1.5 rounded-full" style={{ background: detail.line_connected ? '#10B981' : '#EF4444' }} />
+                {detail.line_connected ? 'Online' : 'Not set'}
+              </span>
+            </div>
+
+            <div className="rounded-lg p-3" style={{ background: 'var(--bg-subtle)' }}>
+              <label className="mb-2 block font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+                Target webhook endpoint
+              </label>
+              <div className="flex min-w-0 items-center gap-2">
+                <code className="min-w-0 flex-1 truncate text-xs font-semibold" style={{ color: 'var(--navy)' }}>
+                  {detail.line_webhook?.webhook_url || (detail.line_webhook?.webhook_reference_id ? `/v1/line/webhook/${detail.line_webhook.webhook_reference_id}` : 'No webhook URL configured')}
+                </code>
+                <button
+                  type="button"
+                  className="inline-flex shrink-0 items-center gap-1 px-2 py-1 text-xs font-semibold"
+                  style={{ background: '#fff', color: 'var(--blue)', border: '1px solid var(--border)' }}
+                  onClick={() => {
+                    const value = detail.line_webhook?.webhook_url || (detail.line_webhook?.webhook_reference_id ? `/v1/line/webhook/${detail.line_webhook.webhook_reference_id}` : '');
+                    if (value) navigator.clipboard.writeText(value);
+                  }}
+                >
+                  <Clipboard className="h-3.5 w-3.5" />
+                  Copy
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="p-3" style={{ background: 'var(--bg-subtle)' }}>
+                <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>LINE channel ID</p>
+                <p className="mt-1 truncate text-sm font-bold" style={{ color: 'var(--navy)' }}>{detail.line_webhook?.line_channel_id || '-'}</p>
+              </div>
+              <div className="p-3" style={{ background: 'var(--bg-subtle)' }}>
+                <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Configured</p>
+                <p className="mt-1 text-sm font-bold" style={{ color: 'var(--navy)' }}>{formatShortDate(detail.line_webhook?.created_at)}</p>
+              </div>
+              <div className="p-3" style={{ background: 'var(--bg-subtle)' }}>
+                <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Auto reply</p>
+                <p className="mt-1 text-sm font-bold" style={{ color: detail.line_connected ? '#047857' : '#DC2626' }}>{detail.line_connected ? 'Enabled' : 'Disabled'}</p>
+              </div>
+              <div className="p-3" style={{ background: 'var(--bg-subtle)' }}>
+                <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Last update</p>
+                <p className="mt-1 text-sm font-bold" style={{ color: 'var(--navy)' }}>{formatShortDate(detail.line_webhook?.updated_at)}</p>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <AdminMerchantTransactions merchantId={merchantId} />
+
+        {quotaModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
+            <div className="w-full max-w-md bg-white p-6 shadow-xl" style={{ border: '1px solid var(--border)' }}>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-black" style={{ color: 'var(--navy)' }}>Adjust Quota</h2>
+                  <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
+                    Add extra monthly slips on top of {detail.merchant.shop_name}'s package quota.
+                  </p>
+                </div>
+                <span className="px-2 py-1 font-mono text-[10px] uppercase tracking-widest" style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)' }}>
+                  Total {usage.quota.toLocaleString()}
+                </span>
+              </div>
+
+              <div className="mt-5 grid grid-cols-3 gap-2">
+                <div className="p-3" style={{ background: 'var(--bg-subtle)' }}>
+                  <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Package</p>
+                  <p className="mt-1 font-bold" style={{ color: 'var(--navy)' }}>{packageQuota.toLocaleString()}</p>
+                </div>
+                <div className="p-3" style={{ background: 'var(--bg-subtle)' }}>
+                  <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Extra</p>
+                  <p className="mt-1 font-bold" style={{ color: 'var(--navy)' }}>{quotaExtra.toLocaleString()}</p>
+                </div>
+                <div className="p-3" style={{ background: 'var(--bg-subtle)' }}>
+                  <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>New Total</p>
+                  <p className="mt-1 font-bold" style={{ color: 'var(--navy)' }}>{(packageQuota + (Number(quotaInput) || 0)).toLocaleString()}</p>
+                </div>
+              </div>
+
+              <label className="mt-5 block">
+                <span className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+                  Extra quota
+                </span>
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={quotaInput}
+                  onChange={(event) => setQuotaInput(event.target.value)}
+                  className="mt-2 h-12 w-full px-3 text-lg font-bold outline-none"
+                  style={{ border: '1px solid var(--border)', color: 'var(--navy)' }}
+                  autoFocus
+                />
+              </label>
+
+              <div className="mt-5 grid grid-cols-3 gap-2 text-xs">
+                {[0, 1, 50, 100, 500, 1000].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    className="px-3 py-2 font-semibold"
+                    style={{ border: '1px solid var(--border)', color: 'var(--navy)', background: quotaInput === String(preset) ? 'var(--bg-subtle)' : '#fff' }}
+                    onClick={() => setQuotaInput(String(preset))}
+                  >
+                    {preset.toLocaleString()}
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-6 flex justify-end gap-2">
+                <button
+                  type="button"
+                  className="px-4 py-2 text-sm font-semibold"
+                  style={{ border: '1px solid var(--border)', color: 'var(--navy)' }}
+                  onClick={() => setQuotaModalOpen(false)}
+                  disabled={updateQuotaMutation.isPending}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                  style={{ background: 'var(--blue)' }}
+                  onClick={submitQuota}
+                  disabled={updateQuotaMutation.isPending}
+                >
+                  {updateQuotaMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Save Quota
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </AdminShell>

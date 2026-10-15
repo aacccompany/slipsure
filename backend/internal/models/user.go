@@ -25,6 +25,7 @@ type User struct {
 	LineUserID    *string   `json:"line_user_id,omitempty"`
 	LineLinked    bool      `json:"line_linked"`
 	EmailVerified bool      `json:"email_verified"`
+	IsActive      bool      `json:"is_active"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
 	MerchantID    string    `json:"merchant_id"`

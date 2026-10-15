@@ -7,7 +7,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api, tokenManager } from '@/lib/api-client';
 import { FreePlanConfirmModal } from '@/components/subscription/FreePlanConfirmModal';
-import type { BillingCycle } from '@/types/api';
 
 const featureLabels: Record<string, string> = {
   slip_verify:          'ตรวจสอบสลิป',
@@ -25,7 +24,6 @@ const featureLabels: Record<string, string> = {
 
 export default function PricingPage() {
   const queryClient = useQueryClient();
-  const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
   const [freeConfirmOpen, setFreeConfirmOpen] = useState(false);
 
   const { data: plansData, isLoading } = useQuery({
@@ -41,7 +39,7 @@ export default function PricingPage() {
   });
 
   const checkoutMutation = useMutation({
-    mutationFn: (data: { plan_id: string; billing_cycle: BillingCycle }) => api.createCheckout(data),
+    mutationFn: (data: { plan_id: string; billing_cycle: 'monthly' }) => api.createCheckout(data),
     onSuccess: (response) => {
       setFreeConfirmOpen(false);
       if (response.data?.checkout_url) {
@@ -63,11 +61,11 @@ export default function PricingPage() {
   const currentPlanId = subscriptionData?.data?.subscription?.plan_id;
   const visiblePlans = plans.filter((plan) => !(plan.id === 'plan-free' && freePlanUsed));
 
-  const handlePlanClick = (planId: string, price: number) => {
+  const handlePlanClick = (planId: string) => {
     if (!isAuthenticated) { window.location.href = '/register'; return; }
     if (planId === 'plan-free' && freePlanUsed) { return; }
     if (planId === 'plan-free') { setFreeConfirmOpen(true); return; }
-    checkoutMutation.mutate({ plan_id: planId, billing_cycle: billingCycle });
+    checkoutMutation.mutate({ plan_id: planId, billing_cycle: 'monthly' });
   };
 
   const activateFreePlan = () => {
@@ -106,33 +104,6 @@ export default function PricingPage() {
           </p>
         </div>
 
-        {/* สลับรายเดือน/รายปี */}
-        <div className="flex justify-center mb-12">
-          <div className="flex p-1" style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border)' }}>
-            {(['monthly', 'yearly'] as BillingCycle[]).map((cycle) => (
-              <button
-                key={cycle}
-                onClick={() => setBillingCycle(cycle)}
-                className="px-6 py-2.5 text-sm font-semibold transition-all"
-                style={{
-                  background: billingCycle === cycle ? 'var(--navy)' : 'transparent',
-                  color: billingCycle === cycle ? '#fff' : 'var(--text-muted)',
-                }}
-              >
-                {cycle === 'monthly' ? 'รายเดือน' : 'รายปี'}
-                {cycle === 'yearly' && (
-                  <span
-                    className="ml-2 font-mono text-[9px] px-1.5 py-0.5"
-                    style={{ background: 'var(--blue)', color: '#fff' }}
-                  >
-                    ประหยัด 17%
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* แผน */}
         {isLoading ? (
           <div className="flex justify-center py-24">
@@ -141,7 +112,7 @@ export default function PricingPage() {
         ) : (
           <div className="grid lg:grid-cols-3 gap-6 items-stretch">
             {visiblePlans.map((plan) => {
-              const price = billingCycle === 'monthly' ? plan.price_monthly : plan.price_yearly;
+              const price = plan.price_monthly;
               const isPopular = plan.is_popular;
               const isCurrent = plan.id === currentPlanId;
               const isFreeUnavailable = plan.id === 'plan-free' && freePlanUsed && !isCurrent;
@@ -190,7 +161,7 @@ export default function PricingPage() {
                         </span>
                         {price > 0 && (
                           <span className="text-sm" style={{ color: isPopular ? 'rgba(248,250,252,0.4)' : 'var(--text-muted)' }}>
-                            /{billingCycle === 'monthly' ? 'เดือน' : 'ปี'}
+                            /เดือน
                           </span>
                         )}
                       </div>
@@ -219,7 +190,7 @@ export default function PricingPage() {
 
                     {/* ปุ่ม */}
                     <button
-                      onClick={() => handlePlanClick(plan.id, price)}
+                      onClick={() => handlePlanClick(plan.id)}
                       disabled={checkoutMutation.isPending || isCurrent || isFreeUnavailable}
                       className="w-full py-3.5 text-sm font-semibold flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-60 active:scale-95"
                       style={{

@@ -50,25 +50,13 @@ func NewStripeService() (*StripeService, error) {
 
 	// Build price ID mapping
 	priceIDMapping := map[string]string{
-		"plan-free":                  os.Getenv("STRIPE_PRICE_ID_FREE"),
-		"plan-havenovid":             os.Getenv("STRIPE_PRICE_ID_HAVENOVID_MONTHLY"),
-		"plan-havenovid-yearly":      os.Getenv("STRIPE_PRICE_ID_HAVENOVID_YEARLY"),
-		"plan-havestart":             firstEnv("STRIPE_PRICE_ID_HAVESTART_MONTHLY", "STRIPE_PRICE_ID_STARTER_MONTHLY"),
-		"plan-havestart-yearly":      firstEnv("STRIPE_PRICE_ID_HAVESTART_YEARLY", "STRIPE_PRICE_ID_STARTER_YEARLY"),
-		"plan-havesme":               firstEnv("STRIPE_PRICE_ID_HAVESME_MONTHLY", "STRIPE_PRICE_ID_PRO_MONTHLY"),
-		"plan-havesme-yearly":        firstEnv("STRIPE_PRICE_ID_HAVESME_YEARLY", "STRIPE_PRICE_ID_PRO_YEARLY"),
-		"plan-haveenterprise":        firstEnv("STRIPE_PRICE_ID_HAVEENTERPRISE_MONTHLY", "STRIPE_PRICE_ID_ENTERPRISE_MONTHLY"),
-		"plan-haveenterprise-yearly": firstEnv("STRIPE_PRICE_ID_HAVEENTERPRISE_YEARLY", "STRIPE_PRICE_ID_ENTERPRISE_YEARLY"),
-		"plan-havegold":              os.Getenv("STRIPE_PRICE_ID_HAVEGOLD_MONTHLY"),
-		"plan-havegold-yearly":       os.Getenv("STRIPE_PRICE_ID_HAVEGOLD_YEARLY"),
-		"plan-havebusiness":          os.Getenv("STRIPE_PRICE_ID_HAVEBUSINESS_MONTHLY"),
-		"plan-havebusiness-yearly":   os.Getenv("STRIPE_PRICE_ID_HAVEBUSINESS_YEARLY"),
-		"plan-starter":               os.Getenv("STRIPE_PRICE_ID_STARTER_MONTHLY"),
-		"plan-starter-yearly":        os.Getenv("STRIPE_PRICE_ID_STARTER_YEARLY"),
-		"plan-pro":                   os.Getenv("STRIPE_PRICE_ID_PRO_MONTHLY"),
-		"plan-pro-yearly":            os.Getenv("STRIPE_PRICE_ID_PRO_YEARLY"),
-		"plan-enterprise":            os.Getenv("STRIPE_PRICE_ID_ENTERPRISE_MONTHLY"),
-		"plan-enterprise-yearly":     os.Getenv("STRIPE_PRICE_ID_ENTERPRISE_YEARLY"),
+		"plan-free":     os.Getenv("STRIPE_PRICE_ID_FREE"),
+		"plan-mini":     os.Getenv("STRIPE_PRICE_ID_MINI_MONTHLY"),
+		"plan-starter":  os.Getenv("STRIPE_PRICE_ID_STARTER_MONTHLY"),
+		"plan-basic":    os.Getenv("STRIPE_PRICE_ID_BASIC_MONTHLY"),
+		"plan-standard": os.Getenv("STRIPE_PRICE_ID_STANDARD_MONTHLY"),
+		"plan-pro":      os.Getenv("STRIPE_PRICE_ID_PRO_MONTHLY"),
+		"plan-business": os.Getenv("STRIPE_PRICE_ID_BUSINESS_MONTHLY"),
 	}
 
 	successURL := os.Getenv("STRIPE_SUCCESS_URL")
@@ -217,6 +205,84 @@ func (s *StripeService) GetCheckoutSessionPayment(checkoutSessionID string) (flo
 	return float64(checkoutSession.AmountTotal) / 100, strings.ToUpper(string(checkoutSession.Currency)), nil
 }
 
+// GetCheckoutSessionDetail retrieves a safe, normalized admin view of a Stripe Checkout Session.
+func (s *StripeService) GetCheckoutSessionDetail(checkoutSessionID string) (*models.StripeCheckoutSessionDetail, error) {
+	params := &stripe.CheckoutSessionParams{}
+	params.AddExpand("customer")
+	params.AddExpand("payment_intent")
+
+	checkoutSession, err := session.Get(checkoutSessionID, params)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve checkout session %s: %w", checkoutSessionID, err)
+	}
+
+	dashboardBase := "https://dashboard.stripe.com"
+	if strings.HasPrefix(s.apiKey, "sk_test_") || strings.HasPrefix(checkoutSessionID, "cs_test_") {
+		dashboardBase += "/test"
+	}
+
+	createdAt := time.Unix(checkoutSession.Created, 0)
+	expiresAt := time.Unix(checkoutSession.ExpiresAt, 0)
+	detail := &models.StripeCheckoutSessionDetail{
+		SessionID:      checkoutSession.ID,
+		Mode:           string(checkoutSession.Mode),
+		Status:         string(checkoutSession.Status),
+		PaymentStatus:  string(checkoutSession.PaymentStatus),
+		AmountSubtotal: float64(checkoutSession.AmountSubtotal) / 100,
+		AmountTotal:    float64(checkoutSession.AmountTotal) / 100,
+		Currency:       strings.ToUpper(string(checkoutSession.Currency)),
+		CreatedAt:      &createdAt,
+		ExpiresAt:      &expiresAt,
+		DashboardURL:   fmt.Sprintf("%s/checkout/sessions/%s", dashboardBase, checkoutSession.ID),
+		Metadata:       checkoutSession.Metadata,
+	}
+
+	if checkoutSession.Customer != nil {
+		detail.CustomerID = checkoutSession.Customer.ID
+		detail.CustomerEmail = checkoutSession.Customer.Email
+		detail.CustomerName = checkoutSession.Customer.Name
+		if detail.CustomerID != "" {
+			detail.CustomerDashboardURL = fmt.Sprintf("%s/customers/%s", dashboardBase, detail.CustomerID)
+		}
+	}
+	if checkoutSession.CustomerDetails != nil {
+		if detail.CustomerEmail == "" {
+			detail.CustomerEmail = checkoutSession.CustomerDetails.Email
+		}
+		if detail.CustomerName == "" {
+			detail.CustomerName = checkoutSession.CustomerDetails.Name
+		}
+	}
+	if checkoutSession.PaymentIntent != nil {
+		detail.PaymentIntentID = checkoutSession.PaymentIntent.ID
+		if detail.PaymentIntentID != "" {
+			detail.PaymentIntentDashboardURL = fmt.Sprintf("%s/payments/%s", dashboardBase, detail.PaymentIntentID)
+		}
+	}
+
+	lineItemIter := session.ListLineItems(&stripe.CheckoutSessionListLineItemsParams{
+		Session: stripe.String(checkoutSessionID),
+	})
+	for lineItemIter.Next() {
+		item := lineItemIter.LineItem()
+		lineItem := models.StripeLineItemDetail{
+			Description: item.Description,
+			Quantity:    item.Quantity,
+			AmountTotal: float64(item.AmountTotal) / 100,
+			Currency:    strings.ToUpper(string(item.Currency)),
+		}
+		if item.Price != nil {
+			lineItem.PriceID = item.Price.ID
+		}
+		detail.LineItems = append(detail.LineItems, lineItem)
+	}
+	if err := lineItemIter.Err(); err != nil {
+		return nil, fmt.Errorf("failed to retrieve checkout session line items: %w", err)
+	}
+
+	return detail, nil
+}
+
 func checkoutSessionIDFromPaymentIntent(raw json.RawMessage) (string, error) {
 	var paymentIntent struct {
 		PaymentDetails struct {
@@ -313,12 +379,11 @@ func (s *StripeService) GetSubscription(subscriptionID string) (*stripe.Subscrip
 // Helper functions
 
 func (s *StripeService) getPriceID(planID, billingCycle string) (string, error) {
-	key := planID
-	if billingCycle == "yearly" && planID != "plan-free" {
-		key = fmt.Sprintf("%s-yearly", planID)
+	if billingCycle != "monthly" {
+		return "", fmt.Errorf("billing cycle %q is no longer available", billingCycle)
 	}
 
-	priceID, exists := s.priceIDMapping[key]
+	priceID, exists := s.priceIDMapping[planID]
 	if !exists || strings.TrimSpace(priceID) == "" {
 		return "", fmt.Errorf("no Stripe price ID found for plan: %s, billing: %s", planID, billingCycle)
 	}
@@ -327,36 +392,21 @@ func (s *StripeService) getPriceID(planID, billingCycle string) (string, error) 
 }
 
 func (s *StripeService) calculateAmount(planID, billingCycle string) float64 {
-	// Calculate amount based on plan and billing cycle
-	// In production, you'd fetch this from Stripe price API or your database
+	if billingCycle != "monthly" {
+		return 0
+	}
+
 	amounts := map[string]float64{
-		"plan-free":                  0,
-		"plan-havenovid":             35.99,
-		"plan-havenovid-yearly":      359.90,
-		"plan-havestart":             77,
-		"plan-havestart-yearly":      770,
-		"plan-havesme":               200,
-		"plan-havesme-yearly":        2000,
-		"plan-haveenterprise":        720,
-		"plan-haveenterprise-yearly": 7200,
-		"plan-havegold":              2400,
-		"plan-havegold-yearly":       24000,
-		"plan-havebusiness":          5599.99,
-		"plan-havebusiness-yearly":   55999.90,
-		"plan-starter":               299,
-		"plan-starter-yearly":        2990,
-		"plan-pro":                   799,
-		"plan-pro-yearly":            7990,
-		"plan-enterprise":            999,
-		"plan-enterprise-yearly":     9990,
+		"plan-free":     0,
+		"plan-mini":     49,
+		"plan-starter":  99,
+		"plan-basic":    179,
+		"plan-standard": 399,
+		"plan-pro":      699,
+		"plan-business": 1299,
 	}
 
-	key := planID
-	if billingCycle == "yearly" && planID != "plan-free" {
-		key = fmt.Sprintf("%s-yearly", planID)
-	}
-
-	if amount, exists := amounts[key]; exists {
+	if amount, exists := amounts[planID]; exists {
 		return amount
 	}
 

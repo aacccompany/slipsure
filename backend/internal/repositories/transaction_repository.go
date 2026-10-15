@@ -42,6 +42,8 @@ type TransactionRepository interface {
 	FindByMerchantID(merchantID uuid.UUID, limit, offset int) ([]*models.Transaction, error)
 	ListByMerchant(merchantID uuid.UUID, filters models.TransactionFilters) ([]*models.Transaction, error)
 	CountByMerchant(merchantID uuid.UUID, filters models.TransactionFilters) (int, error)
+	ListAll(filters models.TransactionFilters) ([]*models.Transaction, error)
+	CountAll(filters models.TransactionFilters) (int, error)
 	UpdateStatus(id uuid.UUID, status models.TransactionStatus) error
 	IncrementRecheckCount(id uuid.UUID) error
 	CheckDuplicate(merchantID uuid.UUID, referenceNo string, amount float64, withinHours int) (*models.Transaction, error)
@@ -165,7 +167,7 @@ func (r *transactionRepository) FindByMerchantID(merchantID uuid.UUID, limit, of
 
 // ListByMerchant retrieves filtered transactions for a merchant with pagination.
 func (r *transactionRepository) ListByMerchant(merchantID uuid.UUID, filters models.TransactionFilters) ([]*models.Transaction, error) {
-	where, args := buildTransactionFilterWhere(merchantID, filters)
+	where, args := buildTransactionFilterWhere(&merchantID, filters)
 	args = append(args, filters.Limit, filters.Offset)
 
 	query := fmt.Sprintf(`
@@ -196,7 +198,7 @@ func (r *transactionRepository) ListByMerchant(merchantID uuid.UUID, filters mod
 
 // CountByMerchant counts filtered transactions for a merchant.
 func (r *transactionRepository) CountByMerchant(merchantID uuid.UUID, filters models.TransactionFilters) (int, error) {
-	where, args := buildTransactionFilterWhere(merchantID, filters)
+	where, args := buildTransactionFilterWhere(&merchantID, filters)
 	query := fmt.Sprintf(`SELECT COUNT(*) FROM transactions %s`, where)
 
 	var total int
@@ -207,9 +209,58 @@ func (r *transactionRepository) CountByMerchant(merchantID uuid.UUID, filters mo
 	return total, nil
 }
 
-func buildTransactionFilterWhere(merchantID uuid.UUID, filters models.TransactionFilters) (string, []interface{}) {
-	conditions := []string{"merchant_id = $1"}
-	args := []interface{}{merchantID}
+// ListAll retrieves filtered transactions across all merchants for administrators.
+func (r *transactionRepository) ListAll(filters models.TransactionFilters) ([]*models.Transaction, error) {
+	where, args := buildTransactionFilterWhere(nil, filters)
+	args = append(args, filters.Limit, filters.Offset)
+
+	query := fmt.Sprintf(`
+		SELECT `+transactionSelectColumns+`
+		FROM transactions
+		%s
+		ORDER BY created_at DESC
+		LIMIT $%d OFFSET $%d
+	`, where, len(args)-1, len(args))
+
+	rows, err := r.db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var transactions []*models.Transaction
+	for rows.Next() {
+		txn := &models.Transaction{}
+		if err := scanTransaction(rows, txn); err != nil {
+			return nil, err
+		}
+		transactions = append(transactions, txn)
+	}
+
+	return transactions, nil
+}
+
+// CountAll counts filtered transactions across all merchants.
+func (r *transactionRepository) CountAll(filters models.TransactionFilters) (int, error) {
+	where, args := buildTransactionFilterWhere(nil, filters)
+	query := fmt.Sprintf(`SELECT COUNT(*) FROM transactions %s`, where)
+
+	var total int
+	if err := r.db.QueryRow(query, args...).Scan(&total); err != nil {
+		return 0, fmt.Errorf("failed to count transactions: %w", err)
+	}
+
+	return total, nil
+}
+
+func buildTransactionFilterWhere(merchantID *uuid.UUID, filters models.TransactionFilters) (string, []interface{}) {
+	conditions := make([]string, 0, 5)
+	args := make([]interface{}, 0, 5)
+
+	if merchantID != nil {
+		args = append(args, *merchantID)
+		conditions = append(conditions, fmt.Sprintf("merchant_id = $%d", len(args)))
+	}
 
 	if filters.Status != nil {
 		args = append(args, *filters.Status)
@@ -233,7 +284,7 @@ func buildTransactionFilterWhere(merchantID uuid.UUID, filters models.Transactio
 		conditions = append(conditions, fmt.Sprintf(`(
 			id::text ILIKE $%d
 			OR slip_id::text ILIKE $%d
-			reference_no ILIKE $%d
+			OR reference_no ILIKE $%d
 			OR provider_verification_id ILIKE $%d
 			OR sender_name ILIKE $%d
 			OR sender_bank ILIKE $%d
@@ -243,6 +294,10 @@ func buildTransactionFilterWhere(merchantID uuid.UUID, filters models.Transactio
 			OR receiver_account ILIKE $%d
 			OR amount::text ILIKE $%d
 		)`, searchParam, searchParam, searchParam, searchParam, searchParam, searchParam, searchParam, searchParam, searchParam, searchParam, searchParam))
+	}
+
+	if len(conditions) == 0 {
+		return "", args
 	}
 
 	return "WHERE " + strings.Join(conditions, " AND "), args

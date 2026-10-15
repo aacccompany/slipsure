@@ -56,6 +56,7 @@ type Subscription struct {
 	PlanID               string             `json:"plan_id"`
 	Status               SubscriptionStatus `json:"status"`
 	BillingCycle         BillingCycle       `json:"billing_cycle"`
+	QuotaOverride        *int               `json:"quota_override,omitempty"`
 	StripeSubscriptionID *string            `json:"stripe_subscription_id,omitempty"`
 	StripeCustomerID     *string            `json:"stripe_customer_id,omitempty"`
 	StartedAt            time.Time          `json:"started_at"`
@@ -86,6 +87,58 @@ type PaymentLog struct {
 	CreatedAt          time.Time  `json:"created_at"`
 }
 
+// CreditLot represents one expiring quota package purchased or granted to a merchant.
+type CreditLot struct {
+	ID               uuid.UUID  `json:"id"`
+	MerchantID       uuid.UUID  `json:"merchant_id"`
+	SubscriptionID   *uuid.UUID `json:"subscription_id,omitempty"`
+	PaymentLogID     *uuid.UUID `json:"payment_log_id,omitempty"`
+	PlanID           string     `json:"plan_id"`
+	CreditsTotal     int        `json:"credits_total"`
+	CreditsRemaining int        `json:"credits_remaining"`
+	StartedAt        time.Time  `json:"started_at"`
+	ExpiresAt        time.Time  `json:"expires_at"`
+	CreatedAt        time.Time  `json:"created_at"`
+	UpdatedAt        time.Time  `json:"updated_at"`
+}
+
+// StripeLineItemDetail is a normalized Stripe Checkout line item.
+type StripeLineItemDetail struct {
+	Description string  `json:"description"`
+	Quantity    int64   `json:"quantity"`
+	AmountTotal float64 `json:"amount_total"`
+	Currency    string  `json:"currency"`
+	PriceID     string  `json:"price_id,omitempty"`
+}
+
+// StripeCheckoutSessionDetail is a safe admin view of the Stripe Checkout Session.
+type StripeCheckoutSessionDetail struct {
+	SessionID                 string                 `json:"session_id"`
+	Mode                      string                 `json:"mode"`
+	Status                    string                 `json:"status"`
+	PaymentStatus             string                 `json:"payment_status"`
+	CustomerID                string                 `json:"customer_id,omitempty"`
+	CustomerEmail             string                 `json:"customer_email,omitempty"`
+	CustomerName              string                 `json:"customer_name,omitempty"`
+	PaymentIntentID           string                 `json:"payment_intent_id,omitempty"`
+	AmountSubtotal            float64                `json:"amount_subtotal"`
+	AmountTotal               float64                `json:"amount_total"`
+	Currency                  string                 `json:"currency"`
+	CreatedAt                 *time.Time             `json:"created_at,omitempty"`
+	ExpiresAt                 *time.Time             `json:"expires_at,omitempty"`
+	DashboardURL              string                 `json:"dashboard_url,omitempty"`
+	CustomerDashboardURL      string                 `json:"customer_dashboard_url,omitempty"`
+	PaymentIntentDashboardURL string                 `json:"payment_intent_dashboard_url,omitempty"`
+	Metadata                  map[string]string      `json:"metadata,omitempty"`
+	LineItems                 []StripeLineItemDetail `json:"line_items,omitempty"`
+}
+
+// AdminPaymentDetail combines local payment data with Stripe Checkout details.
+type AdminPaymentDetail struct {
+	Payment PaymentLog                   `json:"payment"`
+	Stripe  *StripeCheckoutSessionDetail `json:"stripe,omitempty"`
+}
+
 // PaymentLogListResponse represents paginated admin payment history.
 type PaymentLogListResponse struct {
 	Items      []PaymentLog `json:"items"`
@@ -106,6 +159,7 @@ type AdminUserListItem struct {
 	MerchantName  string     `json:"merchant_name,omitempty"`
 	LineLinked    bool       `json:"line_linked"`
 	EmailVerified bool       `json:"email_verified"`
+	IsActive      bool       `json:"is_active"`
 	CreatedAt     time.Time  `json:"created_at"`
 }
 
@@ -186,18 +240,49 @@ type AdminMerchantDetailResponse struct {
 
 // AdminAnalyticsDashboard summarizes platform-level KPIs.
 type AdminAnalyticsDashboard struct {
-	TotalTransactions      int     `json:"total_transactions"`
-	SuccessfulTransactions int     `json:"successful_transactions"`
-	FailedTransactions     int     `json:"failed_transactions"`
-	ActiveMerchants        int     `json:"active_merchants"`
-	TotalMerchants         int     `json:"total_merchants"`
-	TotalUsers             int     `json:"total_users"`
-	ConnectedBots          int     `json:"connected_bots"`
-	TotalScans             int     `json:"total_scans"`
-	TotalRevenue           float64 `json:"total_revenue"`
-	TodayTransactions      int     `json:"today_transactions"`
-	TodayRevenue           float64 `json:"today_revenue"`
-	SystemErrorRate        float64 `json:"system_error_rate"`
+	TotalTransactions      int                       `json:"total_transactions"`
+	SuccessfulTransactions int                       `json:"successful_transactions"`
+	FailedTransactions     int                       `json:"failed_transactions"`
+	ActiveMerchants        int                       `json:"active_merchants"`
+	TotalMerchants         int                       `json:"total_merchants"`
+	TotalUsers             int                       `json:"total_users"`
+	ConnectedBots          int                       `json:"connected_bots"`
+	TotalScans             int                       `json:"total_scans"`
+	TotalRevenue           float64                   `json:"total_revenue"`
+	TodayTransactions      int                       `json:"today_transactions"`
+	TodayRevenue           float64                   `json:"today_revenue"`
+	SystemErrorRate        float64                   `json:"system_error_rate"`
+	ProviderCreditsUsed    int                       `json:"provider_credits_used"`
+	ProviderCachedCount    int                       `json:"provider_cached_count"`
+	FailedScanReasons      []AdminFailedScanReason   `json:"failed_scan_reasons"`
+	RecentVerifications    []AdminRecentVerification `json:"recent_verifications"`
+}
+
+// AdminFailedScanReason summarizes platform-wide failed verification causes.
+type AdminFailedScanReason struct {
+	Reason string `json:"reason"`
+	Count  int    `json:"count"`
+}
+
+// AdminRecentVerification is a platform-wide recent verification row.
+type AdminRecentVerification struct {
+	TransactionID          uuid.UUID `json:"transaction_id"`
+	MerchantID             uuid.UUID `json:"merchant_id"`
+	MerchantName           string    `json:"merchant_name"`
+	SlipID                 uuid.UUID `json:"slip_id"`
+	Amount                 float64   `json:"amount"`
+	Status                 string    `json:"status"`
+	FailReason             string    `json:"fail_reason,omitempty"`
+	IsDuplicate            bool      `json:"is_duplicate"`
+	Provider               string    `json:"provider,omitempty"`
+	ProviderVerificationID string    `json:"provider_verification_id,omitempty"`
+	ProviderStatus         string    `json:"provider_status,omitempty"`
+	ProviderValid          bool      `json:"provider_valid"`
+	ProviderCached         bool      `json:"provider_cached"`
+	ProviderChargedCredits int       `json:"provider_charged_credits"`
+	SenderBank             string    `json:"sender_bank,omitempty"`
+	ReceiverBank           string    `json:"receiver_bank,omitempty"`
+	CreatedAt              time.Time `json:"created_at"`
 }
 
 // AdminRevenueByPlan summarizes paid revenue grouped by plan.
@@ -217,12 +302,14 @@ type AdminRevenueAnalytics struct {
 
 // AdminMerchantPerformanceItem summarizes merchant activity for admin analytics.
 type AdminMerchantPerformanceItem struct {
-	MerchantID   uuid.UUID  `json:"merchant_id"`
-	ShopName     string     `json:"shop_name"`
-	Scans        int        `json:"scans"`
-	Quota        int        `json:"quota"`
-	QuotaPercent float64    `json:"quota_percent"`
-	LastScan     *time.Time `json:"last_scan,omitempty"`
+	MerchantID    uuid.UUID  `json:"merchant_id"`
+	ShopName      string     `json:"shop_name"`
+	Scans         int        `json:"scans"`
+	VerifiedScans int        `json:"verified_scans"`
+	FailedScans   int        `json:"failed_scans"`
+	Quota         int        `json:"quota"`
+	QuotaPercent  float64    `json:"quota_percent"`
+	LastScan      *time.Time `json:"last_scan,omitempty"`
 }
 
 // AdminMerchantPerformanceAnalytics summarizes merchant usage distribution.
@@ -403,7 +490,7 @@ type UpdateMerchantSettingsRequest struct {
 // CheckoutRequest represents checkout request
 type CheckoutRequest struct {
 	PlanID       string       `json:"plan_id" binding:"required"`
-	BillingCycle BillingCycle `json:"billing_cycle" binding:"required,oneof=monthly yearly"`
+	BillingCycle BillingCycle `json:"billing_cycle" binding:"required,oneof=monthly"`
 }
 
 // CheckoutResponse represents checkout response

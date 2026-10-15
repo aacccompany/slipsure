@@ -35,6 +35,7 @@ import type {
   AdminRevenueAnalytics,
   AdminMerchantPerformanceAnalytics,
   AdminBankStatus,
+  AdminPaymentDetail,
   PaymentLog,
   LINEWebhookConfig,
   UpdateLINEWebhookRequest,
@@ -491,6 +492,7 @@ class ApiClient {
     page?: number;
     limit?: number;
     role?: string;
+    status?: string;
     search?: string;
     start_date?: string;
     end_date?: string;
@@ -501,6 +503,7 @@ class ApiClient {
 
   async exportAdminUsers(params?: {
     role?: string;
+    status?: string;
     search?: string;
     start_date?: string;
     end_date?: string;
@@ -516,6 +519,16 @@ class ApiClient {
     }
 
     return response.blob();
+  }
+
+  async updateAdminUserStatus(
+    userId: string,
+    isActive: boolean
+  ): Promise<ApiResponse<{ user_id: string; is_active: boolean }>> {
+    return this.request(`/v1/admin/users/${userId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ is_active: isActive }),
+    });
   }
 
   async getAdminMerchants(params?: {
@@ -553,6 +566,16 @@ class ApiClient {
     return this.request(`/v1/admin/merchants/${merchantId}`);
   }
 
+  async updateAdminMerchantQuota(
+    merchantId: string,
+    quotaExtra: number
+  ): Promise<ApiResponse<{ merchant_id: string; quota_extra: number }>> {
+    return this.request(`/v1/admin/merchants/${merchantId}/quota`, {
+      method: 'PUT',
+      body: JSON.stringify({ quota_extra: quotaExtra }),
+    });
+  }
+
   async getAdminMerchantTransactions(
     merchantId: string,
     params?: {
@@ -568,6 +591,18 @@ class ApiClient {
     return this.request(`/v1/admin/merchants/${merchantId}/transactions${queryString ? `?${queryString}` : ''}`);
   }
 
+  async getAdminTransactions(params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    start_date?: string;
+    end_date?: string;
+    search?: string;
+  }): Promise<ApiResponse<TransactionListResponse>> {
+    const queryString = toQueryString(params);
+    return this.request(`/v1/admin/transactions${queryString ? `?${queryString}` : ''}`);
+  }
+
   async getAdminPayments(params?: {
     page?: number;
     limit?: number;
@@ -577,6 +612,10 @@ class ApiClient {
   }): Promise<ApiResponse<{ items: PaymentLog[]; page: number; limit: number; total: number; total_pages: number }>> {
     const queryString = toQueryString(params);
     return this.request(`/v1/admin/payments${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getAdminPaymentDetail(paymentId: string): Promise<ApiResponse<AdminPaymentDetail>> {
+    return this.request(`/v1/admin/payments/${paymentId}`);
   }
 
   async exportAdminPayments(params?: {

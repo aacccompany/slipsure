@@ -12,6 +12,9 @@ import (
 	"slipsure-backend/internal/models"
 )
 
+// ErrNoAvailableCredits is returned when a merchant has no unexpired credit lot remaining.
+var ErrNoAvailableCredits = errors.New("no available credits")
+
 // MerchantRepository defines the interface for merchant data operations
 type MerchantRepository interface {
 	// Merchant profile operations
@@ -30,10 +33,14 @@ type MerchantRepository interface {
 	UpdateSubscription(subscription *models.Subscription) error
 	CancelSubscription(merchantID uuid.UUID, reason string) error
 	CreatePaymentLog(payment *models.PaymentLog) error
+	CreateCreditLot(lot *models.CreditLot) error
+	ConsumeCreditFIFO(merchantID uuid.UUID) error
 	ListPaymentLogs(status string, startDate *time.Time, endDate *time.Time, limit, offset int) ([]models.PaymentLog, int, error)
+	FindPaymentLogByID(id uuid.UUID) (*models.PaymentLog, error)
 	ListPaymentLogsByMerchant(merchantID uuid.UUID, limit int) ([]models.PaymentLog, error)
 	GetAdminMerchantUsage(merchantID uuid.UUID, periodStart time.Time, quota int, remaining int, resetDate time.Time) (models.AdminMerchantUsage, error)
 	GetAdminMerchantBillingSummary(merchantID uuid.UUID) (models.AdminMerchantBillingSummary, error)
+	UpdateAdminMerchantQuota(merchantID uuid.UUID, quotaExtra int) error
 	GetAdminAnalyticsDashboard() (models.AdminAnalyticsDashboard, error)
 	GetAdminRevenueAnalytics(period string) (models.AdminRevenueAnalytics, error)
 	GetAdminMerchantPerformance() (models.AdminMerchantPerformanceAnalytics, error)
@@ -473,6 +480,97 @@ func (r *merchantRepository) CreatePaymentLog(payment *models.PaymentLog) error 
 	return tx.Commit()
 }
 
+// CreateCreditLot records one expiring FIFO credit package for a merchant.
+func (r *merchantRepository) CreateCreditLot(lot *models.CreditLot) error {
+	if lot.CreditsRemaining == 0 {
+		lot.CreditsRemaining = lot.CreditsTotal
+	}
+
+	query := `
+		INSERT INTO credit_lots (
+			merchant_id, subscription_id, payment_log_id, plan_id,
+			credits_total, credits_remaining, started_at, expires_at
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING id, created_at, updated_at
+	`
+
+	return r.db.QueryRow(
+		query,
+		lot.MerchantID,
+		lot.SubscriptionID,
+		lot.PaymentLogID,
+		lot.PlanID,
+		lot.CreditsTotal,
+		lot.CreditsRemaining,
+		lot.StartedAt,
+		lot.ExpiresAt,
+	).Scan(&lot.ID, &lot.CreatedAt, &lot.UpdatedAt)
+}
+
+// ConsumeCreditFIFO consumes one scan credit from the oldest unexpired lot.
+func (r *merchantRepository) ConsumeCreditFIFO(merchantID uuid.UUID) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	var lotID uuid.UUID
+	err = tx.QueryRow(`
+		SELECT id
+		FROM credit_lots
+		WHERE merchant_id = $1
+		  AND credits_remaining > 0
+		  AND expires_at > CURRENT_TIMESTAMP
+		ORDER BY expires_at ASC, started_at ASC, created_at ASC
+		FOR UPDATE SKIP LOCKED
+		LIMIT 1
+	`, merchantID).Scan(&lotID)
+	if err == sql.ErrNoRows {
+		var lotCount int
+		if countErr := tx.QueryRow(`SELECT COUNT(*)::int FROM credit_lots WHERE merchant_id = $1`, merchantID).Scan(&lotCount); countErr != nil {
+			return countErr
+		}
+		if lotCount == 0 {
+			return tx.Commit()
+		}
+		return ErrNoAvailableCredits
+	}
+	if err != nil {
+		return err
+	}
+
+	if _, err := tx.Exec(`
+		UPDATE credit_lots
+		SET credits_remaining = credits_remaining - 1,
+		    updated_at = CURRENT_TIMESTAMP
+		WHERE id = $1
+	`, lotID); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func scanPaymentLog(scanner interface {
+	Scan(dest ...interface{}) error
+}, payment *models.PaymentLog) error {
+	return scanner.Scan(
+		&payment.ID,
+		&payment.MerchantID,
+		&payment.MerchantName,
+		&payment.SubscriptionID,
+		&payment.Amount,
+		&payment.Currency,
+		&payment.Gateway,
+		&payment.GatewayReferenceID,
+		&payment.Status,
+		&payment.PaidAt,
+		&payment.CreatedAt,
+	)
+}
+
 // ListPaymentLogs retrieves paginated payment history for admins.
 func (r *merchantRepository) ListPaymentLogs(status string, startDate *time.Time, endDate *time.Time, limit, offset int) ([]models.PaymentLog, int, error) {
 	conditions := []string{}
@@ -523,19 +621,7 @@ func (r *merchantRepository) ListPaymentLogs(status string, startDate *time.Time
 	payments := make([]models.PaymentLog, 0)
 	for rows.Next() {
 		var payment models.PaymentLog
-		if err := rows.Scan(
-			&payment.ID,
-			&payment.MerchantID,
-			&payment.MerchantName,
-			&payment.SubscriptionID,
-			&payment.Amount,
-			&payment.Currency,
-			&payment.Gateway,
-			&payment.GatewayReferenceID,
-			&payment.Status,
-			&payment.PaidAt,
-			&payment.CreatedAt,
-		); err != nil {
+		if err := scanPaymentLog(rows, &payment); err != nil {
 			return nil, 0, err
 		}
 		payments = append(payments, payment)
@@ -545,6 +631,27 @@ func (r *merchantRepository) ListPaymentLogs(status string, startDate *time.Time
 	}
 
 	return payments, total, nil
+}
+
+// FindPaymentLogByID retrieves one admin payment log.
+func (r *merchantRepository) FindPaymentLogByID(id uuid.UUID) (*models.PaymentLog, error) {
+	query := `
+		SELECT p.id, p.merchant_id, COALESCE(m.shop_name, '') AS merchant_name,
+		       p.subscription_id, p.amount, p.currency, p.gateway::text,
+		       p.gateway_reference_id, p.status::text, p.paid_at, p.created_at
+		FROM payment_logs p
+		LEFT JOIN merchants m ON m.id = p.merchant_id
+		WHERE p.id = $1
+	`
+
+	var payment models.PaymentLog
+	if err := scanPaymentLog(r.db.QueryRow(query, id), &payment); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, errors.New("payment log not found")
+		}
+		return nil, err
+	}
+	return &payment, nil
 }
 
 // ListPaymentLogsByMerchant retrieves recent payment history for one merchant.
@@ -573,19 +680,7 @@ func (r *merchantRepository) ListPaymentLogsByMerchant(merchantID uuid.UUID, lim
 	payments := make([]models.PaymentLog, 0)
 	for rows.Next() {
 		var payment models.PaymentLog
-		if err := rows.Scan(
-			&payment.ID,
-			&payment.MerchantID,
-			&payment.MerchantName,
-			&payment.SubscriptionID,
-			&payment.Amount,
-			&payment.Currency,
-			&payment.Gateway,
-			&payment.GatewayReferenceID,
-			&payment.Status,
-			&payment.PaidAt,
-			&payment.CreatedAt,
-		); err != nil {
+		if err := scanPaymentLog(rows, &payment); err != nil {
 			return nil, err
 		}
 		payments = append(payments, payment)
@@ -731,20 +826,22 @@ func (r *merchantRepository) GetAdminAnalyticsDashboard() (models.AdminAnalytics
 	query := `
 		SELECT
 			COALESCE((SELECT COUNT(*)::int FROM transactions), 0) AS total_transactions,
-			COALESCE((SELECT COUNT(*)::int FROM transactions WHERE status = 'success'), 0) AS successful_transactions,
-			COALESCE((SELECT COUNT(*)::int FROM transactions WHERE status = 'failed'), 0) AS failed_transactions,
+			COALESCE((SELECT COUNT(*)::int FROM slips WHERE status = 'verified'), 0) AS successful_transactions,
+			COALESCE((SELECT COUNT(*)::int FROM slips WHERE status = 'failed'), 0) AS failed_transactions,
 			COALESCE((SELECT COUNT(*)::int FROM merchants WHERE is_active = TRUE), 0) AS active_merchants,
 			COALESCE((SELECT COUNT(*)::int FROM merchants), 0) AS total_merchants,
 			COALESCE((SELECT COUNT(*)::int FROM users), 0) AS total_users,
 			COALESCE((SELECT COUNT(*)::int FROM line_webhook_configs), 0) AS connected_bots,
-			COALESCE((SELECT SUM(scan_count)::int FROM usage_counters), 0) AS total_scans,
+			COALESCE((SELECT COUNT(*)::int FROM slips), 0) AS total_scans,
 			COALESCE((SELECT SUM(amount)::float8 FROM payment_logs WHERE status = 'success'), 0) AS total_revenue,
-			COALESCE((SELECT COUNT(*)::int FROM transactions WHERE created_at::date = CURRENT_DATE), 0) AS today_transactions,
+			COALESCE((SELECT COUNT(*)::int FROM slips WHERE created_at::date = CURRENT_DATE), 0) AS today_transactions,
 			COALESCE((SELECT SUM(amount)::float8 FROM payment_logs WHERE status = 'success' AND paid_at::date = CURRENT_DATE), 0) AS today_revenue,
 			COALESCE((
 				SELECT (COUNT(*) FILTER (WHERE status = 'failed')::float8 / NULLIF(COUNT(*) FILTER (WHERE status IN ('verified', 'failed')), 0)::float8) * 100
 				FROM slips
-			), 0) AS system_error_rate
+			), 0) AS system_error_rate,
+			COALESCE((SELECT SUM(provider_charged_credits)::int FROM transactions), 0) AS provider_credits_used,
+			COALESCE((SELECT COUNT(*)::int FROM transactions WHERE provider_cached = TRUE), 0) AS provider_cached_count
 	`
 
 	var dashboard models.AdminAnalyticsDashboard
@@ -761,7 +858,95 @@ func (r *merchantRepository) GetAdminAnalyticsDashboard() (models.AdminAnalytics
 		&dashboard.TodayTransactions,
 		&dashboard.TodayRevenue,
 		&dashboard.SystemErrorRate,
+		&dashboard.ProviderCreditsUsed,
+		&dashboard.ProviderCachedCount,
 	); err != nil {
+		return dashboard, err
+	}
+
+	reasonQuery := `
+		SELECT COALESCE(fail_reason::text, 'UNKNOWN') AS reason, COUNT(*)::int AS count
+		FROM slips
+		WHERE status = 'failed'
+		GROUP BY reason
+		ORDER BY count DESC, reason ASC
+	`
+	reasonRows, err := r.db.Query(reasonQuery)
+	if err != nil {
+		return dashboard, err
+	}
+	defer reasonRows.Close()
+
+	dashboard.FailedScanReasons = make([]models.AdminFailedScanReason, 0)
+	for reasonRows.Next() {
+		var item models.AdminFailedScanReason
+		if err := reasonRows.Scan(&item.Reason, &item.Count); err != nil {
+			return dashboard, err
+		}
+		dashboard.FailedScanReasons = append(dashboard.FailedScanReasons, item)
+	}
+	if err := reasonRows.Err(); err != nil {
+		return dashboard, err
+	}
+
+	recentQuery := `
+		SELECT
+			COALESCE(t.id, '00000000-0000-0000-0000-000000000000'::uuid) AS transaction_id,
+			s.merchant_id,
+			COALESCE(m.shop_name, '') AS merchant_name,
+			s.id AS slip_id,
+			COALESCE(t.amount, 0)::float8 AS amount,
+			COALESCE(t.status::text, s.status::text) AS status,
+			COALESCE(t.fail_reason, s.fail_reason::text, '') AS fail_reason,
+			COALESCE(t.is_duplicate, FALSE) AS is_duplicate,
+			COALESCE(t.provider, '') AS provider,
+			COALESCE(t.provider_verification_id, '') AS provider_verification_id,
+			COALESCE(t.provider_status, '') AS provider_status,
+			COALESCE(t.provider_valid, FALSE) AS provider_valid,
+			COALESCE(t.provider_cached, FALSE) AS provider_cached,
+			COALESCE(t.provider_charged_credits, 0) AS provider_charged_credits,
+			COALESCE(t.sender_bank, '') AS sender_bank,
+			COALESCE(t.receiver_bank, '') AS receiver_bank,
+			s.created_at
+		FROM slips s
+		LEFT JOIN transactions t ON t.slip_id = s.id
+		LEFT JOIN merchants m ON m.id = s.merchant_id
+		ORDER BY s.created_at DESC
+		LIMIT 5
+	`
+	recentRows, err := r.db.Query(recentQuery)
+	if err != nil {
+		return dashboard, err
+	}
+	defer recentRows.Close()
+
+	dashboard.RecentVerifications = make([]models.AdminRecentVerification, 0)
+	for recentRows.Next() {
+		var item models.AdminRecentVerification
+		if err := recentRows.Scan(
+			&item.TransactionID,
+			&item.MerchantID,
+			&item.MerchantName,
+			&item.SlipID,
+			&item.Amount,
+			&item.Status,
+			&item.FailReason,
+			&item.IsDuplicate,
+			&item.Provider,
+			&item.ProviderVerificationID,
+			&item.ProviderStatus,
+			&item.ProviderValid,
+			&item.ProviderCached,
+			&item.ProviderChargedCredits,
+			&item.SenderBank,
+			&item.ReceiverBank,
+			&item.CreatedAt,
+		); err != nil {
+			return dashboard, err
+		}
+		dashboard.RecentVerifications = append(dashboard.RecentVerifications, item)
+	}
+	if err := recentRows.Err(); err != nil {
 		return dashboard, err
 	}
 
@@ -863,8 +1048,14 @@ func (r *merchantRepository) GetAdminMerchantPerformance() (models.AdminMerchant
 		SELECT
 			m.id,
 			m.shop_name,
-			COALESCE((SELECT SUM(scan_count)::int FROM usage_counters uc WHERE uc.merchant_id = m.id), 0) AS scans,
-			COALESCE(sp.quota_per_month, 0) AS quota,
+			COALESCE((SELECT COUNT(*)::int FROM slips sl WHERE sl.merchant_id = m.id), 0) AS scans,
+			COALESCE((SELECT COUNT(*)::int FROM slips sl WHERE sl.merchant_id = m.id AND sl.status = 'verified'), 0) AS verified_scans,
+			COALESCE((SELECT COUNT(*)::int FROM slips sl WHERE sl.merchant_id = m.id AND sl.status = 'failed'), 0) AS failed_scans,
+			COALESCE((
+				SELECT NULLIF(SUM(cl.credits_total) FILTER (WHERE cl.expires_at > CURRENT_TIMESTAMP), 0)::int
+				FROM credit_lots cl
+				WHERE cl.merchant_id = m.id
+			), COALESCE(sp.quota_per_month, 0) + COALESCE(s.quota_override, 0)) AS quota,
 			COALESCE((SELECT MAX(created_at) FROM slips sl WHERE sl.merchant_id = m.id), NULL) AS last_scan
 		FROM merchants m
 		LEFT JOIN subscriptions s ON s.merchant_id = m.id
@@ -881,7 +1072,7 @@ func (r *merchantRepository) GetAdminMerchantPerformance() (models.AdminMerchant
 	for rows.Next() {
 		var item models.AdminMerchantPerformanceItem
 		var lastScan sql.NullTime
-		if err := rows.Scan(&item.MerchantID, &item.ShopName, &item.Scans, &item.Quota, &lastScan); err != nil {
+		if err := rows.Scan(&item.MerchantID, &item.ShopName, &item.Scans, &item.VerifiedScans, &item.FailedScans, &item.Quota, &lastScan); err != nil {
 			return analytics, err
 		}
 		if lastScan.Valid {
@@ -1184,7 +1375,7 @@ func (r *merchantRepository) ListMerchantAnalyticsExport(merchantID uuid.UUID, s
 func (r *merchantRepository) FindByMerchantID(merchantID uuid.UUID) (*models.Subscription, error) {
 	query := `
 		SELECT s.id, s.merchant_id, s.plan_id, s.status, s.billing_cycle,
-		       s.stripe_subscription_id, s.stripe_customer_id, s.started_at, s.expires_at,
+		       s.quota_override, s.stripe_subscription_id, s.stripe_customer_id, s.started_at, s.expires_at,
 		       s.auto_renew, s.cancelled_at, s.created_at, s.updated_at,
 		       p.name as plan_name, p.price_monthly, p.price_yearly, p.quota_per_month,
 		       p.features, p.is_popular
@@ -1198,6 +1389,7 @@ func (r *merchantRepository) FindByMerchantID(merchantID uuid.UUID) (*models.Sub
 	var subscription models.Subscription
 	var plan models.SubscriptionPlan
 	var featuresJSON string
+	var quotaOverride sql.NullInt64
 
 	err := r.db.QueryRow(query, merchantID).Scan(
 		&subscription.ID,
@@ -1205,6 +1397,7 @@ func (r *merchantRepository) FindByMerchantID(merchantID uuid.UUID) (*models.Sub
 		&subscription.PlanID,
 		&subscription.Status,
 		&subscription.BillingCycle,
+		&quotaOverride,
 		&subscription.StripeSubscriptionID,
 		&subscription.StripeCustomerID,
 		&subscription.StartedAt,
@@ -1232,6 +1425,11 @@ func (r *merchantRepository) FindByMerchantID(merchantID uuid.UUID) (*models.Sub
 	if featuresJSON != "" {
 		json.Unmarshal([]byte(featuresJSON), &plan.Features)
 	}
+	if quotaOverride.Valid {
+		value := int(quotaOverride.Int64)
+		subscription.QuotaOverride = &value
+		plan.QuotaPerMonth += value
+	}
 
 	subscription.Plan = &plan
 
@@ -1241,6 +1439,27 @@ func (r *merchantRepository) FindByMerchantID(merchantID uuid.UUID) (*models.Sub
 	subscription.RemainingQuota = plan.QuotaPerMonth - subscription.UsageThisMonth
 
 	return &subscription, nil
+}
+
+// UpdateAdminMerchantQuota sets extra monthly quota for one merchant on top of the plan quota.
+func (r *merchantRepository) UpdateAdminMerchantQuota(merchantID uuid.UUID, quotaExtra int) error {
+	query := `
+		UPDATE subscriptions
+		SET quota_override = NULLIF($2, 0), updated_at = CURRENT_TIMESTAMP
+		WHERE merchant_id = $1
+	`
+
+	result, err := r.db.Exec(query, merchantID, quotaExtra)
+	if err != nil {
+		return err
+	}
+
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return errors.New("subscription not found")
+	}
+
+	return nil
 }
 
 // UpdateSubscription updates subscription information
@@ -1423,12 +1642,52 @@ func (r *merchantRepository) GetQuotaStatus(merchantID uuid.UUID) (*models.Quota
 		return nil, err
 	}
 
+	var lotCount int
+	var activeQuota sql.NullInt64
+	var activeRemaining sql.NullInt64
+	var nextExpiry sql.NullTime
+	lotQuery := `
+		SELECT
+			COUNT(*)::int,
+			COALESCE(SUM(credits_total) FILTER (WHERE expires_at > CURRENT_TIMESTAMP), 0)::bigint,
+			COALESCE(SUM(credits_remaining) FILTER (WHERE expires_at > CURRENT_TIMESTAMP), 0)::bigint,
+			MIN(expires_at) FILTER (WHERE credits_remaining > 0 AND expires_at > CURRENT_TIMESTAMP)
+		FROM credit_lots
+		WHERE merchant_id = $1
+	`
+	if err := r.db.QueryRow(lotQuery, merchantID).Scan(&lotCount, &activeQuota, &activeRemaining, &nextExpiry); err != nil {
+		return nil, err
+	}
+	if lotCount > 0 {
+		quotaLimit := int(activeQuota.Int64)
+		remaining := int(activeRemaining.Int64)
+		used := quotaLimit - remaining
+		resetDate := time.Now()
+		if nextExpiry.Valid {
+			resetDate = nextExpiry.Time
+		} else if subscription.ExpiresAt != nil {
+			resetDate = *subscription.ExpiresAt
+		}
+
+		return &models.QuotaStatus{
+			QuotaLimit: quotaLimit,
+			Used:       used,
+			Remaining:  remaining,
+			ResetDate:  resetDate,
+			IsBlocked:  remaining <= 0,
+		}, nil
+	}
+
 	periodStart, resetDate := models.QuotaPeriodFor(subscription.StartedAt, time.Now())
 	used := r.getUsageForPeriod(merchantID, periodStart)
 
 	quotaLimit := subscription.Plan.QuotaPerMonth
 	remaining := quotaLimit - used
-	isBlocked := used >= quotaLimit
+	isExpired := subscription.ExpiresAt != nil && !subscription.ExpiresAt.After(time.Now())
+	isBlocked := used >= quotaLimit || isExpired
+	if remaining < 0 || isExpired {
+		remaining = 0
+	}
 
 	return &models.QuotaStatus{
 		QuotaLimit: quotaLimit,

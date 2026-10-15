@@ -43,6 +43,7 @@ DROP TABLE IF EXISTS merchants CASCADE;
 DROP TABLE IF EXISTS subscription_plans CASCADE;
 DROP TABLE IF EXISTS subscriptions CASCADE;
 DROP TABLE IF EXISTS payment_logs CASCADE;
+DROP TABLE IF EXISTS credit_lots CASCADE;
 DROP TABLE IF EXISTS slips CASCADE;
 DROP TABLE IF EXISTS transactions CASCADE;
 DROP TABLE IF EXISTS notifications CASCADE;
@@ -61,6 +62,7 @@ CREATE TABLE users (
     line_user_id VARCHAR(255),
     line_linked BOOLEAN DEFAULT FALSE,
     email_verified BOOLEAN DEFAULT FALSE,
+    is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -118,6 +120,7 @@ CREATE TABLE subscriptions (
     plan_id VARCHAR(50) NOT NULL REFERENCES subscription_plans(id),
     status subscription_status DEFAULT 'trial',
     billing_cycle billing_cycle DEFAULT 'monthly',
+    quota_override INTEGER,
     stripe_subscription_id VARCHAR(255),
     stripe_customer_id VARCHAR(255),
     started_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -266,6 +269,24 @@ CREATE TABLE usage_counters (
 );
 
 -- ============================================
+-- Credit Lots Table
+-- ============================================
+
+CREATE TABLE credit_lots (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    merchant_id UUID NOT NULL REFERENCES merchants(id) ON DELETE CASCADE,
+    subscription_id UUID REFERENCES subscriptions(id) ON DELETE SET NULL,
+    payment_log_id UUID REFERENCES payment_logs(id) ON DELETE SET NULL,
+    plan_id VARCHAR(50) NOT NULL REFERENCES subscription_plans(id),
+    credits_total INTEGER NOT NULL CHECK (credits_total >= 0),
+    credits_remaining INTEGER NOT NULL CHECK (credits_remaining >= 0),
+    started_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================
 -- System Logs Table
 -- ============================================
 
@@ -324,6 +345,7 @@ CREATE INDEX idx_notifications_status ON notifications(status);
 -- Usage Counters
 CREATE INDEX idx_usage_counters_merchant_id ON usage_counters(merchant_id);
 CREATE INDEX idx_usage_counters_year_month ON usage_counters(year, month);
+CREATE INDEX idx_credit_lots_merchant_fifo ON credit_lots(merchant_id, expires_at, started_at) WHERE credits_remaining > 0;
 
 -- LINE Bot Clients
 CREATE INDEX idx_line_webhook_configs_webhook_ref_id ON line_webhook_configs(webhook_reference_id);
@@ -341,9 +363,12 @@ CREATE INDEX idx_system_logs_created_at ON system_logs(created_at);
 
 INSERT INTO subscription_plans (id, name, description, price_monthly, price_yearly, quota_per_month, features, is_popular) VALUES
 ('plan-free', 'Free', 'Perfect for trying out SlipSure', 0, 0, 50, '["slip_verify", "line_notify", "csv_export", "analytics"]'::jsonb, FALSE),
-('plan-starter', 'Starter', 'For small businesses', 299, 2990, 200, '["slip_verify", "line_notify", "csv_export", "analytics"]'::jsonb, FALSE),
-('plan-pro', 'Pro', 'For growing businesses', 799, 7990, 1000, '["slip_verify", "line_notify", "csv_export", "analytics", "priority_support"]'::jsonb, TRUE),
-('plan-enterprise', 'Enterprise', 'For high-volume businesses', 999, 9990, 4000, '["slip_verify", "line_notify", "csv_export", "analytics", "priority_support", "higher_quota"]'::jsonb, FALSE)
+('plan-mini', 'Mini', 'For very small teams', 49, 0, 150, '["slip_verify", "line_notify", "csv_export", "analytics"]'::jsonb, FALSE),
+('plan-starter', 'Starter', 'For small businesses', 99, 0, 300, '["slip_verify", "line_notify", "csv_export", "analytics"]'::jsonb, FALSE),
+('plan-basic', 'Basic', 'For steady daily usage', 179, 0, 600, '["slip_verify", "line_notify", "csv_export", "analytics"]'::jsonb, FALSE),
+('plan-standard', 'Standard', 'For growing businesses', 399, 0, 1500, '["slip_verify", "line_notify", "csv_export", "analytics", "priority_support"]'::jsonb, TRUE),
+('plan-pro', 'Pro', 'For high-volume businesses', 699, 0, 3000, '["slip_verify", "line_notify", "csv_export", "analytics", "priority_support", "higher_quota"]'::jsonb, FALSE),
+('plan-business', 'Business', 'For large-volume operations', 1299, 0, 6000, '["slip_verify", "line_notify", "csv_export", "analytics", "priority_support", "higher_quota"]'::jsonb, FALSE)
 ON CONFLICT (id) DO UPDATE SET
   name = EXCLUDED.name,
   description = EXCLUDED.description,
@@ -352,3 +377,7 @@ ON CONFLICT (id) DO UPDATE SET
   quota_per_month = EXCLUDED.quota_per_month,
   features = EXCLUDED.features,
   is_popular = EXCLUDED.is_popular;
+
+UPDATE subscription_plans
+SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP
+WHERE id NOT IN ('plan-free', 'plan-mini', 'plan-starter', 'plan-basic', 'plan-standard', 'plan-pro', 'plan-business');

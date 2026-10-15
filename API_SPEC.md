@@ -1,36 +1,84 @@
-# SlipSure API Documentation
+# FlowSlip API Spec
 
-## Base URL
+Current as of 2026-10-13.
+
+## Base URLs
+
+```text
+Local API:      http://localhost:8080
+Local frontend: http://localhost:3000
+UAT frontend:   https://flowslip-test.aacc-ai.com
 ```
-Production: https://api.slipsure.com
-Development: http://localhost:8080
+
+Frontend calls API paths under `/v1`, for example:
+
+```text
+https://flowslip-test.aacc-ai.com/v1/auth/login
 ```
+
+## Current Product Flow
+
+FlowSlip verifies payment slips through a merchant LINE bot:
+
+1. Merchant registers/logs in.
+2. Merchant profile is created. Free tier is auto-activated.
+3. Merchant configures LINE Official Account credentials.
+4. FlowSlip generates a merchant webhook URL: `/v1/line/webhook/:ref_id`.
+5. Customer sends a slip image to the merchant LINE bot.
+6. Backend validates the LINE signature, replies immediately with a received/processing message, and queues the image verification job.
+7. A LINE queue worker downloads the image from LINE, extracts QR data, sends it to HaveSLIP, stores slip/transaction result, increments quota, and pushes the result back to LINE.
+8. Merchant views dashboard, transactions, usage, payment history, and subscription.
+
+Direct customer-facing slip upload/scan endpoints are not part of the current app flow.
+
+## Background Jobs
+
+LINE image verification uses a Redis-backed queue:
+
+```text
+queue:line_webhook:image_jobs
+```
+
+If Redis is unavailable, the backend falls back to an in-process channel so the LINE webhook still returns quickly. The fallback is not durable across process restarts, so production should run Redis.
 
 ## Authentication
-Most endpoints require a Bearer token in the Authorization header:
-```
+
+Protected endpoints require:
+
+```http
 Authorization: Bearer <access_token>
 ```
 
-## Response Format
-All API responses follow this format:
+Admin endpoints additionally require `role = admin`.
+
+## Response Envelope
+
+Most JSON responses use:
+
 ```json
 {
   "success": true,
-  "data": { ... },
   "message": "Optional message",
-  "error": "Error message if failed"
+  "data": {}
 }
 ```
 
----
+Errors use:
 
-## Health Check
+```json
+{
+  "success": false,
+  "error": "ERROR_CODE",
+  "message": "Human readable message"
+}
+```
 
-### GET /health
-Check API health status.
+## Health
 
-**Response:**
+### GET `/health`
+
+Checks API/database health.
+
 ```json
 {
   "status": "ok",
@@ -41,566 +89,285 @@ Check API health status.
 }
 ```
 
----
+### GET `/v1/`
 
-## Authentication Endpoints
+Returns API info.
 
-### POST /v1/auth/register
-Register a new user account.
+## Auth
 
-**Request Body:**
+### POST `/v1/auth/register`
+
+Creates a merchant user. A default merchant profile and free plan are created automatically.
+
 ```json
 {
-  "name": "John Doe",
-  "email": "john@example.com",
+  "name": "Unik",
+  "email": "unik@example.com",
   "password": "password123",
-  "phone": "+66812345678"
+  "phone": "02078974620"
 }
 ```
 
-**Validation:**
-- `name`: required
-- `email`: required, must be valid email
-- `password`: required, minimum 8 characters
-- `phone`: optional
+### POST `/v1/auth/verify-otp`
 
-**Response:**
+Verifies email OTP and returns tokens.
+
 ```json
 {
-  "success": true,
-  "data": {
-    "email": "john@example.com",
-    "otp_sent_to": true,
-    "message": "OTP sent to your email. Please verify to complete registration."
-  }
-}
-```
-
----
-
-### POST /v1/auth/verify-otp
-Verify OTP code sent to email.
-
-**Request Body:**
-```json
-{
-  "email": "john@example.com",
+  "email": "unik@example.com",
   "otp": "123456"
 }
 ```
 
-**Response:**
+### POST `/v1/auth/resend-otp`
+
 ```json
 {
-  "success": true,
-  "data": {
-    "access_token": "eyJhbGc...",
-    "refresh_token": "eyJhbGc...",
-    "expires_in": 86400,
-    "message": "Email verified successfully"
-  }
+  "email": "unik@example.com"
 }
 ```
 
----
+### POST `/v1/auth/login`
 
-### POST /v1/auth/resend-otp
-Resend OTP to email.
-
-**Request Body:**
 ```json
 {
-  "email": "john@example.com"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "message": "OTP resent successfully"
-  }
-}
-```
-
----
-
-### POST /v1/auth/login
-Login with email and password.
-
-**Request Body:**
-```json
-{
-  "email": "john@example.com",
+  "email": "unik@example.com",
   "password": "password123"
 }
 ```
 
-**Response:**
+Response data:
+
 ```json
 {
-  "success": true,
-  "data": {
-    "access_token": "eyJhbGc...",
-    "refresh_token": "eyJhbGc...",
-    "expires_in": 86400,
-    "user": {
-      "id": "uuid",
-      "name": "John Doe",
-      "email": "john@example.com",
-      "role": "merchant",
-      "line_linked": false,
-      "email_verified": true,
-      "created_at": "2024-01-01T00:00:00Z"
-    }
+  "access_token": "jwt",
+  "refresh_token": "jwt",
+  "expires_in": 86400,
+  "user": {
+    "id": "uuid",
+    "name": "Unik",
+    "email": "unik@example.com",
+    "role": "merchant",
+    "merchant_id": "uuid",
+    "line_linked": false,
+    "email_verified": true,
+    "created_at": "2026-10-13T00:00:00Z"
   }
 }
 ```
 
----
+### POST `/v1/auth/line-login`
 
-### POST /v1/auth/line-login
-Login with LINE OAuth.
+LINE Login OAuth.
 
-**Request Body:**
 ```json
 {
-  "line_code": "authorization_code_from_LINE",
-  "redirect_uri": "https://yourapp.com/callback"
+  "line_code": "authorization_code",
+  "redirect_uri": "http://localhost:3000/auth/line/callback"
 }
 ```
 
-**Response:**
+### POST `/v1/auth/forgot-password`
+
 ```json
 {
-  "success": true,
-  "data": {
-    "access_token": "eyJhbGc...",
-    "refresh_token": "eyJhbGc...",
-    "expires_in": 86400,
-    "is_new_user": false,
-    "user": { ... }
-  }
+  "email": "unik@example.com"
 }
 ```
 
----
+### POST `/v1/auth/reset-password`
 
-### POST /v1/auth/forgot-password
-Request password reset via email.
-
-**Request Body:**
 ```json
 {
-  "email": "john@example.com"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "message": "Password reset OTP sent to your email"
-  }
-}
-```
-
----
-
-### POST /v1/auth/reset-password
-Reset password with OTP.
-
-**Request Body:**
-```json
-{
-  "email": "john@example.com",
+  "email": "unik@example.com",
   "otp": "123456",
   "new_password": "newpassword123"
 }
 ```
 
-**Response:**
+### GET `/v1/auth/me`
+
+Protected. Returns current user profile.
+
+### PUT `/v1/auth/profile`
+
+Protected. Updates name/phone.
+
 ```json
 {
-  "success": true,
-  "data": {
-    "message": "Password reset successfully"
-  }
+  "name": "Unik",
+  "phone": "02078974620"
 }
 ```
 
----
+### POST `/v1/auth/connect-line`
 
-## Protected Auth Endpoints (Require Auth + Email Verification)
+Protected. Connects a LINE account to the logged-in user.
 
-### GET /v1/auth/me
-Get current user profile.
-
-**Headers:**
-```
-Authorization: Bearer <token>
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "uuid",
-    "name": "John Doe",
-    "email": "john@example.com",
-    "phone": "+66812345678",
-    "role": "merchant",
-    "merchant_id": "uuid",
-    "line_linked": false,
-    "email_verified": true,
-    "created_at": "2024-01-01T00:00:00Z"
-  }
-}
-```
-
----
-
-### PUT /v1/auth/profile
-Update user profile.
-
-**Headers:**
-```
-Authorization: Bearer <token>
-```
-
-**Request Body:**
-```json
-{
-  "name": "John Updated",
-  "phone": "+66812345678"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "user": { ... }
-  }
-}
-```
-
----
-
-### POST /v1/auth/connect-line
-Connect LINE account to user profile.
-
-**Headers:**
-```
-Authorization: Bearer <token>
-```
-
-**Request Body:**
 ```json
 {
   "line_code": "authorization_code",
-  "redirect_uri": "https://yourapp.com/callback"
+  "redirect_uri": "http://localhost:3000/auth/line/callback"
 }
 ```
 
-**Response:**
+### POST `/v1/auth/logout`
+
+Protected. Logs out the current user.
+
+## Plans and Checkout
+
+### GET `/v1/plans`
+
+Public. Returns active plans from `subscription_plans`.
+
+Current active plan IDs:
+
+```text
+plan-free
+plan-starter
+plan-pro
+plan-enterprise
+```
+
+Example response data:
+
 ```json
-{
-  "success": true,
-  "data": {
-    "message": "LINE account connected successfully",
-    "user": { ... }
+[
+  {
+    "id": "plan-free",
+    "name": "Free",
+    "price_monthly": 0,
+    "price_yearly": 0,
+    "quota_per_month": 50,
+    "is_active": true
+  },
+  {
+    "id": "plan-starter",
+    "name": "Starter",
+    "price_monthly": 299,
+    "price_yearly": 2990,
+    "quota_per_month": 200,
+    "is_active": true
+  },
+  {
+    "id": "plan-pro",
+    "name": "Pro",
+    "price_monthly": 799,
+    "price_yearly": 7990,
+    "quota_per_month": 1000,
+    "is_popular": true,
+    "is_active": true
+  },
+  {
+    "id": "plan-enterprise",
+    "name": "Enterprise",
+    "price_monthly": 999,
+    "price_yearly": 9990,
+    "quota_per_month": 4000,
+    "is_active": true
   }
-}
+]
 ```
 
----
+### POST `/v1/checkout`
 
-### POST /v1/auth/logout
-Logout current user.
+Protected. Creates a Stripe Checkout session for a paid plan or activates free plan where applicable.
 
-**Headers:**
-```
-Authorization: Bearer <token>
-```
-
-**Response:**
 ```json
 {
-  "success": true,
-  "data": {
-    "message": "Logged out successfully"
-  }
-}
-```
-
----
-
-## Subscription & Plans Endpoints
-
-### GET /v1/plans
-Get available subscription plans.
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "plans": [
-      {
-        "id": "price_free",
-        "name": "Free Plan",
-        "description": "Basic slip verification",
-        "price_monthly": 0,
-        "price_yearly": 0,
-        "quota_per_month": 50,
-        "features": [
-          "50 verifications/month",
-          "Basic support",
-          "24-hour data retention"
-        ],
-        "is_popular": false,
-        "is_active": true
-      },
-      {
-        "id": "price_starter_monthly",
-        "name": "Starter Plan",
-        "description": "For small businesses",
-        "price_monthly": 299,
-        "price_yearly": 2900,
-        "quota_per_month": 500,
-        "features": [
-          "500 verifications/month",
-          "Priority support",
-          "30-day data retention",
-          "LINE webhook integration"
-        ],
-        "is_popular": true,
-        "is_active": true
-      },
-      {
-        "id": "price_pro_monthly",
-        "name": "Pro Plan",
-        "description": "For growing businesses",
-        "price_monthly": 999,
-        "price_yearly": 9900,
-        "quota_per_month": 2000,
-        "features": [
-          "2000 verifications/month",
-          "24/7 support",
-          "90-day data retention",
-          "LINE webhook integration",
-          "API access",
-          "Custom branding"
-        ],
-        "is_popular": false,
-        "is_active": true
-      }
-    ]
-  }
-}
-```
-
----
-
-### POST /v1/checkout
-Create a checkout session for subscription.
-
-**Headers:**
-```
-Authorization: Bearer <token>
-```
-
-**Request Body:**
-```json
-{
-  "plan_id": "price_starter_monthly",
+  "plan_id": "plan-pro",
   "billing_cycle": "monthly"
 }
 ```
 
-**Validation:**
-- `plan_id`: required
-- `billing_cycle`: required, must be "monthly" or "yearly"
+`billing_cycle`: `monthly` or `yearly`.
 
-**Response:**
+Response data:
+
 ```json
 {
-  "success": true,
-  "data": {
-    "checkout_session_id": "cs_...",
-    "checkout_url": "https://checkout.stripe.com/...",
-    "amount": 299,
-    "currency": "THB",
-    "plan_id": "price_starter_monthly",
-    "billing_cycle": "monthly",
-    "expires_at": "2024-01-01T01:00:00Z"
-  }
+  "checkout_session_id": "cs_test_...",
+  "checkout_url": "https://checkout.stripe.com/...",
+  "amount": 799,
+  "currency": "THB",
+  "plan_id": "plan-pro",
+  "billing_cycle": "monthly",
+  "expires_at": "2026-10-13T12:30:00Z"
 }
 ```
 
----
+### POST `/v1/checkout/webhook`
 
-### POST /v1/checkout/webhook
-Stripe webhook endpoint (public - called by Stripe).
+Public Stripe webhook endpoint.
 
-**Request:** Stripe webhook payload
+Recommended Stripe events:
 
----
-
-## Merchant Profile Endpoints (Require Auth + Email Verification)
-
-### POST /v1/merchants/me/profile
-Create merchant profile.
-
-**Headers:**
-```
-Authorization: Bearer <token>
+```text
+checkout.session.completed
+payment_intent.succeeded
+invoice.paid
+customer.subscription.deleted
 ```
 
-**Request Body:**
+Checkout is currently created in Stripe `payment` mode. The backend manages plan period/expiry in its own `subscriptions` table.
+
+## Merchant Profile
+
+All endpoints in this section are protected.
+
+### POST `/v1/merchants/me/profile`
+
+Creates merchant profile. In the current product, duplicate checks are always enabled.
+
 ```json
 {
-  "shop_name": "My Coffee Shop",
-  "address": "123 Street, Bangkok",
+  "shop_name": "Unik Shop",
+  "address": "13 South Road, Thakhek",
   "contact_email": "shop@example.com",
-  "contact_phone": "+66812345678",
+  "contact_phone": "02078974620",
   "business_hours": {
     "open": "09:00",
     "close": "18:00",
-    "days": ["mon", "tue", "wed", "thu", "fri", "sat"]
-  },
-  "strict_mode": false
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "profile": {
-      "id": "uuid",
-      "shop_name": "My Coffee Shop",
-      "address": "123 Street, Bangkok",
-      "contact_email": "shop@example.com",
-      "contact_phone": "+66812345678",
-      "logo_url": null,
-      "business_hours": {
-        "open": "09:00",
-        "close": "18:00",
-        "days": ["mon", "tue", "wed", "thu", "fri", "sat"]
-      },
-      "strict_mode": false,
-      "is_active": true,
-      "created_at": "2024-01-01T00:00:00Z",
-      "updated_at": "2024-01-01T00:00:00Z"
-    }
+    "days": ["mon", "tue", "wed", "thu", "fri"]
   }
 }
 ```
 
----
+### GET `/v1/merchants/me/profile`
 
-### GET /v1/merchants/me/profile
-Get merchant profile.
+Returns merchant profile.
 
-**Headers:**
-```
-Authorization: Bearer <token>
-```
+### PUT `/v1/merchants/me/profile`
 
-**Response:** Same as POST /v1/merchants/me/profile
+Updates merchant profile.
 
----
+### POST `/v1/merchants/me/logo`
 
-### PUT /v1/merchants/me/profile
-Update merchant profile.
+Multipart upload.
 
-**Headers:**
-```
-Authorization: Bearer <token>
+```text
+logo: <image file>
 ```
 
-**Request Body:** Same as POST /v1/merchants/me/profile (all fields optional except shop_name)
+Response data:
 
-**Response:** Same as POST /v1/merchants/me/profile
-
----
-
-### POST /v1/merchants/me/logo
-Upload merchant logo.
-
-**Headers:**
-```
-Authorization: Bearer <token>
-Content-Type: multipart/form-data
-```
-
-**Request:**
-```
-logo: <file>
-```
-
-**Response:**
 ```json
 {
-  "success": true,
-  "data": {
-    "logo_url": "https://cdn.slipsure.com/merchants/uuid/logo.png"
-  }
+  "logo_url": "https://..."
 }
 ```
 
----
+## Merchant Settings
 
-### GET /v1/merchants/me/settings
-Get merchant settings.
+### GET `/v1/merchants/me/settings`
 
-**Headers:**
-```
-Authorization: Bearer <token>
-```
+Protected. Returns notification/business preferences.
 
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "settings": {
-      "merchant_id": "uuid",
-      "notification_preferences": {
-        "send_line_notifications": true,
-        "send_email_summary": true,
-        "notify_on_failed_verification": true,
-        "daily_summary_time": "18:00"
-      },
-      "business_preferences": {
-        "currency": "THB",
-        "timezone": "Asia/Bangkok",
-        "language": "th"
-      },
-      "updated_at": "2024-01-01T00:00:00Z"
-    }
-  }
-}
-```
+### PUT `/v1/merchants/me/settings`
 
----
+Protected. Updates notification/business preferences.
 
-### PUT /v1/merchants/me/settings
-Update merchant settings.
-
-**Headers:**
-```
-Authorization: Bearer <token>
-```
-
-**Request Body:**
 ```json
 {
   "notification_preferences": {
@@ -617,60 +384,44 @@ Authorization: Bearer <token>
 }
 ```
 
-**Response:** Same as GET /v1/merchants/me/settings
+## Subscription, Quota, Payments
 
----
+### GET `/v1/merchants/me/subscription`
 
-### GET /v1/merchants/me/subscription
-Get merchant subscription details.
+Protected. Returns current subscription and whether free plan has been used.
 
-**Headers:**
-```
-Authorization: Bearer <token>
-```
+Response data:
 
-**Response:**
 ```json
 {
-  "success": true,
-  "data": {
-    "subscription": {
-      "id": "uuid",
-      "merchant_id": "uuid",
-      "plan_id": "price_starter_monthly",
-      "status": "active",
-      "billing_cycle": "monthly",
-      "stripe_subscription_id": "sub_...",
-      "stripe_customer_id": "cus_...",
-      "started_at": "2024-01-01T00:00:00Z",
-      "expires_at": "2024-02-01T00:00:00Z",
-      "auto_renew": true,
-      "cancelled_at": null,
-      "created_at": "2024-01-01T00:00:00Z",
-      "updated_at": "2024-01-01T00:00:00Z",
-      "plan": {
-        "id": "price_starter_monthly",
-        "name": "Starter Plan",
-        "quota_per_month": 500
-      },
-      "usage_this_month": 150,
-      "remaining_quota": 350
-    }
-  }
+  "subscription": {
+    "id": "uuid",
+    "merchant_id": "uuid",
+    "plan_id": "plan-pro",
+    "status": "active",
+    "billing_cycle": "monthly",
+    "stripe_subscription_id": "cs_test_...",
+    "stripe_customer_id": "cus_...",
+    "started_at": "2026-10-13T00:00:00Z",
+    "expires_at": "2026-11-13T00:00:00Z",
+    "auto_renew": true,
+    "cancelled_at": null,
+    "plan": {
+      "id": "plan-pro",
+      "name": "Pro",
+      "quota_per_month": 1000
+    },
+    "usage_this_month": 10,
+    "remaining_quota": 990
+  },
+  "free_plan_used": true
 }
 ```
 
----
+### POST `/v1/merchants/me/subscription/cancel`
 
-### POST /v1/merchants/me/subscription/cancel
-Cancel subscription.
+Protected. Cancels renewal only. Access remains active until `expires_at`.
 
-**Headers:**
-```
-Authorization: Bearer <token>
-```
-
-**Request Body:**
 ```json
 {
   "cancel_immediately": false,
@@ -678,520 +429,416 @@ Authorization: Bearer <token>
 }
 ```
 
-**Response:**
+### GET `/v1/merchants/me/payments`
+
+Protected. Lists merchant payment history.
+
+Query:
+
+```text
+limit=100
+```
+
+Response data:
+
 ```json
 {
-  "success": true,
-  "data": {
-    "message": "Subscription will be cancelled at the end of the billing period"
-  }
-}
-```
-
----
-
-### GET /v1/merchants/me/quota
-Get quota usage status.
-
-**Headers:**
-```
-Authorization: Bearer <token>
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "quota_limit": 500,
-    "used": 150,
-    "remaining": 350,
-    "reset_date": "2024-02-01T00:00:00Z",
-    "is_blocked": false
-  }
-}
-```
-
----
-
-## LINE Webhook Configuration Endpoints (Require Auth + Email Verification)
-
-### GET /v1/merchants/me/line-webhook
-Get LINE webhook configuration.
-
-**Headers:**
-```
-Authorization: Bearer <token>
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "config": {
-      "merchant_id": "uuid",
-      "line_channel_id": "1234567890",
-      "is_configured": true,
-      "webhook_reference_id": "BDhX",
-      "webhook_url": "https://api.slipsure.com/v1/line/webhook/BDhX",
-      "created_at": "2024-01-01T00:00:00Z",
-      "updated_at": "2024-01-01T00:00:00Z"
-    }
-  }
-}
-```
-
----
-
-### PUT /v1/merchants/me/line-webhook
-Update LINE webhook configuration.
-
-**Headers:**
-```
-Authorization: Bearer <token>
-```
-
-**Request Body:**
-```json
-{
-  "line_channel_id": "1234567890",
-  "line_channel_secret": "channel_secret_from_LINE_developers",
-  "line_access_token": "access_token_from_LINE_developers"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "message": "LINE webhook configuration updated successfully",
-    "config": { ... }
-  }
-}
-```
-
----
-
-### DELETE /v1/merchants/me/line-webhook
-Delete LINE webhook configuration.
-
-**Headers:**
-```
-Authorization: Bearer <token>
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "message": "LINE webhook configuration deleted successfully"
-  }
-}
-```
-
----
-
-### POST /v1/merchants/me/test
-Test LINE webhook connectivity.
-
-**Headers:**
-```
-Authorization: Bearer <token>
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "result": {
-      "webhook_status": "active",
-      "connection_status": "connected",
-      "signature_validation": "passed",
-      "api_access": "working",
-      "tested_at": "2024-01-01T00:00:00Z",
-      "response_time_ms": 250
-    }
-  }
-}
-```
-
----
-
-### GET /v1/merchants/me/webhook-url
-Generate webhook URL for merchant.
-
-**Headers:**
-```
-Authorization: Bearer <token>
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "webhook_url": "https://api.slipsure.com/v1/line/webhook/BDhX",
-    "webhook_reference_id": "BDhX"
-  }
-}
-```
-
----
-
-### POST /v1/line/webhook/:ref_id
-LINE webhook endpoint (public - called by LINE Platform).
-
-**Parameters:**
-- `ref_id`: Webhook reference ID (e.g., "BDhX")
-
-**Headers:**
-```
-X-Line-Signature: <signature_from_LINE>
-```
-
-**Request:** LINE webhook event payload
-
-**Response:**
-```json
-{
-  "status": "ok"
-}
-```
-
----
-
-## Slip Verification Endpoints (Require Auth + Email Verification)
-
-### POST /v1/slips/upload
-Upload slip for verification.
-
-**Headers:**
-```
-Authorization: Bearer <token>
-Content-Type: multipart/form-data
-```
-
-**Request:**
-```
-file: <image_file>
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "slip_id": "uuid",
-    "status": "pending",
-    "estimated_seconds": 10
-  }
-}
-```
-
----
-
-### POST /v1/slips/scan
-Scan QR data from slip image.
-
-**Headers:**
-```
-Authorization: Bearer <token>
-```
-
-**Request Body:**
-```json
-{
-  "qr_raw_data": "0041000600000101030040220016073114414BPP011615102TH910479F0"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "qr_data": {
-      "reference_no": "016073114414BPP01161",
-      "amount": 10103.00,
-      "sender_bank": "KBank",
-      "sender_account": "1234567890",
-      "transaction_time": "2024-01-01T17:57:00Z"
-    }
-  }
-}
-```
-
----
-
-### GET /v1/slips/:slip_id
-Get slip details.
-
-**Headers:**
-```
-Authorization: Bearer <token>
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "slip": {
+  "items": [
+    {
       "id": "uuid",
       "merchant_id": "uuid",
-      "image_url": "https://cdn.slipsure.com/...",
-      "qr_raw_data": "0041000600000101030040220016073114414BPP011615102TH910479F0",
-      "status": "verified",
-      "processing_started_at": "2024-01-01T00:00:00Z",
-      "processing_completed_at": "2024-01-01T00:00:10Z",
-      "created_at": "2024-01-01T00:00:00Z",
-      "updated_at": "2024-01-01T00:00:10Z",
-      "transaction": {
-        "id": "uuid",
-        "reference_no": "016073114414BPP01161",
-        "amount": 10103.00,
-        "sender_bank": "KBank",
-        "sender_account": "1234567890",
-        "receiver_bank": "KBank",
-        "receiver_account": "9876543210",
-        "transaction_time": "2024-01-01T17:57:00Z",
-        "status": "success",
-        "is_duplicate": false
-      }
+      "merchant_name": "Unik Shop",
+      "subscription_id": "uuid",
+      "amount": 799,
+      "currency": "thb",
+      "gateway": "stripe",
+      "gateway_reference_id": "cs_test_...",
+      "status": "success",
+      "paid_at": "2026-10-13T00:00:00Z",
+      "created_at": "2026-10-13T00:00:00Z"
     }
-  }
+  ],
+  "total": 1
 }
 ```
 
----
+### GET `/v1/merchants/me/quota`
 
-### POST /v1/slips/:slip_id/reprocess
-Reprocess failed slip.
+Protected.
 
-**Headers:**
-```
-Authorization: Bearer <token>
-```
-
-**Request Body:**
 ```json
 {
-  "force_verify": false
+  "quota_limit": 1000,
+  "used": 10,
+  "remaining": 990,
+  "reset_date": "2026-11-13T00:00:00Z",
+  "is_blocked": false
 }
 ```
 
-**Response:**
+## Merchant Analytics
+
+### GET `/v1/merchants/me/analytics/dashboard`
+
+Protected. Returns dashboard summary: scan totals, success rate, amount totals, client counts, duplicate counts, and plan usage.
+
+### GET `/v1/merchants/me/analytics/usage`
+
+Protected.
+
+Query:
+
+```text
+period=7d
+period=30d
+```
+
+Returns daily verified/failed counts, failed reason summary, and credit usage.
+
+### GET `/v1/merchants/me/analytics/export`
+
+Protected. Exports analytics CSV.
+
+Query:
+
+```text
+format=csv
+```
+
+## LINE Webhook Configuration
+
+Protected endpoints for merchant LINE bot setup.
+
+### GET `/v1/merchants/me/line-webhook`
+
+Returns saved LINE config metadata. Secrets/tokens are not returned in plaintext.
+
+### PUT `/v1/merchants/me/line-webhook`
+
+Creates or updates LINE credentials.
+
 ```json
 {
-  "success": true,
-  "data": {
-    "slip_id": "uuid",
-    "status": "processing"
-  }
+  "line_channel_id": "2000000000",
+  "line_channel_secret": "LINE channel secret",
+  "line_access_token": "LINE Messaging API access token"
 }
 ```
 
----
+### DELETE `/v1/merchants/me/line-webhook`
 
-### GET /v1/slips
-List all slips with pagination.
+Deletes merchant LINE webhook config.
 
-**Headers:**
-```
-Authorization: Bearer <token>
-```
+### GET `/v1/merchants/me/webhook-url`
 
-**Query Parameters:**
-- `page`: Page number (default: 1)
-- `limit`: Items per page (default: 20, max: 100)
-- `status`: Filter by status (optional: pending, processing, verified, failed)
+Generates/returns the merchant LINE webhook URL.
 
-**Response:**
+Response data:
+
 ```json
 {
-  "success": true,
-  "data": {
-    "slips": [
-      { ...slip_object... },
-      { ...slip_object... }
-    ],
-    "pagination": {
-      "page": 1,
-      "limit": 20,
-      "total": 100,
-      "total_pages": 5
+  "webhook_url": "https://flowslip-test.aacc-ai.com/v1/line/webhook/h6sP",
+  "webhook_reference_id": "h6sP"
+}
+```
+
+### POST `/v1/line/webhook/:ref_id`
+
+Public endpoint called by LINE.
+
+Headers:
+
+```http
+X-Line-Signature: <signature>
+```
+
+LINE image messages trigger queued slip verification. The backend replies immediately with a received/processing message, enqueues the image job, then a background worker pushes the verification result to the LINE user.
+
+## Slips
+
+Current direct slip API is read-only for dashboard/history. Slip creation happens through the LINE webhook flow.
+
+### GET `/v1/slips`
+
+Protected. Lists slips.
+
+Query:
+
+```text
+page=1
+limit=20
+status=pending|processing|verified|failed
+```
+
+### GET `/v1/slips/stats`
+
+Protected. Returns slip stats.
+
+### GET `/v1/slips/:slip_id`
+
+Protected. Returns slip detail and linked transaction if available.
+
+## Transactions
+
+### GET `/v1/transactions`
+
+Protected. Lists transaction history.
+
+Query:
+
+```text
+page=1
+limit=15
+status=success|failed|pending|processing
+start_date=2026-10-01
+end_date=2026-10-13
+search=SCB
+```
+
+### GET `/v1/transactions/:id`
+
+Protected. Returns full transaction detail.
+
+### GET `/v1/transactions/export`
+
+Protected. Exports CSV.
+
+Query:
+
+```text
+format=csv
+status=success
+start_date=2026-10-01
+end_date=2026-10-13
+search=SCB
+```
+
+## Admin
+
+All admin endpoints require an authenticated admin user.
+
+### GET `/v1/admin/users`
+
+Query:
+
+```text
+page=1
+limit=20
+search=unik
+role=merchant|admin
+start_date=2026-10-01
+end_date=2026-10-13
+```
+
+### GET `/v1/admin/users/export`
+
+Exports users CSV.
+
+### GET `/v1/admin/merchants`
+
+Lists merchants with subscription/usage summary.
+
+### GET `/v1/admin/merchants/export`
+
+Exports merchants CSV.
+
+### GET `/v1/admin/merchants/:id`
+
+Full merchant detail: profile, users, subscription, usage, payments, billing, and recent transactions.
+
+### GET `/v1/admin/merchants/:id/transactions`
+
+Lists transactions for one merchant.
+
+Query supports `page`, `limit`, `status`, `start_date`, `end_date`, and `search`.
+
+### GET `/v1/admin/payments`
+
+Lists payment logs.
+
+### GET `/v1/admin/payments/export`
+
+Exports payment logs CSV.
+
+### GET `/v1/admin/analytics/dashboard`
+
+Platform dashboard analytics.
+
+Includes real platform data from `transactions`, `slips`, `merchants`, `users`, `line_webhook_configs`, `usage_counters`, and `payment_logs`.
+
+Important fields:
+
+```json
+{
+  "total_transactions": 4,
+  "successful_transactions": 4,
+  "failed_transactions": 0,
+  "active_merchants": 2,
+  "total_merchants": 2,
+  "connected_bots": 1,
+  "total_scans": 3,
+  "total_revenue": 1100,
+  "today_transactions": 2,
+  "today_revenue": 0,
+  "system_error_rate": 0,
+  "provider_credits_used": 4,
+  "provider_cached_count": 0,
+  "failed_scan_reasons": [
+    { "reason": "DUPLICATE_SLIP", "count": 2 }
+  ],
+  "recent_verifications": [
+    {
+      "transaction_id": "uuid",
+      "merchant_id": "uuid",
+      "merchant_name": "unik",
+      "slip_id": "uuid",
+      "amount": 300,
+      "status": "success",
+      "provider": "haveslip",
+      "provider_verification_id": "ver_xxx",
+      "provider_status": "completed",
+      "provider_valid": true,
+      "provider_cached": false,
+      "provider_charged_credits": 1,
+      "sender_bank": "KBank",
+      "receiver_bank": "SCB",
+      "created_at": "2026-10-13T08:00:00Z"
     }
-  }
+  ]
 }
 ```
 
----
+### GET `/v1/admin/analytics/revenue`
 
-## Error Responses
+Revenue analytics.
 
-All errors follow this format:
+### GET `/v1/admin/analytics/merchants/performance`
 
-```json
-{
-  "success": false,
-  "error": "Error message",
-  "details": {}
-}
+Merchant performance analytics.
+
+### GET `/v1/admin/bank/status`
+
+Returns configured verification provider status. Current provider is HaveSLIP when:
+
+```env
+SLIP_VALIDATION_PROVIDER=haveslip
+HAVESLIP_MOCK_MODE=false
 ```
 
-### Common HTTP Status Codes
+## Verification Provider: HaveSLIP
 
-- `200` - Success
-- `201` - Created
-- `400` - Bad Request (validation errors)
-- `401` - Unauthorized (missing/invalid token)
-- `403` - Forbidden (email not verified, no quota)
-- `404` - Not Found
-- `429` - Too Many Requests (rate limit exceeded)
-- `500` - Internal Server Error
+Current slip validation provider:
 
-### Common Error Messages
-
-| Error | Description |
-|-------|-------------|
-| `invalid_token` | Token is invalid or expired |
-| `email_not_verified` | Email requires verification |
-| `quota_exceeded` | Monthly quota exceeded |
-| `subscription_required` | Active subscription required |
-| `invalid_credentials` | Email or password incorrect |
-| `duplicate_email` | Email already registered |
-| `invalid_otp` | OTP code is invalid or expired |
-| `merchant_not_found` | Merchant profile not found |
-
----
-
-## Rate Limiting
-
-- **Authenticated requests**: 100 requests/minute
-- **Unauthenticated requests**: 20 requests/minute
-
-Rate limit headers are included in responses:
-```
-X-RateLimit-Limit: 100
-X-RateLimit-Remaining: 95
-X-RateLimit-Reset: 1640995200
+```env
+SLIP_VALIDATION_PROVIDER=haveslip
+HAVESLIP_API_URL=https://api.haveslip.com/api
+HAVESLIP_API_KEY=<secret>
+HAVESLIP_MOCK_MODE=false
 ```
 
----
+Backend flow:
 
-## Webhooks
+1. Extract QR from slip image.
+2. Parse Thai bank QR/ref/amount.
+3. Send verification request to HaveSLIP.
+4. Store HaveSLIP response fields in `transactions.provider_*` and `transactions.provider_response`.
+5. Mark duplicate/failed/success result.
 
-### Stripe Webhook
-- **Endpoint**: `POST /v1/checkout/webhook`
-- **Purpose**: Receive subscription events from Stripe
+No public direct HaveSLIP endpoint is exposed by FlowSlip.
 
-### LINE Webhook
-- **Endpoint**: `POST /v1/line/webhook/:ref_id`
-- **Purpose**: Receive payment slip images from LINE
+## Removed / Not Current
 
----
+These were in older specs but are not current registered routes:
 
-## Data Models
-
-### User Roles
-- `merchant` - Business owner
-- `admin` - System administrator
-
-### Subscription Status
-- `trial` - Trial period
-- `active` - Active subscription
-- `suspended` - Temporarily suspended
-- `cancelled` - Cancelled by user
-- `expired` - Subscription expired
-- `pending` - Pending activation
-
-### Slip Status
-- `pending` - Waiting to be processed
-- `processing` - Currently being verified
-- `verified` - Successfully verified
-- `failed` - Verification failed
-
-### Fail Reasons
-- `DUPLICATE_SLIP` - Slip already processed
-- `AMOUNT_MISMATCH` - Amount doesn't match
-- `TIMEOUT` - Bank API timeout
-- `INVALID_QR` - Cannot read QR code
-- `BANK_ERROR` - Bank API error
-- `EXPIRED_SLIP` - Slip is too old
-
----
-
-## SDK / Client Libraries
-
-For frontend integration, you can use the API directly with:
-
-```javascript
-// Example API client
-const api = {
-  baseURL: 'http://localhost:8080/v1',
-  token: localStorage.getItem('access_token'),
-
-  async request(endpoint, options = {}) {
-    const response = await fetch(`${this.baseURL}${endpoint}`, {
-      ...options,
-      headers: {
-        'Authorization': `Bearer ${this.token}`,
-        'Content-Type': 'application/json',
-        ...options.headers
-      }
-    });
-    return response.json();
-  },
-
-  // Auth
-  register: (data) => api.request('/auth/register', {
-    method: 'POST',
-    body: JSON.stringify(data)
-  }),
-
-  login: (data) => api.request('/auth/login', {
-    method: 'POST',
-    body: JSON.stringify(data)
-  }),
-
-  // Merchant
-  getProfile: () => api.request('/merchants/me/profile'),
-
-  // Slips
-  uploadSlip: (file) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    return fetch(`${api.baseURL}/slips/upload`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${api.token}` },
-      body: formData
-    }).then(r => r.json());
-  }
-};
+```text
+POST /v1/slips/upload
+POST /v1/slips/scan
+POST /v1/slips/:slip_id/reprocess
+POST /v1/merchants/me/test
 ```
 
----
+Use the LINE webhook flow for verification.
 
-## Changelog
+## Status Values
 
-### v1.0.0 (Current)
-- User authentication with email verification
-- Merchant profile management
-- Subscription management with Stripe
-- Slip verification with QR code parsing
-- LINE webhook integration for multi-merchant support
-- Quota management
-- Settings management
+### User roles
 
----
+```text
+merchant
+admin
+```
 
-## Support
+### Subscription status
 
-For API support, contact:
-- Email: support@slipsure.com
-- Documentation: https://docs.slipsure.com
-- Status Page: https://status.slipsure.com
+```text
+trial
+active
+suspended
+cancelled
+expired
+pending
+```
+
+Cancel currently disables renewal but keeps verification usable until `expires_at`.
+
+### Slip status
+
+```text
+pending
+processing
+verified
+failed
+```
+
+### Transaction status
+
+```text
+pending
+processing
+success
+failed
+```
+
+### Fail reasons
+
+```text
+DUPLICATE_SLIP
+AMOUNT_MISMATCH
+TIMEOUT
+INVALID_QR
+BANK_ERROR
+EXPIRED_SLIP
+```
+
+## Common HTTP Status Codes
+
+```text
+200 OK
+201 Created
+400 Bad Request
+401 Unauthorized
+403 Forbidden
+404 Not Found
+409 Conflict
+500 Internal Server Error
+```
+
+## Deployment Notes
+
+Important env names used by the backend:
+
+```env
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+STRIPE_PRICE_ID_STARTER_MONTHLY=
+STRIPE_PRICE_ID_STARTER_YEARLY=
+STRIPE_PRICE_ID_PRO_MONTHLY=
+STRIPE_PRICE_ID_PRO_YEARLY=
+STRIPE_PRICE_ID_ENTERPRISE_MONTHLY=
+STRIPE_PRICE_ID_ENTERPRISE_YEARLY=
+STRIPE_SUCCESS_URL=http://localhost:3000/success?session_id={CHECKOUT_SESSION_ID}
+STRIPE_CANCEL_URL=http://localhost:3000/billing
+```
+
+Do not use `PRICE_ID_STARTER_MONTHLY`; backend reads `STRIPE_PRICE_ID_STARTER_MONTHLY`.
+

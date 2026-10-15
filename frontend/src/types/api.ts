@@ -3,7 +3,7 @@
 // Common Types
 export type UserRole = 'merchant' | 'admin';
 export type SubscriptionStatus = 'trial' | 'active' | 'suspended' | 'cancelled' | 'expired' | 'pending';
-export type BillingCycle = 'monthly' | 'yearly';
+export type BillingCycle = 'monthly';
 export type SlipStatus = 'pending' | 'processing' | 'verified' | 'failed';
 export type FailReason = 'DUPLICATE_SLIP' | 'AMOUNT_MISMATCH' | 'TIMEOUT' | 'INVALID_QR' | 'BANK_ERROR' | 'EXPIRED_SLIP';
 export type TransactionStatus = 'pending' | 'success' | 'failed' | 'processing';
@@ -139,6 +139,7 @@ export interface Subscription {
   plan_id: string;
   status: SubscriptionStatus;
   billing_cycle: BillingCycle;
+  quota_override?: number;
   stripe_subscription_id?: string;
   stripe_customer_id?: string;
   started_at: string;
@@ -245,6 +246,7 @@ export interface AdminUserListItem {
   merchant_name?: string;
   line_linked: boolean;
   email_verified: boolean;
+  is_active: boolean;
   created_at: string;
 }
 
@@ -274,6 +276,40 @@ export interface PaymentLog {
   status: string;
   paid_at?: string;
   created_at: string;
+}
+
+export interface StripeLineItemDetail {
+  description: string;
+  quantity: number;
+  amount_total: number;
+  currency: string;
+  price_id?: string;
+}
+
+export interface StripeCheckoutSessionDetail {
+  session_id: string;
+  mode: string;
+  status: string;
+  payment_status: string;
+  customer_id?: string;
+  customer_email?: string;
+  customer_name?: string;
+  payment_intent_id?: string;
+  amount_subtotal: number;
+  amount_total: number;
+  currency: string;
+  created_at?: string;
+  expires_at?: string;
+  dashboard_url?: string;
+  customer_dashboard_url?: string;
+  payment_intent_dashboard_url?: string;
+  metadata?: Record<string, string>;
+  line_items?: StripeLineItemDetail[];
+}
+
+export interface AdminPaymentDetail {
+  payment: PaymentLog;
+  stripe?: StripeCheckoutSessionDetail;
 }
 
 export interface AdminMerchantUsage {
@@ -333,6 +369,35 @@ export interface AdminAnalyticsDashboard {
   today_transactions: number;
   today_revenue: number;
   system_error_rate: number;
+  provider_credits_used: number;
+  provider_cached_count: number;
+  failed_scan_reasons: AdminFailedScanReason[];
+  recent_verifications: AdminRecentVerification[];
+}
+
+export interface AdminFailedScanReason {
+  reason: string;
+  count: number;
+}
+
+export interface AdminRecentVerification {
+  transaction_id: string;
+  merchant_id: string;
+  merchant_name: string;
+  slip_id: string;
+  amount: number;
+  status: string;
+  fail_reason?: string;
+  is_duplicate: boolean;
+  provider?: string;
+  provider_verification_id?: string;
+  provider_status?: string;
+  provider_valid: boolean;
+  provider_cached: boolean;
+  provider_charged_credits: number;
+  sender_bank?: string;
+  receiver_bank?: string;
+  created_at: string;
 }
 
 export interface AdminRevenueByPlan {
@@ -352,6 +417,8 @@ export interface AdminMerchantPerformanceItem {
   merchant_id: string;
   shop_name: string;
   scans: number;
+  verified_scans: number;
+  failed_scans: number;
   quota: number;
   quota_percent: number;
   last_scan?: string;

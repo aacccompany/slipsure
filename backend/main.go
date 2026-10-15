@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -40,6 +41,9 @@ func main() {
 		log.Fatal(" Database connection failed:", err)
 	}
 	defer database.Close()
+	if err := database.RunMigrations(); err != nil {
+		log.Fatal(" Database migration failed:", err)
+	}
 
 	// Get port from env or use default
 	port := os.Getenv("PORT")
@@ -152,6 +156,9 @@ func main() {
 			baseURL = "https://supersilent-patripotestal-vernetta.ngrok-free.dev"
 		}
 		lineWebhookService = services.NewLINEWebhookService(merchantRepo, cryptoService, slipVerificationService, baseURL)
+		lineWebhookQueue := services.NewLINEWebhookJobQueue(redisAddr, lineWebhookService)
+		lineWebhookService.SetJobQueue(lineWebhookQueue)
+		lineWebhookQueue.Start(context.Background())
 
 		// Initialize LINE webhook config handler
 		lineWebhookConfigHandler = handlers.NewLINEWebhookConfigHandler(lineWebhookService, merchantRepo)
@@ -185,7 +192,7 @@ func main() {
 
 		// Protected routes (require authentication - email verification disabled for testing)
 		protected := v1.Group("/auth")
-		protected.Use(middleware.AuthMiddleware())
+		protected.Use(middleware.AuthMiddleware(userRepo))
 		// protected.Use(middleware.EmailVerificationMiddleware(userRepo)) // Temporarily disabled for testing
 		{
 			protected.GET("/me", authHandler.GetProfile)
@@ -199,14 +206,18 @@ func main() {
 		v1.POST("/checkout/webhook", merchantHandler.HandleStripeWebhook)
 
 		admin := v1.Group("/admin")
-		admin.Use(middleware.AuthMiddleware(), middleware.RequireRole("admin"))
+		admin.Use(middleware.AuthMiddleware(userRepo), middleware.RequireRole("admin"))
 		{
 			admin.GET("/payments", merchantHandler.GetAdminPayments)
 			admin.GET("/payments/export", merchantHandler.ExportAdminPayments)
+			admin.GET("/payments/:id", merchantHandler.GetAdminPaymentDetail)
+			admin.GET("/transactions", merchantHandler.GetAdminTransactions)
 			admin.GET("/users", merchantHandler.GetAdminUsers)
 			admin.GET("/users/export", merchantHandler.ExportAdminUsers)
+			admin.PATCH("/users/:id/status", merchantHandler.UpdateAdminUserStatus)
 			admin.GET("/merchants", merchantHandler.GetAdminMerchants)
 			admin.GET("/merchants/export", merchantHandler.ExportAdminMerchants)
+			admin.PUT("/merchants/:id/quota", merchantHandler.UpdateAdminMerchantQuota)
 			admin.GET("/merchants/:id/transactions", merchantHandler.GetAdminMerchantTransactions)
 			admin.GET("/merchants/:id", merchantHandler.GetAdminMerchantDetail)
 			admin.GET("/analytics/dashboard", merchantHandler.GetAdminAnalyticsDashboard)
@@ -217,7 +228,7 @@ func main() {
 
 		// Checkout routes (protected only - email verification disabled for testing)
 		checkout := v1.Group("/checkout")
-		checkout.Use(middleware.AuthMiddleware())
+		checkout.Use(middleware.AuthMiddleware(userRepo))
 		// checkout.Use(middleware.EmailVerificationMiddleware(userRepo)) // Temporarily disabled for testing
 		{
 			checkout.POST("", merchantHandler.CreateCheckout)
@@ -225,7 +236,7 @@ func main() {
 
 		// Merchant routes (protected only - email verification disabled for testing)
 		merchants := v1.Group("/merchants/me")
-		merchants.Use(middleware.AuthMiddleware())
+		merchants.Use(middleware.AuthMiddleware(userRepo))
 		// merchants.Use(middleware.EmailVerificationMiddleware(userRepo)) // Temporarily disabled for testing
 		{
 			// Profile management
@@ -254,14 +265,14 @@ func main() {
 
 		// Alternative protected routes (removed duplicate /me endpoint)
 		altProtected := v1.Group("")
-		altProtected.Use(middleware.AuthMiddleware())
+		altProtected.Use(middleware.AuthMiddleware(userRepo))
 		{
 			// Additional protected endpoints can be added here
 		}
 
 		// Slip verification routes (protected - email verification disabled for testing)
 		slips := v1.Group("/slips")
-		slips.Use(middleware.AuthMiddleware())
+		slips.Use(middleware.AuthMiddleware(userRepo))
 		// slips.Use(middleware.EmailVerificationMiddleware(userRepo)) // Temporarily disabled for testing
 		{
 			slips.GET("/stats", slipHandler.GetSlipStats)
@@ -271,7 +282,7 @@ func main() {
 
 		// Transaction history routes (protected - email verification disabled for testing)
 		transactions := v1.Group("/transactions")
-		transactions.Use(middleware.AuthMiddleware())
+		transactions.Use(middleware.AuthMiddleware(userRepo))
 		// transactions.Use(middleware.EmailVerificationMiddleware(userRepo)) // Temporarily disabled for testing
 		{
 			transactions.GET("/export", transactionHandler.ExportTransactions)
@@ -282,7 +293,7 @@ func main() {
 		// LINE webhook configuration routes (protected - email verification disabled for testing)
 		if lineWebhookConfigHandler != nil {
 			lineWebhookConfig := v1.Group("/merchants/me")
-			lineWebhookConfig.Use(middleware.AuthMiddleware())
+			lineWebhookConfig.Use(middleware.AuthMiddleware(userRepo))
 			// lineWebhookConfig.Use(middleware.EmailVerificationMiddleware(userRepo)) // Temporarily disabled for testing
 			{
 				lineWebhookConfig.GET("/line-webhook", lineWebhookConfigHandler.GetConfig)
@@ -335,7 +346,7 @@ func connectDatabase() error {
 	return nil
 }
 
-// runMigrations runs database migrations manually
+// runMigrations applies pending migrations without starting the server.
 func runMigrations() error {
 	log.Println(" Running database migrations...")
 

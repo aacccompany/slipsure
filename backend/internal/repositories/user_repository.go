@@ -21,10 +21,11 @@ type UserRepository interface {
 	Update(user *models.User) error
 	UpdatePassword(userID uuid.UUID, passwordHash string) error
 	UpdateEmailVerification(userID uuid.UUID, verified bool) error
+	UpdateActiveStatus(userID uuid.UUID, isActive bool) error
 	EmailExists(email string) (bool, error)
 	LinkLineAccount(userID uuid.UUID, lineUserID string) error
 	FindByMerchantID(merchantID uuid.UUID) ([]*models.User, error)
-	ListAdminUsers(search string, role string, startDate *time.Time, endDate *time.Time, limit int, offset int) ([]models.AdminUserListItem, int, error)
+	ListAdminUsers(search string, role string, status string, startDate *time.Time, endDate *time.Time, limit int, offset int) ([]models.AdminUserListItem, int, error)
 }
 
 // userRepository implements UserRepository interface
@@ -40,8 +41,8 @@ func NewUserRepository(db *sql.DB) UserRepository {
 // Create inserts a new user into the database
 func (r *userRepository) Create(user *models.User) error {
 	query := `
-		INSERT INTO users (name, email, phone, password_hash, role, line_user_id, line_linked, email_verified)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO users (name, email, phone, password_hash, role, line_user_id, line_linked, email_verified, is_active)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING id, created_at, updated_at
 	`
 
@@ -55,7 +56,11 @@ func (r *userRepository) Create(user *models.User) error {
 		lineUserID = *user.LineUserID
 	}
 
-	err := r.db.QueryRow(query, user.Name, user.Email, phone, user.PasswordHash, user.Role, lineUserID, user.LineLinked, user.EmailVerified).Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
+	if !user.IsActive {
+		user.IsActive = true
+	}
+
+	err := r.db.QueryRow(query, user.Name, user.Email, phone, user.PasswordHash, user.Role, lineUserID, user.LineLinked, user.EmailVerified, user.IsActive).Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		return err
 	}
@@ -67,7 +72,7 @@ func (r *userRepository) Create(user *models.User) error {
 func (r *userRepository) FindByID(id uuid.UUID) (*models.User, error) {
 	query := `
 		SELECT id, name, email, phone, password_hash, role,
-			   line_user_id, line_linked, email_verified, created_at, updated_at
+			   line_user_id, line_linked, email_verified, COALESCE(is_active, TRUE), created_at, updated_at
 		FROM users
 		WHERE id = $1
 	`
@@ -78,7 +83,7 @@ func (r *userRepository) FindByID(id uuid.UUID) (*models.User, error) {
 
 	err := r.db.QueryRow(query, id).Scan(
 		&user.ID, &user.Name, &user.Email, &phone, &user.PasswordHash, &user.Role,
-		&lineUserID, &user.LineLinked, &user.EmailVerified, &user.CreatedAt, &user.UpdatedAt,
+		&lineUserID, &user.LineLinked, &user.EmailVerified, &user.IsActive, &user.CreatedAt, &user.UpdatedAt,
 	)
 
 	if err != nil {
@@ -98,7 +103,7 @@ func (r *userRepository) FindByID(id uuid.UUID) (*models.User, error) {
 func (r *userRepository) FindByEmail(email string) (*models.User, error) {
 	query := `
 		SELECT id, name, email, phone, password_hash, role, merchant_id,
-			   line_user_id, line_linked, email_verified, created_at, updated_at
+			   line_user_id, line_linked, email_verified, COALESCE(is_active, TRUE), created_at, updated_at
 		FROM users
 		WHERE email = $1
 	`
@@ -110,7 +115,7 @@ func (r *userRepository) FindByEmail(email string) (*models.User, error) {
 
 	err := r.db.QueryRow(query, email).Scan(
 		&user.ID, &user.Name, &user.Email, &phone, &user.PasswordHash, &user.Role, &merchantID,
-		&lineUserID, &user.LineLinked, &user.EmailVerified, &user.CreatedAt, &user.UpdatedAt,
+		&lineUserID, &user.LineLinked, &user.EmailVerified, &user.IsActive, &user.CreatedAt, &user.UpdatedAt,
 	)
 
 	if err != nil {
@@ -130,7 +135,7 @@ func (r *userRepository) FindByEmail(email string) (*models.User, error) {
 func (r *userRepository) FindByLineUserID(lineUserID string) (*models.User, error) {
 	query := `
 		SELECT id, name, email, phone, password_hash, role, merchant_id,
-			   line_user_id, line_linked, email_verified, created_at, updated_at
+			   line_user_id, line_linked, email_verified, COALESCE(is_active, TRUE), created_at, updated_at
 		FROM users
 		WHERE line_user_id = $1
 	`
@@ -142,7 +147,7 @@ func (r *userRepository) FindByLineUserID(lineUserID string) (*models.User, erro
 
 	err := r.db.QueryRow(query, lineUserID).Scan(
 		&user.ID, &user.Name, &user.Email, &phone, &user.PasswordHash, &user.Role, &merchantID,
-		&lineUserIDResult, &user.LineLinked, &user.EmailVerified, &user.CreatedAt, &user.UpdatedAt,
+		&lineUserIDResult, &user.LineLinked, &user.EmailVerified, &user.IsActive, &user.CreatedAt, &user.UpdatedAt,
 	)
 
 	if err != nil {
@@ -162,7 +167,7 @@ func (r *userRepository) FindByLineUserID(lineUserID string) (*models.User, erro
 func (r *userRepository) Update(user *models.User) error {
 	query := `
 		UPDATE users
-		SET name = $2, email = $3, phone = $4, merchant_id = $5, line_user_id = $6, line_linked = $7, email_verified = $8, updated_at = CURRENT_TIMESTAMP
+		SET name = $2, email = $3, phone = $4, merchant_id = $5, line_user_id = $6, line_linked = $7, email_verified = $8, is_active = $9, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $1
 	`
 
@@ -181,7 +186,28 @@ func (r *userRepository) Update(user *models.User) error {
 		lineUserID = *user.LineUserID
 	}
 
-	result, err := r.db.Exec(query, user.ID, user.Name, user.Email, phone, merchantID, lineUserID, user.LineLinked, user.EmailVerified)
+	result, err := r.db.Exec(query, user.ID, user.Name, user.Email, phone, merchantID, lineUserID, user.LineLinked, user.EmailVerified, user.IsActive)
+	if err != nil {
+		return err
+	}
+
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return errors.New("user not found")
+	}
+
+	return nil
+}
+
+// UpdateActiveStatus updates whether a user is allowed to access the platform.
+func (r *userRepository) UpdateActiveStatus(userID uuid.UUID, isActive bool) error {
+	query := `
+		UPDATE users
+		SET is_active = $2, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $1
+	`
+
+	result, err := r.db.Exec(query, userID, isActive)
 	if err != nil {
 		return err
 	}
@@ -276,7 +302,7 @@ func (r *userRepository) LinkLineAccount(userID uuid.UUID, lineUserID string) er
 func (r *userRepository) FindByMerchantID(merchantID uuid.UUID) ([]*models.User, error) {
 	query := `
 		SELECT u.id, u.name, u.email, u.phone, u.password_hash, u.role, u.merchant_id,
-			   u.line_user_id, u.line_linked, u.email_verified, u.created_at, u.updated_at
+			   u.line_user_id, u.line_linked, u.email_verified, COALESCE(u.is_active, TRUE), u.created_at, u.updated_at
 		FROM users u
 		LEFT JOIN merchants m ON m.id = $1
 		WHERE u.merchant_id = $1 OR u.id = m.owner_id
@@ -299,7 +325,7 @@ func (r *userRepository) FindByMerchantID(merchantID uuid.UUID) ([]*models.User,
 
 		err := rows.Scan(
 			&user.ID, &user.Name, &user.Email, &phone, &user.PasswordHash, &user.Role, &userMerchantID,
-			&lineUserID, &user.LineLinked, &user.EmailVerified, &user.CreatedAt, &user.UpdatedAt,
+			&lineUserID, &user.LineLinked, &user.EmailVerified, &user.IsActive, &user.CreatedAt, &user.UpdatedAt,
 		)
 		if err != nil {
 			return nil, err
@@ -317,8 +343,8 @@ func (r *userRepository) FindByMerchantID(merchantID uuid.UUID) ([]*models.User,
 }
 
 // ListAdminUsers retrieves users with their merchant relation for backoffice.
-func (r *userRepository) ListAdminUsers(search string, role string, startDate *time.Time, endDate *time.Time, limit int, offset int) ([]models.AdminUserListItem, int, error) {
-	where, args := buildAdminUserWhere(search, role, startDate, endDate)
+func (r *userRepository) ListAdminUsers(search string, role string, status string, startDate *time.Time, endDate *time.Time, limit int, offset int) ([]models.AdminUserListItem, int, error) {
+	where, args := buildAdminUserWhere(search, role, status, startDate, endDate)
 
 	countQuery := fmt.Sprintf(`
 		SELECT COUNT(*)
@@ -340,7 +366,7 @@ func (r *userRepository) ListAdminUsers(search string, role string, startDate *t
 			u.id, u.name, u.email, u.phone, u.role,
 			COALESCE(linked.id, owned.id)::text AS merchant_id,
 			COALESCE(linked.shop_name, owned.shop_name, '') AS merchant_name,
-			u.line_linked, u.email_verified, u.created_at
+			u.line_linked, u.email_verified, COALESCE(u.is_active, TRUE), u.created_at
 		FROM users u
 		LEFT JOIN merchants owned ON owned.owner_id = u.id
 		LEFT JOIN merchants linked ON linked.id = u.merchant_id
@@ -370,6 +396,7 @@ func (r *userRepository) ListAdminUsers(search string, role string, startDate *t
 			&item.MerchantName,
 			&item.LineLinked,
 			&item.EmailVerified,
+			&item.IsActive,
 			&item.CreatedAt,
 		); err != nil {
 			return nil, 0, err
@@ -390,7 +417,7 @@ func (r *userRepository) ListAdminUsers(search string, role string, startDate *t
 	return users, total, nil
 }
 
-func buildAdminUserWhere(search string, role string, startDate *time.Time, endDate *time.Time) (string, []interface{}) {
+func buildAdminUserWhere(search string, role string, status string, startDate *time.Time, endDate *time.Time) (string, []interface{}) {
 	conditions := make([]string, 0)
 	args := make([]interface{}, 0)
 
@@ -406,6 +433,21 @@ func buildAdminUserWhere(search string, role string, startDate *time.Time, endDa
 	if role != "" {
 		args = append(args, role)
 		conditions = append(conditions, fmt.Sprintf("u.role = $%d", len(args)))
+	}
+
+	switch status {
+	case "active":
+		conditions = append(conditions, "COALESCE(u.is_active, TRUE) = TRUE")
+	case "blocked":
+		conditions = append(conditions, "COALESCE(u.is_active, TRUE) = FALSE")
+	case "verified":
+		conditions = append(conditions, "u.email_verified = TRUE")
+	case "unverified":
+		conditions = append(conditions, "u.email_verified = FALSE")
+	case "line_linked":
+		conditions = append(conditions, "u.line_linked = TRUE")
+	case "line_unlinked":
+		conditions = append(conditions, "u.line_linked = FALSE")
 	}
 
 	if startDate != nil {

@@ -145,6 +145,24 @@ func (s *MerchantService) activateFreePlanForMerchant(merchantID uuid.UUID, plan
 	if err != nil {
 		return nil, fmt.Errorf("failed to create free plan subscription: %w", err)
 	}
+	plan, err := s.merchantRepo.GetPlanByID(planID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load free plan credits: %w", err)
+	}
+	if plan.QuotaPerMonth > 0 {
+		lot := &models.CreditLot{
+			MerchantID:       merchantID,
+			SubscriptionID:   &subscription.ID,
+			PlanID:           planID,
+			CreditsTotal:     plan.QuotaPerMonth,
+			CreditsRemaining: plan.QuotaPerMonth,
+			StartedAt:        subscription.StartedAt,
+			ExpiresAt:        *subscription.ExpiresAt,
+		}
+		if err := s.merchantRepo.CreateCreditLot(lot); err != nil {
+			return nil, fmt.Errorf("failed to record free plan credits: %w", err)
+		}
+	}
 
 	if err := s.merchantRepo.MarkFreePlanUsed(merchantID); err != nil {
 		return nil, fmt.Errorf("failed to mark free plan as used: %w", err)

@@ -9,6 +9,7 @@ import {
   CreditCard,
   LogOut,
   Menu,
+  ReceiptText,
   Store,
   Users,
   X,
@@ -28,6 +29,7 @@ export type AdminMenuItem = {
 export const adminMenuItems: AdminMenuItem[] = [
   { name: 'Overview', href: '/admin?tab=analytics', icon: BarChart3, matchPath: '/admin', matchTab: 'analytics' },
   { name: 'Merchants', href: '/admin?tab=merchants', icon: Store, matchPath: '/admin', matchTab: 'merchants' },
+  { name: 'Transactions', href: '/admin?tab=transactions', icon: ReceiptText, matchPath: '/admin', matchTab: 'transactions' },
   { name: 'Users', href: '/admin?tab=users', icon: Users, matchPath: '/admin', matchTab: 'users' },
   { name: 'Billing', href: '/admin?tab=billing', icon: CreditCard, matchPath: '/admin', matchTab: 'billing' },
 ];

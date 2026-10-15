@@ -39,7 +39,7 @@ export default function SubscriptionPage() {
   });
 
   const checkoutMutation = useMutation({
-    mutationFn: (data: { plan_id: string; billing_cycle: 'monthly' | 'yearly' }) =>
+    mutationFn: (data: { plan_id: string; billing_cycle: 'monthly' }) =>
       api.createCheckout(data),
     onSuccess: (response) => {
       if (response.data?.checkout_url) {
@@ -58,7 +58,7 @@ export default function SubscriptionPage() {
 
   const subscription = subscriptionData?.data?.subscription;
   const plans = plansData?.data?.plans || [];
-  const planOrder = ['plan-starter', 'plan-pro', 'plan-enterprise'];
+  const planOrder = ['plan-mini', 'plan-starter', 'plan-basic', 'plan-standard', 'plan-pro', 'plan-business'];
   const visiblePlans = plans
     .filter((plan) => plan.id !== 'plan-free')
     .sort((a, b) => {
@@ -70,7 +70,7 @@ export default function SubscriptionPage() {
       return aIndex - bIndex;
     });
   const quota = quotaData?.data;
-  const monthlyPlanCards = visiblePlans
+  const planCards = visiblePlans
     .map((plan) => ({
       id: `${plan.id}-monthly`,
       plan,
@@ -79,18 +79,7 @@ export default function SubscriptionPage() {
       badge: '1 เดือน',
     }))
     .filter((card) => card.price > 0);
-  const yearlyPlanCards = visiblePlans
-    .map((plan) => ({
-      id: `${plan.id}-yearly`,
-      plan,
-      billingCycle: 'yearly' as const,
-      price: plan.price_yearly,
-      badge: '1 ปี',
-    }))
-    .filter((card) => card.price > 0);
-  const planCards = [...monthlyPlanCards, ...yearlyPlanCards];
-
-  const handleUpgrade = (planId: string, billingCycle: 'monthly' | 'yearly' = 'monthly') => {
+  const handleUpgrade = (planId: string, billingCycle: 'monthly' = 'monthly') => {
     checkoutMutation.mutate({ plan_id: planId, billing_cycle: billingCycle });
   };
 
@@ -113,6 +102,12 @@ export default function SubscriptionPage() {
   const resetDays = quota
     ? Math.ceil((new Date(quota.reset_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : 0;
+  const expiresAtMs = subscription?.expires_at ? new Date(subscription.expires_at).getTime() : null;
+  const isSubscriptionExpired = expiresAtMs !== null && expiresAtMs <= Date.now();
+  const verificationBlocked = Boolean(quota?.is_blocked || isSubscriptionExpired);
+  const expiryLabel = subscription?.expires_at
+    ? new Date(subscription.expires_at).toLocaleString('th-TH', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+    : null;
   const formatTHB = (value: number) => `฿${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const formatBaht = (value: number) =>
     `${value.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท`;
@@ -147,7 +142,7 @@ export default function SubscriptionPage() {
               <div className="mt-4 h-2 overflow-hidden rounded-full bg-zinc-100">
                 <div
                   className="h-full rounded-full bg-blue-700"
-                  style={{ width: `${Math.min(100, (quota.used / quota.quota_limit) * 100)}%` }}
+                  style={{ width: `${quota.quota_limit > 0 ? Math.min(100, (quota.used / quota.quota_limit) * 100) : 0}%` }}
                 />
               </div>
               <p className="mt-2 text-sm text-zinc-500">{quota.remaining} credits remaining</p>
@@ -155,13 +150,13 @@ export default function SubscriptionPage() {
 
             <div className="rounded-lg border border-zinc-200 bg-white p-5">
               <div className="mb-4 flex items-center justify-between">
-                <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">Reset Date</p>
+                <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">Quota Reset</p>
                 <Clock className="h-4 w-4 text-zinc-400" />
               </div>
               <p className="text-2xl font-black text-zinc-950">
                 {new Date(quota.reset_date).toLocaleDateString('th-TH', { month: 'short', day: 'numeric', year: 'numeric' })}
               </p>
-              <p className="mt-2 text-sm text-zinc-500">In {resetDays} days</p>
+              <p className="mt-2 text-sm text-zinc-500">{resetDays > 0 ? `In ${resetDays} days` : 'Reset is due'}</p>
             </div>
 
             <div className="rounded-lg border border-zinc-200 bg-white p-5">
@@ -169,11 +164,17 @@ export default function SubscriptionPage() {
                 <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">Status</p>
                 <CreditCard className="h-4 w-4 text-zinc-400" />
               </div>
-              <p className={`text-2xl font-black ${quota.is_blocked ? 'text-rose-600' : 'text-emerald-600'}`}>
-                {quota.is_blocked ? 'Blocked' : 'Active'}
+              <p className={`text-2xl font-black ${verificationBlocked ? 'text-rose-600' : 'text-emerald-600'}`}>
+                {isSubscriptionExpired ? 'Expired' : quota.is_blocked ? 'Blocked' : 'Active'}
               </p>
               <p className="mt-2 text-sm text-zinc-500">
-                {quota.is_blocked ? 'Quota exceeded. Upgrade to continue.' : 'Verification is available.'}
+                {isSubscriptionExpired
+                  ? `Expired at ${expiryLabel}. Renew to continue.`
+                  : quota.is_blocked
+                    ? 'Quota exceeded. Upgrade to continue.'
+                    : expiryLabel
+                      ? `Verification available until ${expiryLabel}.`
+                      : 'Verification is available.'}
               </p>
             </div>
           </section>
@@ -183,13 +184,9 @@ export default function SubscriptionPage() {
           {planCards.map(({ id, plan, billingCycle, price, badge }) => {
             const isCurrentPlan = plan.id === subscription?.plan_id && subscription?.billing_cycle === billingCycle;
             const isPopular = plan.is_popular && billingCycle === 'monthly';
-            const yearlySavings = billingCycle === 'yearly' && plan.price_yearly > 0
-              ? Math.round(((plan.price_monthly * 12 - plan.price_yearly) / (plan.price_monthly * 12)) * 100)
-              : 0;
             const beforeVat = price / 1.07;
             const vat = price - beforeVat;
-            const billingMonths = billingCycle === 'yearly' ? 12 : 1;
-            const slipUnitPrice = price / (plan.quota_per_month * billingMonths);
+            const slipUnitPrice = price / plan.quota_per_month;
             const customerFeatures = [
               'เชื่อมต่อไลน์บอท',
               `สลิปคิด ${formatBaht(slipUnitPrice)} ต่อสลิป`,
@@ -266,11 +263,6 @@ export default function SubscriptionPage() {
                       >
                         {checkoutMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <>ซื้อเลย <ArrowRight className="h-4 w-4" /></>}
                       </button>
-                      {billingCycle === 'yearly' && yearlySavings > 0 && (
-                        <p className="text-center text-xs font-bold text-emerald-600">
-                          ประหยัด {yearlySavings}% จากรายเดือน
-                        </p>
-                      )}
                     </>
                   )}
                 </div>

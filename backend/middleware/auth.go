@@ -30,8 +30,14 @@ func RequireRole(role string) gin.HandlerFunc {
 	}
 }
 
-// AuthMiddleware validates JWT tokens
-func AuthMiddleware() gin.HandlerFunc {
+// AuthMiddleware validates JWT tokens and, when a repository is provided,
+// rejects users that have been blocked by an admin.
+func AuthMiddleware(userRepos ...repositories.UserRepository) gin.HandlerFunc {
+	var userRepo repositories.UserRepository
+	if len(userRepos) > 0 {
+		userRepo = userRepos[0]
+	}
+
 	return func(c *gin.Context) {
 		requestPath := c.Request.URL.Path
 		log.Printf("AuthMiddleware: START %s", requestPath)
@@ -82,6 +88,39 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		// Debug logging
 		log.Printf("DEBUG: UserID from claims: %s (type: %T)", claims.UserID, claims.UserID)
+
+		if userRepo != nil {
+			userID, err := uuid.Parse(claims.UserID)
+			if err != nil {
+				c.JSON(http.StatusUnauthorized, gin.H{
+					"success": false,
+					"error":   "UNAUTHORIZED",
+					"message": "Invalid user ID",
+				})
+				c.Abort()
+				return
+			}
+
+			user, err := userRepo.FindByID(userID)
+			if err != nil {
+				c.JSON(http.StatusUnauthorized, gin.H{
+					"success": false,
+					"error":   "UNAUTHORIZED",
+					"message": "User not found",
+				})
+				c.Abort()
+				return
+			}
+			if !user.IsActive {
+				c.JSON(http.StatusForbidden, gin.H{
+					"success": false,
+					"error":   "ACCOUNT_BLOCKED",
+					"message": "This account has been blocked. Please contact support.",
+				})
+				c.Abort()
+				return
+			}
+		}
 
 		// Set user context (only user_id, email, role)
 		c.Set("user_id", claims.UserID)
