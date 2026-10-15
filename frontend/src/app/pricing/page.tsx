@@ -129,7 +129,7 @@ export default function PricingPage() {
                 >
                   {isPopular && (
                     <div
-                      className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 font-mono text-[10px] uppercase tracking-widest"
+                      className="absolute -top-4 left-1/2 -translate-x-1/2 rounded-full px-4 py-1 font-mono text-[10px] uppercase tracking-widest"
                       style={{ background: 'var(--blue)', color: '#fff' }}
                     >
                       แนะนำ

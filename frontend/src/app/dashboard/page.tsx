@@ -2,12 +2,14 @@
 
 import React, { useState } from 'react';
 import {
-  ScanLine, ShieldCheck, CheckCircle2, CalendarClock,
+  ScanLine, CheckCircle2,
   Loader2, AlertCircle, ArrowUpRight, Users,
   BarChart3, RefreshCw, Calendar, Info, Search, Eye,
-  X,
+  X, Coins, CreditCard,
 } from 'lucide-react';
 import { StatCard } from '@/components/dashboard/StatCard';
+import { QuotaHero } from '@/components/dashboard/QuotaHero';
+import { EmptyState } from '@/components/dashboard/EmptyState';
 import { RecentSlips } from '@/components/dashboard/RecentSlips';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
@@ -280,23 +282,25 @@ export default function DashboardPage() {
     );
   }
 
-  const resetDate = quota?.data?.reset_date
-    ? new Date(quota.data.reset_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })
+  // Day + month only for the hero card (the full date stays in the Account page).
+  const resetDayMonth = quota?.data?.reset_date
+    ? new Date(quota.data.reset_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'long' })
     : '-';
+  const hasTrendActivity = chartData.some((item) => item.verified > 0 || item.failed > 0);
   return (
     <div className="p-6 space-y-6" style={{ background: 'var(--bg)' }}>
-      <div className="flex items-center justify-between pb-4" style={{ borderBottom: '1px solid var(--border)' }}>
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="font-mono text-[10px] uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>
-            / Overview
-          </p>
-          <h1 className="font-bold tracking-tight" style={{ fontSize: '1.4rem', color: 'var(--navy)', letterSpacing: '-0.02em' }}>
-            Dashboard
+          <h1 className="font-extrabold tracking-tight" style={{ fontSize: '1.75rem', color: 'var(--navy)', letterSpacing: '-0.02em' }}>
+            ภาพรวม
           </h1>
+          <p className="mt-0.5 text-sm" style={{ color: 'var(--text-muted)' }}>
+            สรุปการตรวจสอบสลิปและการใช้งานโควต้าของร้านคุณ
+          </p>
         </div>
         <button
           onClick={downloadReport}
-          className="flex items-center gap-2 text-sm font-medium transition-all hover:opacity-80 px-4 py-2"
+          className="flex shrink-0 items-center gap-2 text-sm font-semibold transition-all hover:opacity-80 px-4 py-2.5"
           style={{ background: 'var(--navy)', color: '#fff' }}
         >
           Download Report
@@ -315,41 +319,35 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <QuotaHero
+        limit={quota?.data?.quota_limit ?? 0}
+        used={quota?.data?.used ?? 0}
+        remaining={quota?.data?.remaining ?? 0}
+        resetLabel={resetDayMonth}
+        isBlocked={quota?.data?.is_blocked}
+      />
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard
-          title="Slips Verified"
+          title="สลิปที่ตรวจสอบแล้ว"
           value={(stats?.verified_scans ?? 0).toLocaleString()}
-          change="All time"
+          change="ตลอดเวลา"
           isPositive={true}
           icon={ScanLine}
         />
         <StatCard
-          title="Quota Remaining"
-          value={(quota?.data?.remaining ?? 0).toLocaleString()}
-          change={`of ${(quota?.data?.quota_limit ?? 0).toLocaleString()}`}
-          isPositive={(quota?.data?.remaining ?? 0) > 0}
-          icon={ShieldCheck}
-        />
-        <StatCard
-          title="Success Rate"
+          title="อัตราความสำเร็จ"
           value={`${successRate}%`}
-          change={`${stats?.verified_scans ?? 0} verified`}
-          isPositive={successRate >= 80}
+          change={`ผ่านการตรวจ ${stats?.verified_scans ?? 0} รายการ`}
+          isPositive={verifiedScans + failedScans === 0 || successRate >= 80}
           icon={CheckCircle2}
         />
         <StatCard
-          title="Bot Clients"
+          title="LINE Bot ที่เชื่อมต่อ"
           value={(stats?.bot_clients ?? 0).toLocaleString()}
-          change={`${stats?.new_bot_clients ?? 0} new / ${stats?.previous_bot_clients ?? 0} previous`}
+          change={`ใหม่ ${stats?.new_bot_clients ?? 0} / ก่อนหน้า ${stats?.previous_bot_clients ?? 0}`}
           isPositive={true}
           icon={Users}
-        />
-        <StatCard
-          title="Quota Resets"
-          value={resetDate}
-          change="Next reset"
-          isPositive={true}
-          icon={CalendarClock}
         />
       </div>
 
@@ -415,6 +413,14 @@ export default function DashboardPage() {
               <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{periodLabel}</span>
             </div>
 
+            {!hasTrendActivity ? (
+              <EmptyState
+                icon={ScanLine}
+                title="ยังไม่มีสลิปที่ตรวจสอบ"
+                description="เชื่อมต่อ LINE bot เพื่อเริ่มรับและตรวจสลิป ผลจะแสดงเป็นกราฟที่นี่"
+                action={{ label: 'เชื่อมต่อ LINE', href: '/dashboard/merchant/line' }}
+              />
+            ) : (
             <div className="relative" onMouseLeave={() => setChartTooltip(null)}>
               <div className="mb-1 flex justify-center gap-4 text-sm">
                 <span className="flex items-center gap-2" style={{ color: 'var(--navy)' }}>
@@ -530,6 +536,7 @@ export default function DashboardPage() {
                 })}
               </svg>
             </div>
+            )}
           </div>
 
           <div className="rounded-lg bg-white p-6" style={{ border: '1px solid var(--border)' }}>
@@ -540,6 +547,14 @@ export default function DashboardPage() {
               <Info className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />
             </div>
 
+            {!hasStripePayments ? (
+              <EmptyState
+                icon={CreditCard}
+                title="ใช้แผน Free อยู่"
+                description="ยังไม่มีการชำระเงินผ่าน Stripe อัพเกรดแผนเพื่อเพิ่มโควต้าสลิปต่อเดือน"
+                action={{ label: 'ดูแผนทั้งหมด', href: '/dashboard/subscription' }}
+              />
+            ) : (
             <div className="flex min-h-72 flex-col items-center justify-center">
               <svg viewBox="0 0 220 220" className="h-56 w-56" role="img" aria-label="Payment method chart">
                 <circle cx="110" cy="110" r={donutRadius} fill="none" stroke="#E5E7EB" strokeWidth={donutStroke} />
@@ -572,6 +587,7 @@ export default function DashboardPage() {
                   : 'No paid Stripe payments yet'}
               </div>
             </div>
+            )}
           </div>
         </div>
 
@@ -585,6 +601,14 @@ export default function DashboardPage() {
             </p>
           </div>
 
+          {totalCredits === 0 ? (
+            <EmptyState
+              compact
+              icon={Coins}
+              title="ยังไม่มีการใช้เครดิต"
+              description="เมื่อมีการตรวจสลิป เครดิตที่ใช้ในแต่ละวันจะแสดงที่นี่"
+            />
+          ) : (
           <div className="relative" onMouseLeave={() => setCreditTooltip(null)}>
             {creditTooltip && (
               <div
@@ -673,6 +697,7 @@ export default function DashboardPage() {
               })}
             </svg>
           </div>
+          )}
         </div>
 
         <div className="rounded-lg bg-white p-6" style={{ border: '1px solid var(--border)' }}>
@@ -859,8 +884,8 @@ export default function DashboardPage() {
 
         <div className="rounded-lg bg-white p-6" style={{ border: '1px solid var(--border)' }}>
           <div className="mb-4 flex items-center gap-3">
-            <p className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-              Recent Orders
+            <p className="text-sm font-bold" style={{ color: 'var(--navy)' }}>
+              คำสั่งซื้อล่าสุด
             </p>
             <div className="h-px flex-1" style={{ background: 'var(--border)' }} />
             <Link

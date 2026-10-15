@@ -99,7 +99,7 @@ export default function ServicesPage() {
         </div>
 
         {/* CTA Section */}
-        <div className="relative overflow-hidden p-12 md:p-16" style={{ background: 'var(--navy)' }}>
+        <div className="relative overflow-hidden rounded-[2rem] p-12 md:p-16" style={{ background: 'var(--navy)' }}>
           <div className="thai-pattern absolute inset-0 pointer-events-none" style={{ opacity: 0.07 }} />
           <div className="absolute top-6 right-10 w-28 h-28 opacity-[0.07] rotate-45" style={{ background: 'var(--blue)' }} />
           <div className="absolute bottom-6 left-8 w-16 h-16 opacity-[0.07] rotate-45" style={{ background: 'var(--cyan)' }} />

@@ -27,7 +27,7 @@ const SlipCard = () => (
           </span>
         </div>
 
-        <div className="text-3xl font-bold mb-1" style={{ color: 'var(--navy)', fontFamily: 'Sarabun, sans-serif' }}>
+        <div className="text-3xl font-bold mb-1" style={{ color: 'var(--navy)' }}>
           ฿ 2,500.00
         </div>
         <div className="font-mono text-[10px]" style={{ color: 'var(--text-muted)' }}>

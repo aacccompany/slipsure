@@ -68,7 +68,7 @@ export function AdminShell({
     : 'A';
 
   return (
-    <div className="flex min-h-screen" style={{ background: 'var(--bg)' }}>
+    <div className="soft-ui flex min-h-screen" style={{ background: 'var(--bg)' }}>
       <aside
         className={[
           'w-56 flex flex-col h-screen shrink-0',
@@ -95,11 +95,10 @@ export function AdminShell({
                 key={item.name}
                 href={item.href}
                 onClick={() => setSidebarOpen(false)}
-                className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-all"
+                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all"
                 style={{
                   color: active ? '#fff' : 'rgba(255,255,255,0.45)',
-                  background: active ? 'rgba(0,82,255,0.25)' : 'transparent',
-                  borderLeft: `2px solid ${active ? 'var(--blue)' : 'transparent'}`,
+                  background: active ? 'rgba(0,82,255,0.35)' : 'transparent',
                 }}
                 onMouseEnter={(e) => {
                   if (!active) (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.8)';
@@ -118,8 +117,8 @@ export function AdminShell({
         <div className="px-3 py-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
           <button
             onClick={() => setConfirmingLogout(true)}
-            className="flex w-full items-center gap-3 px-3 py-2.5 text-sm font-medium transition-all"
-            style={{ color: 'rgba(255,255,255,0.35)', borderLeft: '2px solid transparent' }}
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all"
+            style={{ color: 'rgba(255,255,255,0.35)' }}
             onMouseEnter={(e) => {
               (e.currentTarget as HTMLElement).style.color = '#FCA5A5';
             }}
@@ -171,7 +170,7 @@ export function AdminShell({
 
             <div className="flex items-center gap-2.5">
               <div
-                className="w-7 h-7 flex items-center justify-center text-white text-[11px] font-bold font-mono"
+                className="w-8 h-8 flex items-center justify-center rounded-xl text-white text-[11px] font-bold font-mono"
                 style={{ background: 'var(--navy)' }}
               >
                 {initials}
@@ -188,7 +187,7 @@ export function AdminShell({
           </div>
         </header>
 
-        <main>{children}</main>
+        <main className="mx-auto w-full max-w-[1600px]">{children}</main>
       </div>
     </div>
   );

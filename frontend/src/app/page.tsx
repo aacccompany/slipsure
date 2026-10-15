@@ -106,12 +106,12 @@ export default function Home() {
           </div>
 
           {/* Giant ✗ / ✓ comparison — the human touch */}
-          <div className="grid md:grid-cols-2" style={{ borderTop: '1px solid var(--border)' }}>
+          <div className="grid gap-5 px-6 md:grid-cols-2 md:px-12 pb-8">
 
             {/* ✗ side */}
             <div
-              className="relative px-10 pt-10 pb-14 overflow-hidden"
-              style={{ borderRight: '1px solid var(--border)' }}
+              className="relative overflow-hidden rounded-3xl bg-white px-10 pt-10 pb-14"
+              style={{ border: '1px solid var(--border)' }}
             >
               {/* Giant decorative ✗ */}
               <div
@@ -139,7 +139,7 @@ export default function Home() {
 
             {/* ✓ side */}
             <div
-              className="relative px-10 pt-10 pb-14 overflow-hidden"
+              className="relative overflow-hidden rounded-3xl px-10 pt-10 pb-14"
               style={{ background: 'var(--blue-pale)' }}
             >
               {/* Giant decorative ✓ */}
@@ -171,17 +171,17 @@ export default function Home() {
           </div>
 
           {/* Feature list — 4 items below comparison */}
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4" style={{ borderTop: '1px solid var(--border)' }}>
+          <div className="grid gap-4 px-6 pb-14 sm:grid-cols-2 md:px-12 lg:grid-cols-4">
             {[
               { num: '01', title: 'เชื่อมต่อ LINE OA', desc: 'ลูกค้าส่งสลิปผ่าน LINE รับผลยืนยันอัตโนมัติ' },
               { num: '02', title: 'ป้องกันสลิปซ้ำ', desc: 'ตรวจย้อนหลัง 24 ชั่วโมง ป้องกัน Double Spend' },
               { num: '03', title: 'ดูสถิติ Real-time', desc: 'ติดตามสลิปทุกใบและสถิติย้อนหลังใน Dashboard' },
               { num: '04', title: 'REST API', desc: 'เชื่อมต่อเข้ากับระบบหลังร้านของคุณได้โดยตรง' },
-            ].map((item, i) => (
+            ].map((item) => (
               <div
                 key={item.num}
-                className="p-8 transition-colors hover:bg-white"
-                style={{ borderRight: i < 3 ? '1px solid var(--border)' : 'none' }}
+                className="rounded-2xl bg-white p-7"
+                style={{ border: '1px solid var(--border)' }}
               >
                 <span className="font-mono text-[10px] uppercase tracking-widest block mb-3" style={{ color: 'var(--blue)' }}>
                   {item.num}
@@ -218,12 +218,12 @@ export default function Home() {
             </Link>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-0" style={{ border: '1px solid var(--border)' }}>
-            {steps.map((step, i) => (
+          <div className="grid gap-5 md:grid-cols-3">
+            {steps.map((step) => (
               <div
                 key={step.num}
-                className="p-8 md:p-10 transition-colors hover:bg-[var(--bg-subtle)]"
-                style={{ borderRight: i < 2 ? '1px solid var(--border)' : 'none' }}
+                className="rounded-3xl p-8 md:p-10 transition-colors hover:bg-[var(--bg-subtle)]"
+                style={{ border: '1px solid var(--border)' }}
               >
                 <div
                   className="font-black mb-6 leading-none select-none"
@@ -301,13 +301,14 @@ export default function Home() {
       </section>
 
       {/* ── CTA ────────────────────────────────────────────── */}
-      <section
-        className="relative overflow-hidden"
+      <section className="px-4 py-10 md:px-8 md:py-14">
+      <div
+        className="relative mx-auto max-w-7xl overflow-hidden rounded-[2rem]"
         style={{ background: 'var(--navy)' }}
       >
         <div className="thai-pattern absolute inset-0 pointer-events-none" style={{ opacity: 0.05 }} />
 
-        <div className="relative max-w-7xl mx-auto px-6 md:px-12 py-24">
+        <div className="relative px-6 md:px-12 py-20">
           <div className="grid md:grid-cols-[1fr_auto] gap-12 items-end">
 
             <div>
@@ -361,6 +362,7 @@ export default function Home() {
             ))}
           </div>
         </div>
+      </div>
       </section>
     </main>
   );

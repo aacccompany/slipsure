@@ -12,29 +12,32 @@ interface StatCardProps {
 export const StatCard: React.FC<StatCardProps> = ({ title, value, change, isPositive, icon: Icon }) => {
   return (
     <div
-      className="bg-white p-5 transition-colors hover:bg-[var(--bg-subtle)]"
+      className="bg-white p-5"
       style={{ border: '1px solid var(--border)' }}
     >
-      <div className="flex items-center justify-between mb-4">
-        <Icon className="w-4 h-4" style={{ color: 'var(--blue)' }} />
-        {change && (
-          <span
-            className="font-mono text-[10px] uppercase tracking-widest"
-            style={{ color: isPositive ? 'var(--blue)' : '#EF4444' }}
-          >
-            {change}
-          </span>
-        )}
+      <div
+        className="mb-4 flex h-9 w-9 items-center justify-center rounded-xl"
+        style={{ background: isPositive === false ? '#FEF2F2' : 'var(--blue-pale)' }}
+      >
+        <Icon className="h-4 w-4" style={{ color: isPositive === false ? '#EF4444' : 'var(--blue)' }} />
       </div>
-      <p className="font-mono text-[9px] uppercase tracking-widest mb-1.5" style={{ color: 'var(--text-muted)' }}>
+      <p className="mb-1 text-[13px] font-medium" style={{ color: 'var(--text-muted)' }}>
         {title}
       </p>
       <h3
-        className="font-bold tracking-tight"
-        style={{ fontSize: '1.6rem', color: 'var(--navy)', lineHeight: 1, letterSpacing: '-0.02em' }}
+        className="font-extrabold tracking-tight"
+        style={{ fontSize: '1.75rem', color: 'var(--navy)', lineHeight: 1.1, letterSpacing: '-0.02em' }}
       >
         {value}
       </h3>
+      {change && (
+        <p
+          className="mt-2 text-xs font-medium"
+          style={{ color: isPositive === false ? '#EF4444' : 'var(--text-muted)' }}
+        >
+          {change}
+        </p>
+      )}
     </div>
   );
 };

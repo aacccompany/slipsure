@@ -1,8 +1,28 @@
 import type { Metadata } from "next";
+import { Anuphan, IBM_Plex_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/ui/Navbar";
 import { Footer } from "@/components/ui/Footer";
 import Providers from "./providers";
+
+// Latin + numerals come from Plus Jakarta Sans, Thai glyphs from Anuphan
+// (the browser falls back per glyph, see --font-sans in globals.css).
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-jakarta",
+  display: "swap",
+});
+const anuphan = Anuphan({
+  subsets: ["thai", "latin"],
+  variable: "--font-anuphan",
+  display: "swap",
+});
+const plexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  variable: "--font-plex-mono",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "FLOWSLIP.Ai - ระบบตรวจสอบสลิปโอนเงินอัตโนมัติด้วย AI",
@@ -15,8 +35,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="th">
-      <body className="antialiased">
+    <html lang="th" className={`${jakarta.variable} ${anuphan.variable} ${plexMono.variable}`}>
+      <body className="soft-ui antialiased">
         <Providers>
           <Navbar />
           {children}
