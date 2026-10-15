@@ -15,12 +15,12 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import type { PaymentLog, TransactionStatus } from '@/types/api';
+import type { PaymentLog, SlipStatus } from '@/types/api';
 
 type AnalyticsPeriod = 'today' | '7d' | '30d' | 'month';
 type OrderStatusFilter = 'all' | 'paid' | 'pending';
 type TransactionFilterState = {
-  status: '' | TransactionStatus;
+  status: '' | SlipStatus | 'duplicate';
   channel: '' | 'line';
   startDate: string;
   endDate: string;
@@ -48,10 +48,11 @@ const orderStatusOptions: { label: string; value: OrderStatusFilter }[] = [
   { label: 'รอชำระ', value: 'pending' },
 ];
 
-const transactionStatusOptions: { label: string; value: '' | TransactionStatus }[] = [
+const transactionStatusOptions: { label: string; value: TransactionFilterState['status'] }[] = [
   { label: 'ทั้งหมด', value: '' },
-  { label: 'สำเร็จ', value: 'success' },
+  { label: 'สำเร็จ', value: 'verified' },
   { label: 'ล้มเหลว', value: 'failed' },
+  { label: 'สลิปซ้ำ', value: 'duplicate' },
   { label: 'รอดำเนินการ', value: 'pending' },
   { label: 'กำลังตรวจสอบ', value: 'processing' },
 ];
@@ -111,7 +112,7 @@ export default function DashboardPage() {
     isFetching: transactionsFetching,
   } = useQuery({
     queryKey: ['dashboard-transactions', appliedTransactionFilters],
-    queryFn: () => api.getTransactions({ page: 1, limit: 5, ...transactionQueryParams(appliedTransactionFilters) }),
+    queryFn: () => api.getSlipHistory({ page: 1, limit: 5, ...transactionQueryParams(appliedTransactionFilters) }),
   });
 
   const { data: subscriptionData, isLoading: subLoading } = useQuery({
@@ -225,14 +226,14 @@ export default function DashboardPage() {
     setTransactionFilters(EMPTY_TRANSACTION_FILTERS);
     setAppliedTransactionFilters(EMPTY_TRANSACTION_FILTERS);
   };
-  const transactionStatusColor = (status: TransactionStatus) => {
-    if (status === 'success') return { background: '#D1FAE5', color: '#059669' };
+  const transactionStatusColor = (status: SlipStatus) => {
+    if (status === 'verified') return { background: '#D1FAE5', color: '#059669' };
     if (status === 'failed') return { background: '#FEE2E2', color: '#DC2626' };
     if (status === 'processing') return { background: '#DBEAFE', color: '#1D4ED8' };
     return { background: '#E5E7EB', color: '#475569' };
   };
-  const transactionStatusLabel = (status: TransactionStatus) => {
-    if (status === 'success') return 'สำเร็จ';
+  const transactionStatusLabel = (status: SlipStatus) => {
+    if (status === 'verified') return 'สำเร็จ';
     if (status === 'failed') return 'ล้มเหลว';
     if (status === 'processing') return 'กำลังตรวจสอบ';
     return 'รอดำเนินการ';
@@ -834,31 +835,32 @@ export default function DashboardPage() {
               <div className="flex items-center justify-center py-10">
                 <Loader2 className="h-5 w-5 animate-spin" style={{ color: 'var(--blue)' }} />
               </div>
-            ) : dashboardTransactions.length > 0 ? dashboardTransactions.map((transaction) => {
-              const transactionDate = transaction.transfer_at || transaction.created_at;
-              const sender = transaction.sender_name || transaction.sender_account || '-';
-              const receiver = transaction.receiver_name || transaction.receiver_account || '-';
+            ) : dashboardTransactions.length > 0 ? dashboardTransactions.map(({ slip, transaction }) => {
+              const transactionDate = transaction?.transfer_at || slip.created_at;
+              const sender = transaction?.sender_name || transaction?.sender_account || '-';
+              const receiver = transaction?.receiver_name || transaction?.receiver_account || '-';
+              const isDuplicate = slip.fail_reason === 'DUPLICATE_SLIP';
               return (
                 <div
-                  key={transaction.id}
+                  key={slip.id}
                   className="grid gap-3 border-t px-5 py-4 text-sm md:grid-cols-[0.8fr_0.8fr_1.6fr_0.7fr_0.8fr_0.8fr] md:items-center"
                   style={{ borderColor: 'var(--border)', color: 'var(--navy)' }}
                 >
                   <span>
-                    <span className="rounded-full px-3 py-1 text-xs font-bold" style={transactionStatusColor(transaction.status)}>
-                      {transactionStatusLabel(transaction.status)}
+                    <span className="rounded-full px-3 py-1 text-xs font-bold" style={transactionStatusColor(slip.status)}>
+                      {isDuplicate ? 'สลิปซ้ำ' : transactionStatusLabel(slip.status)}
                     </span>
                   </span>
-                  <span className="font-bold">฿{transaction.amount.toLocaleString()}</span>
+                  <span className="font-bold">{transaction ? `฿${transaction.amount.toLocaleString()}` : '-'}</span>
                   <span className="min-w-0">
                     <span className="block truncate font-semibold">
-                      {sender} <span style={{ color: 'var(--text-muted)' }}>→</span> {receiver}
+                      {transaction ? <>{sender} <span style={{ color: 'var(--text-muted)' }}>→</span> {receiver}</> : slip.fail_reason?.replaceAll('_', ' ') || '-'}
                     </span>
                     <span className="block truncate font-mono text-[10px]" style={{ color: 'var(--text-muted)' }}>
-                      {transaction.reference_no || transaction.id}
+                      {transaction?.reference_no || slip.id}
                     </span>
                   </span>
-                  <span className="font-bold">{transaction.provider_charged_credits ?? 1}</span>
+                  <span className="font-bold">1</span>
                   <span className="font-mono text-[10px]" style={{ color: 'var(--text-muted)' }}>
                     {new Date(transactionDate).toLocaleDateString('th-TH', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                   </span>

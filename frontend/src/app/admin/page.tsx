@@ -10,8 +10,9 @@ import { toast } from 'sonner';
 import { api } from '@/lib/api-client';
 import { useAuth } from '@/contexts/auth-context';
 import { AdminShell } from '@/components/admin/AdminShell';
+import { RejectedSlipDetailModal, TransactionDetailModal } from '@/components/admin/AdminMerchantTransactions';
 import { EmptyState } from '@/components/dashboard/EmptyState';
-import type { AdminAnalyticsDashboard, AdminBankStatus, AdminMerchantPerformanceAnalytics, AdminPaymentDetail, AdminRevenueAnalytics, PaymentLog, SubscriptionPlan } from '@/types/api';
+import type { AdminAnalyticsDashboard, AdminBankStatus, AdminMerchantPerformanceAnalytics, AdminPaymentDetail, AdminRevenueAnalytics, AdminSlipHistoryItem, PaymentLog, SubscriptionPlan } from '@/types/api';
 
 type Tab = 'merchants' | 'users' | 'billing' | 'analytics' | 'transactions';
 
@@ -1027,6 +1028,7 @@ function AdminBackofficeContent() {
   const [transactionPage, setTransactionPage] = useState(1);
   const [transactionStatus, setTransactionStatus] = useState('');
   const [transactionSearch, setTransactionSearch] = useState('');
+  const [selectedSlip, setSelectedSlip] = useState<AdminSlipHistoryItem | null>(null);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [isExporting, setIsExporting] = useState(false);
@@ -1150,7 +1152,7 @@ function AdminBackofficeContent() {
 
   const transactionsQuery = useQuery({
     queryKey: ['admin-transactions', transactionPage, transactionStatus, transactionSearch.trim(), startDate, endDate],
-    queryFn: () => api.getAdminTransactions({
+    queryFn: () => api.getAdminSlipHistory({
       page: transactionPage,
       limit: 20,
       status: transactionStatus || undefined,
@@ -1371,9 +1373,10 @@ function AdminBackofficeContent() {
                   style={{ border: '1px solid var(--border)', color: 'var(--navy)', background: '#fff' }}
                 >
                   <option value="">ทั้งหมด</option>
-                  <option value="success">สำเร็จ</option>
+                  <option value="verified">สำเร็จ</option>
                   <option value="pending">รอตรวจสอบ</option>
                   <option value="failed">ไม่สำเร็จ</option>
+                  <option value="duplicate">สลิปซ้ำ</option>
                   <option value="processing">กำลังประมวลผล</option>
                 </select>
               </label>
@@ -1477,7 +1480,7 @@ function AdminBackofficeContent() {
                   <span>สถานะ</span>
                   <span>ยอดเงิน</span>
                   <span>ต้นทาง - ปลายทาง</span>
-                  <span>เครดิต</span>
+                  <span>เครดิตแพ็กเกจ</span>
                   <span>วันที่</span>
                   <span className="text-right">ดำเนินการ</span>
                 </div>
@@ -1486,46 +1489,51 @@ function AdminBackofficeContent() {
                   <span className="font-mono text-[10px]" style={{ color: 'var(--text-muted)' }}>{transactionsPagination?.total ?? 0} total</span>
                 </div>
                 {transactions.length === 0 ? (
-                  <p className="p-5 text-center text-sm" style={{ color: 'var(--text-muted)' }}>No transactions found.</p>
+                  <p className="p-5 text-center text-sm" style={{ color: 'var(--text-muted)' }}>No slips found.</p>
                 ) : (
                   <div className="overflow-x-auto">
                     <div className="min-w-[980px]">
-                      {transactions.map((transaction) => (
-                        <div key={transaction.id} className="grid grid-cols-[1.1fr_1fr_2fr_0.7fr_1fr_1.2fr] items-center gap-3 px-5 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
+                      {transactions.map((item) => {
+                        const { slip, transaction } = item;
+                        const isDuplicate = slip.status === 'failed' && slip.fail_reason === 'DUPLICATE_SLIP';
+                        return (
+                        <div key={slip.id} className="grid grid-cols-[1.1fr_1fr_2fr_0.7fr_1fr_1.2fr] items-center gap-3 px-5 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
                           <div className="flex items-center gap-3">
-                            <span className="h-1.5 w-1.5 rounded-full" style={{ background: transaction.status === 'success' ? '#10B981' : transaction.status === 'failed' ? '#EF4444' : '#F59E0B' }} />
-                            <span className="rounded-full px-3 py-1 text-xs font-black uppercase" style={{ background: transaction.status === 'success' ? '#DCFCE7' : transaction.status === 'failed' ? '#FEE2E2' : '#FEF3C7', color: transaction.status === 'success' ? '#047857' : transaction.status === 'failed' ? '#DC2626' : '#D97706' }}>
-                              {transaction.status}
+                            <span className="h-1.5 w-1.5 rounded-full" style={{ background: slip.status === 'verified' ? '#10B981' : slip.status === 'failed' ? '#EF4444' : '#F59E0B' }} />
+                            <span className="rounded-full px-3 py-1 text-xs font-black uppercase" style={{ background: slip.status === 'verified' ? '#DCFCE7' : slip.status === 'failed' ? '#FEE2E2' : '#FEF3C7', color: slip.status === 'verified' ? '#047857' : slip.status === 'failed' ? '#DC2626' : '#D97706' }}>
+                              {slip.status === 'verified' ? 'success' : slip.status}
                             </span>
                           </div>
-                          <p className="text-base font-black" style={{ color: 'var(--navy)' }}>฿{transaction.amount.toLocaleString('en-US')}</p>
+                          <p className="text-base font-black" style={{ color: 'var(--navy)' }}>{transaction ? `฿${transaction.amount.toLocaleString('en-US')}` : '-'}</p>
                           <div className="min-w-0">
                             <p className="truncate font-bold" style={{ color: 'var(--navy)' }}>
-                              {transaction.sender_name || transaction.sender_bank || '-'} → {transaction.receiver_name || transaction.receiver_bank || '-'}
+                              {transaction ? `${transaction.sender_name || transaction.sender_bank || '-'} → ${transaction.receiver_name || transaction.receiver_bank || '-'}` : slip.fail_reason?.replaceAll('_', ' ') || 'No transaction recorded'}
                             </p>
                             <p className="truncate font-mono text-[10px]" style={{ color: 'var(--text-muted)' }}>
-                              {transaction.reference_no || transaction.id}
+                              {transaction?.reference_no || slip.id}
                             </p>
                           </div>
-                          <p className="font-black" style={{ color: 'var(--navy)' }}>{transaction.provider_charged_credits ?? 0}</p>
-                          <p className="font-mono text-xs" style={{ color: 'var(--text-muted)' }}>{formatDate(transaction.created_at)}</p>
+                          <p className="font-black" style={{ color: 'var(--navy)' }}>1</p>
+                          <p className="font-mono text-xs" style={{ color: 'var(--text-muted)' }}>{formatDate(slip.created_at)}</p>
                           <div className="flex justify-end gap-2">
-                            <Link
-                              href={`/dashboard/slips?transaction=${transaction.id}`}
+                            <button
+                              type="button"
+                              onClick={() => setSelectedSlip(item)}
                               className="inline-flex items-center gap-2 px-3 py-2 text-sm font-bold"
                               style={{ border: '1px solid var(--border)', color: 'var(--navy)', background: '#fff' }}
                             >
                               <Eye className="h-4 w-4" />
                               ดูรายละเอียด
-                            </Link>
-                            {transaction.is_duplicate && (
+                            </button>
+                            {isDuplicate && (
                               <span className="inline-flex items-center px-3 py-2 text-xs font-bold" style={{ border: '1px solid #F59E0B', color: '#D97706' }}>
                                 Duplicate
                               </span>
                             )}
                           </div>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -1541,7 +1549,7 @@ function AdminBackofficeContent() {
                   <span className="text-center font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
                     Page {transactionsPagination?.page ?? transactionPage} / {Math.max(1, transactionsPagination?.total_pages ?? 1)}
                     <br />
-                    {transactionsPagination?.total ?? 0} total transactions
+                    {transactionsPagination?.total ?? 0} total slips
                   </span>
                   <button
                     type="button"
@@ -1836,6 +1844,12 @@ function AdminBackofficeContent() {
           )}
         </div>
       </div>
+      {selectedSlip?.transaction && (
+        <TransactionDetailModal transaction={selectedSlip.transaction} onClose={() => setSelectedSlip(null)} />
+      )}
+      {selectedSlip && !selectedSlip.transaction && (
+        <RejectedSlipDetailModal slip={selectedSlip.slip} onClose={() => setSelectedSlip(null)} />
+      )}
     </AdminShell>
   );
 }

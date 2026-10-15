@@ -14,7 +14,7 @@ func TestBuildSlipHistoryWhere(t *testing.T) {
 	merchantID := uuid.New()
 	start := time.Date(2026, 10, 15, 0, 0, 0, 0, time.UTC)
 	end := start.AddDate(0, 0, 1)
-	where, args := buildSlipHistoryWhere(merchantID, models.SlipHistoryFilters{
+	where, args := buildSlipHistoryWhere(&merchantID, models.SlipHistoryFilters{
 		Status: "duplicate", StartDate: &start, EndDate: &end, Search: "sender",
 	})
 	for _, clause := range []string{
@@ -27,5 +27,12 @@ func TestBuildSlipHistoryWhere(t *testing.T) {
 	}
 	if len(args) != 4 || args[0] != merchantID || args[3] != "%sender%" || args[2] != end.AddDate(0, 0, 1) {
 		t.Fatalf("unexpected args: %#v", args)
+	}
+}
+
+func TestBuildSlipHistoryWhereAllMerchants(t *testing.T) {
+	where, args := buildSlipHistoryWhere(nil, models.SlipHistoryFilters{Status: "failed"})
+	if strings.Contains(where, "merchant_id") || !strings.Contains(where, "s.status::text = $1") || len(args) != 1 || args[0] != "failed" {
+		t.Fatalf("unexpected global history filter: %q %#v", where, args)
 	}
 }

@@ -1402,6 +1402,19 @@ func (h *MerchantHandler) GetAdminMerchantSlipHistory(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "NOT_FOUND", "message": "Merchant not found"})
 		return
 	}
+	writeSlipHistory(c, merchantID, h.slipRepo, h.transactionRepo)
+}
+
+func writeSlipHistory(c *gin.Context, merchantID uuid.UUID, slipRepo repositories.SlipRepository, transactionRepo repositories.TransactionRepository) {
+	writeSlipHistoryScope(c, &merchantID, slipRepo, transactionRepo)
+}
+
+// GetAdminSlipHistory lists all verification attempts, including failures without transactions.
+func (h *MerchantHandler) GetAdminSlipHistory(c *gin.Context) {
+	writeSlipHistoryScope(c, nil, h.slipRepo, h.transactionRepo)
+}
+
+func writeSlipHistoryScope(c *gin.Context, merchantID *uuid.UUID, slipRepo repositories.SlipRepository, transactionRepo repositories.TransactionRepository) {
 	status := c.Query("status")
 	switch status {
 	case "", "verified", "failed", "pending", "processing", "duplicate":
@@ -1416,28 +1429,42 @@ func (h *MerchantHandler) GetAdminMerchantSlipHistory(c *gin.Context) {
 	page, limit := readPagination(c, 20)
 	filters := models.SlipHistoryFilters{Status: status, StartDate: startDate, EndDate: endDate,
 		Search: c.Query("search"), Limit: limit, Offset: (page - 1) * limit}
-	slips, err := h.slipRepo.ListHistoryByMerchant(merchantID, filters)
+	var slips []*models.Slip
+	var err error
+	if merchantID == nil {
+		slips, err = slipRepo.ListHistoryAll(filters)
+	} else {
+		slips, err = slipRepo.ListHistoryByMerchant(*merchantID, filters)
+	}
 	if err != nil {
-		log.Printf("Failed to list merchant slip history for %s: %v", merchantID, err)
+		log.Printf("Failed to list slip history: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "DATABASE_ERROR", "message": "Failed to retrieve slip history"})
 		return
 	}
-	total, err := h.slipRepo.CountHistoryByMerchant(merchantID, filters)
+	var total int
+	if merchantID == nil {
+		total, err = slipRepo.CountHistoryAll(filters)
+	} else {
+		total, err = slipRepo.CountHistoryByMerchant(*merchantID, filters)
+	}
 	if err != nil {
-		log.Printf("Failed to count merchant slip history for %s: %v", merchantID, err)
+		log.Printf("Failed to count slip history: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "DATABASE_ERROR", "message": "Failed to count slip history"})
 		return
 	}
 	items := make([]models.AdminSlipHistoryItem, 0, len(slips))
+	slipIDs := make([]uuid.UUID, len(slips))
+	for i, slip := range slips {
+		slipIDs[i] = slip.ID
+	}
+	transactions, err := transactionRepo.FindBySlipIDs(slipIDs)
+	if err != nil {
+		log.Printf("Failed to load transactions for slip history: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "DATABASE_ERROR", "message": "Failed to retrieve slip history"})
+		return
+	}
 	for _, slip := range slips {
-		item := models.AdminSlipHistoryItem{Slip: *slip}
-		transaction, err := h.transactionRepo.FindBySlipID(slip.ID)
-		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			log.Printf("Failed to load transaction for slip %s: %v", slip.ID, err)
-			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "DATABASE_ERROR", "message": "Failed to retrieve slip history"})
-			return
-		}
-		item.Transaction = transaction
+		item := models.AdminSlipHistoryItem{Slip: *slip, Transaction: transactions[slip.ID]}
 		items = append(items, item)
 	}
 	c.JSON(http.StatusOK, gin.H{"success": true, "data": models.AdminSlipHistoryResponse{Items: items, Pagination: buildPagination(page, limit, total)}})

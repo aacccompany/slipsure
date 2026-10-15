@@ -80,6 +80,77 @@ func (h *TransactionHandler) ListTransactions(c *gin.Context) {
 	})
 }
 
+// ListSlipHistory includes failed verification attempts that did not create transactions.
+func (h *TransactionHandler) ListSlipHistory(c *gin.Context) {
+	merchantID, ok := h.currentMerchantID(c)
+	if !ok {
+		return
+	}
+	writeSlipHistory(c, merchantID, h.slipRepo, h.transactionRepo)
+}
+
+// ExportSlipHistory exports verification attempts, including rejects with no transaction.
+func (h *TransactionHandler) ExportSlipHistory(c *gin.Context) {
+	merchantID, ok := h.currentMerchantID(c)
+	if !ok {
+		return
+	}
+	if c.DefaultQuery("format", "csv") != "csv" {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "VALIDATION_ERROR", "message": "Only csv export is supported"})
+		return
+	}
+	status := c.Query("status")
+	switch status {
+	case "", "verified", "failed", "pending", "processing", "duplicate":
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "VALIDATION_ERROR", "message": "Invalid slip status"})
+		return
+	}
+	startDate, endDate, ok := readAdminDateRange(c)
+	if !ok {
+		return
+	}
+	slips, err := h.slipRepo.ListHistoryByMerchant(merchantID, models.SlipHistoryFilters{
+		Status: status, StartDate: startDate, EndDate: endDate, Search: c.Query("search"), Limit: 10000,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "DATABASE_ERROR", "message": "Failed to export slip history"})
+		return
+	}
+	slipIDs := make([]uuid.UUID, len(slips))
+	for i, slip := range slips {
+		slipIDs[i] = slip.ID
+	}
+	transactions, err := h.transactionRepo.FindBySlipIDs(slipIDs)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "DATABASE_ERROR", "message": "Failed to export slip history"})
+		return
+	}
+	var buf bytes.Buffer
+	writer := csv.NewWriter(&buf)
+	_ = writer.Write([]string{"slip_id", "status", "fail_reason", "transaction_id", "reference_no", "amount", "sender_name", "receiver_name", "created_at"})
+	for _, slip := range slips {
+		row := []string{slip.ID.String(), string(slip.Status), "", "", "", "", "", "", slip.CreatedAt.Format(time.RFC3339)}
+		if slip.FailReason != nil {
+			row[2] = string(*slip.FailReason)
+		}
+		transaction := transactions[slip.ID]
+		if transaction != nil {
+			row[3], row[4], row[5] = transaction.ID.String(), transaction.ReferenceNo, strconv.FormatFloat(transaction.Amount, 'f', 2, 64)
+			row[6], row[7] = transaction.SenderName, transaction.ReceiverName
+		}
+		_ = writer.Write(row)
+	}
+	writer.Flush()
+	if err := writer.Error(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "INTERNAL_ERROR", "message": "Failed to write CSV"})
+		return
+	}
+	c.Header("Content-Type", "text/csv")
+	c.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="slip-history-%s.csv"`, time.Now().Format("20060102-150405")))
+	c.String(http.StatusOK, buf.String())
+}
+
 // GetTransaction handles GET /transactions/:id.
 func (h *TransactionHandler) GetTransaction(c *gin.Context) {
 	merchantID, ok := h.currentMerchantID(c)

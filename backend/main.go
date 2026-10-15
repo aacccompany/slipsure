@@ -226,6 +226,7 @@ func main() {
 			admin.GET("/payments/export", merchantHandler.ExportAdminPayments)
 			admin.GET("/payments/:id", merchantHandler.GetAdminPaymentDetail)
 			admin.GET("/transactions", merchantHandler.GetAdminTransactions)
+			admin.GET("/slip-history", merchantHandler.GetAdminSlipHistory)
 			admin.GET("/users", merchantHandler.GetAdminUsers)
 			admin.GET("/users/export", merchantHandler.ExportAdminUsers)
 			admin.PATCH("/users/:id/status", merchantHandler.UpdateAdminUserStatus)
@@ -297,6 +298,11 @@ func main() {
 		}
 
 		// Transaction history routes (protected - email verification disabled for testing)
+		slipHistory := v1.Group("/slip-history")
+		slipHistory.Use(middleware.AuthMiddleware(userRepo))
+		slipHistory.GET("/export", transactionHandler.ExportSlipHistory)
+		slipHistory.GET("", transactionHandler.ListSlipHistory)
+
 		transactions := v1.Group("/transactions")
 		transactions.Use(middleware.AuthMiddleware(userRepo))
 		// transactions.Use(middleware.EmailVerificationMiddleware(userRepo)) // Temporarily disabled for testing

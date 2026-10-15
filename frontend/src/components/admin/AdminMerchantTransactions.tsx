@@ -36,7 +36,7 @@ function DetailLine({ label, value }: { label: string; value?: string | number |
   );
 }
 
-function TransactionDetailModal({
+export function TransactionDetailModal({
   transaction,
   onClose,
 }: {
@@ -79,7 +79,7 @@ function TransactionDetailModal({
               <DetailLine label="Valid" value={transaction.provider_valid} />
               <DetailLine label="Cached" value={transaction.provider_cached} />
               <DetailLine label="HaveSLIP charged credits" value={transaction.provider_charged_credits ?? 0} />
-              <DetailLine label="Duplicate" value={transaction.is_duplicate} />
+              <DetailLine label="Provider duplicate flag" value={transaction.is_duplicate} />
             </section>
 
             <section className="rounded-lg border border-zinc-200 p-4">
@@ -124,7 +124,7 @@ function TransactionDetailModal({
   );
 }
 
-function RejectedSlipDetailModal({ slip, onClose }: { slip: Slip; onClose: () => void }) {
+export function RejectedSlipDetailModal({ slip, onClose }: { slip: Slip; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
       <div className="w-full max-w-lg rounded-lg bg-white shadow-xl" onClick={(event) => event.stopPropagation()}>
@@ -144,7 +144,7 @@ function RejectedSlipDetailModal({ slip, onClose }: { slip: Slip; onClose: () =>
           <DetailLine label="Submitted" value={formatDate(slip.created_at)} />
           <DetailLine label="Completed" value={formatDate(slip.processing_completed_at)} />
           <p className="mt-4 text-sm" style={{ color: 'var(--text-muted)' }}>
-            No transaction was recorded for this rejected slip.
+            No transaction was recorded for this slip.
           </p>
         </div>
       </div>
@@ -328,7 +328,7 @@ export function AdminMerchantTransactions({ merchantId }: Props) {
               <tbody>
                 {transactions.map((item) => {
                   const { slip, transaction } = item;
-                  const isDuplicate = slip.fail_reason === 'DUPLICATE_SLIP' || Boolean(transaction?.is_duplicate);
+                  const isDuplicate = slip.status === 'failed' && slip.fail_reason === 'DUPLICATE_SLIP';
                   const displayStatus = isDuplicate && slip.status === 'failed' ? 'duplicate' : slip.status;
                   return (
                   <tr key={slip.id} style={{ borderBottom: '1px solid var(--border)' }}>

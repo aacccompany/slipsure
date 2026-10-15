@@ -11,6 +11,7 @@ import (
 	"slipsure-backend/internal/models"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 // ErrDuplicateReferenceNo is returned when a transaction reference already exists.
@@ -38,6 +39,7 @@ type TransactionRepository interface {
 	Create(transaction *models.Transaction) error
 	FindByID(id uuid.UUID) (*models.Transaction, error)
 	FindBySlipID(slipID uuid.UUID) (*models.Transaction, error)
+	FindBySlipIDs(slipIDs []uuid.UUID) (map[uuid.UUID]*models.Transaction, error)
 	FindByReferenceNo(referenceNo string) (*models.Transaction, error)
 	FindByMerchantID(merchantID uuid.UUID, limit, offset int) ([]*models.Transaction, error)
 	ListByMerchant(merchantID uuid.UUID, filters models.TransactionFilters) ([]*models.Transaction, error)
@@ -138,6 +140,30 @@ func (r *transactionRepository) FindBySlipID(slipID uuid.UUID) (*models.Transact
 	}
 
 	return transaction, nil
+}
+
+func (r *transactionRepository) FindBySlipIDs(slipIDs []uuid.UUID) (map[uuid.UUID]*models.Transaction, error) {
+	transactions := make(map[uuid.UUID]*models.Transaction, len(slipIDs))
+	if len(slipIDs) == 0 {
+		return transactions, nil
+	}
+	ids := make([]string, len(slipIDs))
+	for i, id := range slipIDs {
+		ids[i] = id.String()
+	}
+	rows, err := r.db.Query(`SELECT `+transactionSelectColumns+` FROM transactions WHERE slip_id = ANY($1::uuid[])`, pq.Array(ids))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		transaction := &models.Transaction{}
+		if err := scanTransaction(rows, transaction); err != nil {
+			return nil, err
+		}
+		transactions[transaction.SlipID] = transaction
+	}
+	return transactions, rows.Err()
 }
 
 // FindByReferenceNo retrieves a transaction by reference number

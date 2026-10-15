@@ -6,12 +6,19 @@ import { useQuery } from '@tanstack/react-query';
 import { Code2, Download, Eye, ImageIcon, Loader2, MessageSquare, RefreshCw, Search, X } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { toast } from 'sonner';
-import type { Transaction, TransactionStatus } from '@/types/api';
+import type { AdminSlipHistoryItem, Slip, SlipStatus, Transaction, TransactionStatus } from '@/types/api';
 
 const STATUS_LABEL: Record<TransactionStatus, string> = {
   pending: 'Pending',
   processing: 'Processing',
   success: 'Success',
+  failed: 'Failed',
+};
+
+const SLIP_STATUS_LABEL: Record<SlipStatus, string> = {
+  pending: 'Pending',
+  processing: 'Processing',
+  verified: 'Success',
   failed: 'Failed',
 };
 
@@ -25,7 +32,7 @@ const FAIL_LABEL: Record<string, string> = {
 };
 
 type FilterState = {
-  status: '' | TransactionStatus;
+  status: '' | SlipStatus | 'duplicate';
   channel: '' | 'line';
   startDate: string;
   endDate: string;
@@ -40,9 +47,9 @@ const EMPTY_FILTERS: FilterState = {
   search: '',
 };
 
-function statusStyle(status: TransactionStatus) {
+function statusStyle(status: SlipStatus) {
   switch (status) {
-    case 'success':
+    case 'verified':
       return { bg: '#ECFDF5', text: '#047857', dot: '#10B981' };
     case 'failed':
       return { bg: '#FEF2F2', text: '#B91C1C', dot: '#EF4444' };
@@ -178,16 +185,49 @@ function TransactionDetailModal({
   );
 }
 
+function RejectedSlipDetailModal({ slip, onClose }: { slip: Slip; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+      <div className="w-full max-w-lg rounded-lg bg-white shadow-xl" onClick={(event) => event.stopPropagation()}>
+        <div className="flex items-start justify-between gap-4 border-b border-zinc-200 px-6 py-4">
+          <div className="min-w-0">
+            <p className="font-mono text-[10px] uppercase" style={{ color: 'var(--text-muted)' }}>Slip detail</p>
+            <h2 className="break-all text-lg font-bold" style={{ color: 'var(--navy)' }}>{slip.id}</h2>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Close slip detail" className="rounded-md border border-zinc-200 p-2">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="p-6">
+          <DetailLine label="Status" value={SLIP_STATUS_LABEL[slip.status]} />
+          <DetailLine label="Reason" value={slip.fail_reason ? FAIL_LABEL[slip.fail_reason] ?? slip.fail_reason : '-'} />
+          <DetailLine label="Plan credits" value={1} />
+          <DetailLine label="Submitted" value={formatTime(slip.created_at)} />
+          <DetailLine label="Completed" value={formatTime(slip.processing_completed_at)} />
+          <p className="mt-4 text-sm" style={{ color: 'var(--text-muted)' }}>This rejected slip has no transaction record.</p>
+          {slip.image_url && (
+            <a href={slip.image_url} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--blue)' }}>
+              <ImageIcon className="h-4 w-4" /> View slip image
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function TransactionRow({
-  transaction,
+  item,
   onView,
   isDetailLoading,
 }: {
-  transaction: Transaction;
-  onView: (transaction: Transaction) => Promise<void> | void;
+  item: AdminSlipHistoryItem;
+  onView: (item: AdminSlipHistoryItem) => Promise<void> | void;
   isDetailLoading: boolean;
 }) {
-  const colors = statusStyle(transaction.status);
+  const { slip, transaction } = item;
+  const colors = statusStyle(slip.status);
+  const isDuplicate = slip.status === 'failed' && slip.fail_reason === 'DUPLICATE_SLIP';
 
   return (
     <div
@@ -200,16 +240,16 @@ function TransactionRow({
           className="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide"
           style={{ background: colors.bg, color: colors.text }}
         >
-          {STATUS_LABEL[transaction.status]}
+          {isDuplicate && slip.status === 'failed' ? 'Duplicate' : SLIP_STATUS_LABEL[slip.status]}
         </span>
       </div>
 
       <p className="font-bold" style={{ color: 'var(--navy)' }}>
-        {formatAmount(transaction.amount)}
+        {transaction ? formatAmount(transaction.amount) : '-'}
       </p>
 
       <div className="min-w-0">
-        {transaction.reference_no ? (
+        {transaction ? (
           <>
             <p className="truncate text-sm font-semibold" style={{ color: 'var(--navy)' }}>
               {partyLabel(transaction.sender_name, transaction.sender_bank, transaction.sender_account)}
@@ -217,33 +257,33 @@ function TransactionRow({
               {partyLabel(transaction.receiver_name, transaction.receiver_bank, transaction.receiver_account)}
             </p>
             <p className="mt-0.5 truncate font-mono text-[10px]" style={{ color: 'var(--text-muted)' }}>
-              {transaction.reference_no || transaction.id}
+              {transaction.reference_no || slip.id}
             </p>
           </>
         ) : (
           <>
             <p className="truncate text-sm font-semibold" style={{ color: 'var(--navy)' }}>
-              {transaction.fail_reason ? FAIL_LABEL[transaction.fail_reason] ?? transaction.fail_reason : 'No transaction data'}
+              {slip.fail_reason ? FAIL_LABEL[slip.fail_reason] ?? slip.fail_reason : 'No transaction data'}
             </p>
             <p className="mt-0.5 truncate font-mono text-[10px]" style={{ color: 'var(--text-muted)' }}>
-              {transaction.id}
+              {slip.id}
             </p>
           </>
         )}
       </div>
 
       <p className="hidden text-center font-bold md:block" style={{ color: 'var(--navy)' }}>
-        {transaction.provider_charged_credits ?? 1}
+        1
       </p>
 
       <p className="hidden font-mono text-[10px] md:block" style={{ color: 'var(--text-muted)' }}>
-        {formatTime(transaction.transfer_at || transaction.created_at)}
+        {formatTime(transaction?.transfer_at || slip.created_at)}
       </p>
 
       <div className="flex items-center justify-end gap-2">
         <button
           type="button"
-          onClick={() => onView(transaction)}
+          onClick={() => onView(item)}
           disabled={isDetailLoading}
           className="inline-flex items-center gap-2 rounded-md border border-zinc-200 px-3 py-2 text-xs font-bold transition-colors hover:border-zinc-900 disabled:cursor-wait disabled:opacity-60"
           style={{ color: 'var(--navy)' }}
@@ -251,9 +291,9 @@ function TransactionRow({
           {isDetailLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
           ดูรายละเอียด
         </button>
-        {transaction.slip?.image_url && (
+        {slip.image_url && (
           <a
-            href={transaction.slip.image_url}
+            href={slip.image_url}
             target="_blank"
             rel="noreferrer"
             className="rounded-full border border-zinc-200 px-2.5 py-1 text-[10px] font-semibold text-zinc-600 hover:border-zinc-900 hover:text-zinc-900"
@@ -261,7 +301,7 @@ function TransactionRow({
             Image
           </a>
         )}
-        {transaction.is_duplicate && (
+        {isDuplicate && (
           <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-semibold text-amber-700">
             Duplicate
           </span>
@@ -274,14 +314,15 @@ function TransactionRow({
 export default function SlipsPage() {
   const [page, setPage] = useState(1);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [selectedRejectedSlip, setSelectedRejectedSlip] = useState<Slip | null>(null);
   const [detailLoadingId, setDetailLoadingId] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
   const [appliedFilters, setAppliedFilters] = useState<FilterState>(EMPTY_FILTERS);
 
   const { data: listData, isLoading, isFetching, refetch } = useQuery({
-    queryKey: ['transactions', page, appliedFilters],
-    queryFn: () => api.getTransactions({ page, limit: 15, ...transactionQueryParams(appliedFilters) }),
+    queryKey: ['slip-history', page, appliedFilters],
+    queryFn: () => api.getSlipHistory({ page, limit: 15, ...transactionQueryParams(appliedFilters) }),
   });
 
   const transactions = listData?.data?.items ?? [];
@@ -292,17 +333,17 @@ export default function SlipsPage() {
   const downloadTransactions = async () => {
     setIsExporting(true);
     try {
-      const blob = await api.exportTransactions({ format: 'csv', ...transactionQueryParams(appliedFilters) });
+      const blob = await api.exportSlipHistory(transactionQueryParams(appliedFilters));
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `transactions-${new Date().toISOString().slice(0, 10)}.csv`;
+      link.download = `slip-history-${new Date().toISOString().slice(0, 10)}.csv`;
       document.body.appendChild(link);
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to export transactions');
+      toast.error(error instanceof Error ? error.message : 'Failed to export slip history');
     } finally {
       setIsExporting(false);
     }
@@ -355,15 +396,24 @@ export default function SlipsPage() {
     }
   };
 
+  const openSlipDetail = async (item: AdminSlipHistoryItem) => {
+    if (!item.transaction) {
+      setSelectedRejectedSlip(item.slip);
+      return;
+    }
+    setSelectedRejectedSlip(null);
+    await openTransactionDetail(item.transaction);
+  };
+
   return (
     <div className="p-6 md:p-8" style={{ background: 'var(--bg)' }}>
       <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="mb-1 font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-            / Transaction history
+            / Slip history
           </p>
           <h1 className="text-3xl font-bold tracking-tight" style={{ color: 'var(--navy)' }}>
-            Transactions
+            Slip History
           </h1>
         </div>
 
@@ -441,8 +491,9 @@ export default function SlipsPage() {
               className="h-10 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm font-medium outline-none transition-colors focus:border-blue-500"
             >
               <option value="">ทั้งหมด</option>
-              <option value="success">สำเร็จ</option>
+              <option value="verified">สำเร็จ</option>
               <option value="failed">ล้มเหลว</option>
+              <option value="duplicate">สลิปซ้ำ</option>
               <option value="pending">รอดำเนินการ</option>
               <option value="processing">กำลังตรวจสอบ</option>
             </select>
@@ -572,12 +623,12 @@ export default function SlipsPage() {
             ) : null}
           </div>
         ) : (
-          transactions.map((transaction) => (
+          transactions.map((item) => (
             <TransactionRow
-              key={transaction.id}
-              transaction={transaction}
-              onView={openTransactionDetail}
-              isDetailLoading={detailLoadingId === transaction.id}
+              key={item.slip.id}
+              item={item}
+              onView={openSlipDetail}
+              isDetailLoading={detailLoadingId === item.transaction?.id}
             />
           ))
         )}
@@ -596,7 +647,7 @@ export default function SlipsPage() {
                 Page {pagination.page ?? page} / {totalPages}
               </p>
               <p className="mt-1 font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-                {pagination.total.toLocaleString()} total transactions
+                {pagination.total.toLocaleString()} total slips
               </p>
             </div>
             <button
@@ -615,6 +666,9 @@ export default function SlipsPage() {
           transaction={selectedTransaction}
           onClose={() => setSelectedTransaction(null)}
         />
+      )}
+      {selectedRejectedSlip && (
+        <RejectedSlipDetailModal slip={selectedRejectedSlip} onClose={() => setSelectedRejectedSlip(null)} />
       )}
     </div>
   );

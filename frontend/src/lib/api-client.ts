@@ -488,6 +488,21 @@ class ApiClient {
     return response.blob();
   }
 
+  async exportSlipHistory(params?: {
+    status?: string;
+    start_date?: string;
+    end_date?: string;
+    search?: string;
+  }): Promise<Blob> {
+    const queryString = toQueryString({ format: 'csv', ...(params as Record<string, unknown> | undefined) });
+    const token = this.getAuthHeader();
+    const response = await fetch(`${this.baseURL}/v1/slip-history/export?${queryString}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    if (!response.ok) throw new Error('Failed to export slip history');
+    return response.blob();
+  }
+
   // Admin Backoffice
   async getAdminUsers(params?: {
     page?: number;
@@ -598,6 +613,20 @@ class ApiClient {
   ): Promise<ApiResponse<AdminSlipHistoryResponse>> {
     const queryString = toQueryString(params);
     return this.request(`/v1/admin/merchants/${merchantId}/slip-history${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getAdminSlipHistory(
+    params?: { page?: number; limit?: number; status?: string; start_date?: string; end_date?: string; search?: string }
+  ): Promise<ApiResponse<AdminSlipHistoryResponse>> {
+    const queryString = toQueryString(params);
+    return this.request(`/v1/admin/slip-history${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getSlipHistory(
+    params?: { page?: number; limit?: number; status?: string; start_date?: string; end_date?: string; search?: string }
+  ): Promise<ApiResponse<AdminSlipHistoryResponse>> {
+    const queryString = toQueryString(params);
+    return this.request(`/v1/slip-history${queryString ? `?${queryString}` : ''}`);
   }
 
   async getAdminTransactions(params?: {

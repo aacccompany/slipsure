@@ -17,6 +17,8 @@ type SlipRepository interface {
 	FindByMerchantID(merchantID uuid.UUID, limit, offset int) ([]*models.Slip, error)
 	ListHistoryByMerchant(merchantID uuid.UUID, filters models.SlipHistoryFilters) ([]*models.Slip, error)
 	CountHistoryByMerchant(merchantID uuid.UUID, filters models.SlipHistoryFilters) (int, error)
+	ListHistoryAll(filters models.SlipHistoryFilters) ([]*models.Slip, error)
+	CountHistoryAll(filters models.SlipHistoryFilters) (int, error)
 	CountByMerchantID(merchantID uuid.UUID) (int, error)
 	GetStatsByMerchantID(merchantID uuid.UUID) (*models.SlipStatsResponse, error)
 	GetDailyStatsByMerchantID(merchantID uuid.UUID, days int) ([]models.DailySlipStats, error)
@@ -118,9 +120,13 @@ func (r *slipRepository) FindByMerchantID(merchantID uuid.UUID, limit, offset in
 	return slips, nil
 }
 
-func buildSlipHistoryWhere(merchantID uuid.UUID, filters models.SlipHistoryFilters) (string, []interface{}) {
-	conditions := []string{"s.merchant_id = $1"}
-	args := []interface{}{merchantID}
+func buildSlipHistoryWhere(merchantID *uuid.UUID, filters models.SlipHistoryFilters) (string, []interface{}) {
+	conditions := []string{"1=1"}
+	args := []interface{}{}
+	if merchantID != nil {
+		args = append(args, *merchantID)
+		conditions = append(conditions, "s.merchant_id = $1")
+	}
 	if filters.Status != "" {
 		if filters.Status == "duplicate" {
 			conditions = append(conditions, "s.fail_reason = 'DUPLICATE_SLIP'")
@@ -151,6 +157,14 @@ func buildSlipHistoryWhere(merchantID uuid.UUID, filters models.SlipHistoryFilte
 }
 
 func (r *slipRepository) ListHistoryByMerchant(merchantID uuid.UUID, filters models.SlipHistoryFilters) ([]*models.Slip, error) {
+	return r.listHistory(&merchantID, filters)
+}
+
+func (r *slipRepository) ListHistoryAll(filters models.SlipHistoryFilters) ([]*models.Slip, error) {
+	return r.listHistory(nil, filters)
+}
+
+func (r *slipRepository) listHistory(merchantID *uuid.UUID, filters models.SlipHistoryFilters) ([]*models.Slip, error) {
 	where, args := buildSlipHistoryWhere(merchantID, filters)
 	args = append(args, filters.Limit, filters.Offset)
 	query := fmt.Sprintf(`SELECT s.id, s.merchant_id, s.image_url, COALESCE(s.qr_raw_data, ''), s.status, s.fail_reason,
@@ -175,6 +189,14 @@ func (r *slipRepository) ListHistoryByMerchant(merchantID uuid.UUID, filters mod
 }
 
 func (r *slipRepository) CountHistoryByMerchant(merchantID uuid.UUID, filters models.SlipHistoryFilters) (int, error) {
+	return r.countHistory(&merchantID, filters)
+}
+
+func (r *slipRepository) CountHistoryAll(filters models.SlipHistoryFilters) (int, error) {
+	return r.countHistory(nil, filters)
+}
+
+func (r *slipRepository) countHistory(merchantID *uuid.UUID, filters models.SlipHistoryFilters) (int, error) {
 	where, args := buildSlipHistoryWhere(merchantID, filters)
 	var count int
 	err := r.db.QueryRow("SELECT COUNT(*) FROM slips s"+where, args...).Scan(&count)
