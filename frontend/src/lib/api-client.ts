@@ -22,6 +22,7 @@ import type {
   QuotaStatus,
   Transaction,
   TransactionListResponse,
+  AdminSlipHistoryResponse,
   Slip,
   SlipStatus,
   SlipListResponse,
@@ -589,6 +590,14 @@ class ApiClient {
   ): Promise<ApiResponse<TransactionListResponse>> {
     const queryString = toQueryString(params);
     return this.request(`/v1/admin/merchants/${merchantId}/transactions${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getAdminMerchantSlipHistory(
+    merchantId: string,
+    params?: { page?: number; limit?: number; status?: string; start_date?: string; end_date?: string; search?: string }
+  ): Promise<ApiResponse<AdminSlipHistoryResponse>> {
+    const queryString = toQueryString(params);
+    return this.request(`/v1/admin/merchants/${merchantId}/slip-history${queryString ? `?${queryString}` : ''}`);
   }
 
   async getAdminTransactions(params?: {

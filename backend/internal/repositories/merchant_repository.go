@@ -104,7 +104,7 @@ func (r *merchantRepository) ListAdminMerchants(status string, search string, st
 		SELECT
 			m.id,
 			m.shop_name,
-			owner.email,
+			COALESCE(owner.email, '') AS owner_email,
 			owner.name,
 			m.is_active,
 			COALESCE(s.status::text, 'none') AS subscription_status,

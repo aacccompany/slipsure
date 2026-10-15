@@ -128,8 +128,22 @@ func main() {
 
 	// Initialize slip verification service
 	slipRepo := repositories.NewSlipRepository(database.DB)
+	merchantHandler.SetSlipRepository(slipRepo)
 	usageCounterRepo := repositories.NewUsageCounterRepository(database.DB)
 	slipVerificationService := services.NewSlipVerificationService(slipRepo, transactionRepo, usageCounterRepo, merchantRepo, storageService)
+	if lineMessaging, lineErr := services.NewLINEMessagingService(); lineErr != nil {
+		log.Printf("Quota LINE alerts disabled: %v", lineErr)
+	} else {
+		if bot, botErr := lineMessaging.GetBotInfo(); botErr != nil {
+			log.Printf("Quota LINE bot identity check failed: %v", botErr)
+		} else {
+			log.Printf("Quota LINE alerts use Official Account %s (%s)", bot.DisplayName, bot.BasicID)
+		}
+		quotaAlerts := services.NewQuotaAlertService(database.DB, lineMessaging)
+		merchantHandler.SetQuotaAlertService(quotaAlerts)
+		slipVerificationService.SetQuotaAlertService(quotaAlerts)
+		quotaAlerts.Start(context.Background())
+	}
 	slipHandler := handlers.NewSlipHandler(slipVerificationService, userRepo, merchantRepo)
 	transactionHandler := handlers.NewTransactionHandler(transactionRepo, slipRepo, merchantRepo)
 
@@ -218,7 +232,9 @@ func main() {
 			admin.GET("/merchants", merchantHandler.GetAdminMerchants)
 			admin.GET("/merchants/export", merchantHandler.ExportAdminMerchants)
 			admin.PUT("/merchants/:id/quota", merchantHandler.UpdateAdminMerchantQuota)
+			admin.PUT("/merchants/:id/quota-alert-recipient", merchantHandler.UpdateAdminQuotaAlertRecipient)
 			admin.GET("/merchants/:id/transactions", merchantHandler.GetAdminMerchantTransactions)
+			admin.GET("/merchants/:id/slip-history", merchantHandler.GetAdminMerchantSlipHistory)
 			admin.GET("/merchants/:id", merchantHandler.GetAdminMerchantDetail)
 			admin.GET("/analytics/dashboard", merchantHandler.GetAdminAnalyticsDashboard)
 			admin.GET("/analytics/revenue", merchantHandler.GetAdminRevenueAnalytics)

@@ -1221,7 +1221,7 @@ function AdminBackofficeContent() {
           </h1>
         </div>
 
-        {tab === 'merchants' ? (
+        {tab === 'merchants' && !merchantsQuery.isError ? (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
             {[
               { label: 'Total Merchants', value: merchantsPagination?.total ?? 0, sub: `${activeMerchantCount} active on this page`, icon: Store, color: 'var(--blue)' },
@@ -1568,6 +1568,13 @@ function AdminBackofficeContent() {
                 bankStatusLoading={adminBankStatusQuery.isLoading}
                 isLoading={adminAnalyticsQuery.isLoading || adminRevenueQuery.isLoading || adminPerformanceQuery.isLoading}
               />
+            </div>
+          ) : tab === 'merchants' && merchantsQuery.isError ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-800" role="alert">
+              <span>Could not load merchants. Please try again.</span>
+              <button type="button" onClick={() => merchantsQuery.refetch()} className="border border-red-300 bg-white px-3 py-2 font-semibold hover:bg-red-100">
+                Retry
+              </button>
             </div>
           ) : isTableLoading ? (
             <div className="flex h-64 items-center justify-center">

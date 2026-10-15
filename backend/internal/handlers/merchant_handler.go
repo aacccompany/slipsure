@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/csv"
 	"errors"
 	"fmt"
@@ -24,6 +25,17 @@ type MerchantHandler struct {
 	userRepo        repositories.UserRepository
 	merchantRepo    repositories.MerchantRepository
 	transactionRepo repositories.TransactionRepository
+	slipRepo        repositories.SlipRepository
+	quotaAlerts     *services.QuotaAlertService
+}
+
+func (h *MerchantHandler) SetSlipRepository(repo repositories.SlipRepository) {
+	h.slipRepo = repo
+}
+
+// SetQuotaAlertService enables admin management of quota alert destinations.
+func (h *MerchantHandler) SetQuotaAlertService(service *services.QuotaAlertService) {
+	h.quotaAlerts = service
 }
 
 // Helper function to get merchant ID by querying merchants by owner_id from user ID in JWT
@@ -1379,6 +1391,58 @@ func (h *MerchantHandler) GetAdminBankStatus(c *gin.Context) {
 	})
 }
 
+// GetAdminMerchantSlipHistory includes rejected attempts that have no transaction row.
+func (h *MerchantHandler) GetAdminMerchantSlipHistory(c *gin.Context) {
+	merchantID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "VALIDATION_ERROR", "message": "Invalid merchant ID"})
+		return
+	}
+	if _, err := h.merchantRepo.FindByID(merchantID); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "NOT_FOUND", "message": "Merchant not found"})
+		return
+	}
+	status := c.Query("status")
+	switch status {
+	case "", "verified", "failed", "pending", "processing", "duplicate":
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "VALIDATION_ERROR", "message": "Invalid slip status"})
+		return
+	}
+	startDate, endDate, ok := readAdminDateRange(c)
+	if !ok {
+		return
+	}
+	page, limit := readPagination(c, 20)
+	filters := models.SlipHistoryFilters{Status: status, StartDate: startDate, EndDate: endDate,
+		Search: c.Query("search"), Limit: limit, Offset: (page - 1) * limit}
+	slips, err := h.slipRepo.ListHistoryByMerchant(merchantID, filters)
+	if err != nil {
+		log.Printf("Failed to list merchant slip history for %s: %v", merchantID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "DATABASE_ERROR", "message": "Failed to retrieve slip history"})
+		return
+	}
+	total, err := h.slipRepo.CountHistoryByMerchant(merchantID, filters)
+	if err != nil {
+		log.Printf("Failed to count merchant slip history for %s: %v", merchantID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "DATABASE_ERROR", "message": "Failed to count slip history"})
+		return
+	}
+	items := make([]models.AdminSlipHistoryItem, 0, len(slips))
+	for _, slip := range slips {
+		item := models.AdminSlipHistoryItem{Slip: *slip}
+		transaction, err := h.transactionRepo.FindBySlipID(slip.ID)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			log.Printf("Failed to load transaction for slip %s: %v", slip.ID, err)
+			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "DATABASE_ERROR", "message": "Failed to retrieve slip history"})
+			return
+		}
+		item.Transaction = transaction
+		items = append(items, item)
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true, "data": models.AdminSlipHistoryResponse{Items: items, Pagination: buildPagination(page, limit, total)}})
+}
+
 // GetAdminMerchantTransactions returns transaction logs for one merchant.
 func (h *MerchantHandler) GetAdminMerchantTransactions(c *gin.Context) {
 	merchantID, err := uuid.Parse(c.Param("id"))
@@ -1638,20 +1702,67 @@ func (h *MerchantHandler) GetAdminMerchantDetail(c *gin.Context) {
 	if err != nil {
 		users = []*models.User{}
 	}
+	var alertRecipient string
+	var alertRecipientOverridden bool
+	if h.quotaAlerts != nil {
+		alertRecipient, alertRecipientOverridden, err = h.quotaAlerts.GetRecipient(merchantID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "Failed to retrieve quota alert recipient"})
+			return
+		}
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"data": models.AdminMerchantDetailResponse{
-			Merchant:      merchant,
-			Subscription:  subscription,
-			Usage:         usage,
-			Billing:       billing,
-			LineConnected: lineConnected,
-			LineWebhook:   lineConfig,
-			Payments:      payments,
-			Users:         users,
+			Merchant:                      merchant,
+			Subscription:                  subscription,
+			Usage:                         usage,
+			Billing:                       billing,
+			LineConnected:                 lineConnected,
+			LineWebhook:                   lineConfig,
+			Payments:                      payments,
+			Users:                         users,
+			QuotaAlertRecipient:           alertRecipient,
+			QuotaAlertRecipientOverridden: alertRecipientOverridden,
 		},
 	})
+}
+
+// UpdateAdminQuotaAlertRecipient sets a reachable LINE UID for merchant alerts.
+func (h *MerchantHandler) UpdateAdminQuotaAlertRecipient(c *gin.Context) {
+	if h.quotaAlerts == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"success": false, "message": "Quota LINE alerts are not configured"})
+		return
+	}
+	merchantID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "Invalid merchant ID"})
+		return
+	}
+	var req struct {
+		LineUserID *string `json:"line_user_id"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil || req.LineUserID == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "LINE user ID is required (use an empty string to restore the owner)"})
+		return
+	}
+	if err := h.quotaAlerts.SetRecipient(c.Request.Context(), merchantID, *req.LineUserID); err != nil {
+		switch {
+		case errors.Is(err, services.ErrInvalidLINEUserID):
+			c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": err.Error()})
+		case errors.Is(err, services.ErrLINERecipientUnavailable):
+			c.JSON(http.StatusUnprocessableEntity, gin.H{"success": false, "message": "This LINE account cannot be reached by the platform Official Account"})
+		case errors.Is(err, sql.ErrNoRows):
+			c.JSON(http.StatusNotFound, gin.H{"success": false, "message": "Merchant not found"})
+		default:
+			log.Printf("Failed to update quota alert recipient for merchant %s: %v", merchantID, err)
+			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "Failed to update quota alert recipient"})
+		}
+		return
+	}
+	log.Printf("Admin updated quota alert destination for merchant %s", merchantID)
+	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
 // UpdateAdminMerchantQuota lets an administrator add extra monthly quota for one merchant.

@@ -9,8 +9,8 @@ history entry commit together. Startup stops if a migration fails.
 
 For a new change, add a forward-only SQL file under `migrations/` and register
 its filename in the ordered `migrations` list in `migrate.go`. Do not edit an
-already-applied migration. Historical reset scripts and superseded plan seeds
-are deliberately not registered.
+already-applied migration. Historical reset scripts, webhook-column changes
+for an older schema, and superseded plan seeds are deliberately not registered.
 
 `schema.sql` initializes only an empty database. It must not be run directly on
 an existing database because it contains `DROP TABLE` statements.

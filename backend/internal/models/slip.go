@@ -23,6 +23,25 @@ type Slip struct {
 	Transaction *Transaction `json:"transaction,omitempty"`
 }
 
+type AdminSlipHistoryItem struct {
+	Slip        Slip         `json:"slip"`
+	Transaction *Transaction `json:"transaction,omitempty"`
+}
+
+type AdminSlipHistoryResponse struct {
+	Items      []AdminSlipHistoryItem `json:"items"`
+	Pagination Pagination             `json:"pagination"`
+}
+
+type SlipHistoryFilters struct {
+	Status    string
+	StartDate *time.Time
+	EndDate   *time.Time
+	Search    string
+	Limit     int
+	Offset    int
+}
+
 // SlipStatus represents slip verification status
 type SlipStatus string
 

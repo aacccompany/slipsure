@@ -42,7 +42,7 @@ func NewUserRepository(db *sql.DB) UserRepository {
 func (r *userRepository) Create(user *models.User) error {
 	query := `
 		INSERT INTO users (name, email, phone, password_hash, role, line_user_id, line_linked, email_verified, is_active)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		VALUES ($1, NULLIF($2, ''), $3, $4, $5, $6, $7, $8, $9)
 		RETURNING id, created_at, updated_at
 	`
 
@@ -71,7 +71,7 @@ func (r *userRepository) Create(user *models.User) error {
 // FindByID retrieves a user by ID
 func (r *userRepository) FindByID(id uuid.UUID) (*models.User, error) {
 	query := `
-		SELECT id, name, email, phone, password_hash, role,
+		SELECT id, name, COALESCE(email, ''), phone, password_hash, role,
 			   line_user_id, line_linked, email_verified, COALESCE(is_active, TRUE), created_at, updated_at
 		FROM users
 		WHERE id = $1
@@ -102,7 +102,7 @@ func (r *userRepository) FindByID(id uuid.UUID) (*models.User, error) {
 // FindByEmail retrieves a user by email
 func (r *userRepository) FindByEmail(email string) (*models.User, error) {
 	query := `
-		SELECT id, name, email, phone, password_hash, role, merchant_id,
+		SELECT id, name, COALESCE(email, ''), phone, password_hash, role, merchant_id,
 			   line_user_id, line_linked, email_verified, COALESCE(is_active, TRUE), created_at, updated_at
 		FROM users
 		WHERE email = $1
@@ -134,7 +134,7 @@ func (r *userRepository) FindByEmail(email string) (*models.User, error) {
 // FindByLineUserID retrieves a user by LINE user ID
 func (r *userRepository) FindByLineUserID(lineUserID string) (*models.User, error) {
 	query := `
-		SELECT id, name, email, phone, password_hash, role, merchant_id,
+		SELECT id, name, COALESCE(email, ''), phone, password_hash, role, merchant_id,
 			   line_user_id, line_linked, email_verified, COALESCE(is_active, TRUE), created_at, updated_at
 		FROM users
 		WHERE line_user_id = $1
@@ -167,7 +167,7 @@ func (r *userRepository) FindByLineUserID(lineUserID string) (*models.User, erro
 func (r *userRepository) Update(user *models.User) error {
 	query := `
 		UPDATE users
-		SET name = $2, email = $3, phone = $4, merchant_id = $5, line_user_id = $6, line_linked = $7, email_verified = $8, is_active = $9, updated_at = CURRENT_TIMESTAMP
+		SET name = $2, email = NULLIF($3, ''), phone = $4, merchant_id = $5, line_user_id = $6, line_linked = $7, email_verified = $8, is_active = $9, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $1
 	`
 
@@ -301,7 +301,7 @@ func (r *userRepository) LinkLineAccount(userID uuid.UUID, lineUserID string) er
 // FindByMerchantID retrieves all users associated with a merchant
 func (r *userRepository) FindByMerchantID(merchantID uuid.UUID) ([]*models.User, error) {
 	query := `
-		SELECT u.id, u.name, u.email, u.phone, u.password_hash, u.role, u.merchant_id,
+		SELECT u.id, u.name, COALESCE(u.email, ''), u.phone, u.password_hash, u.role, u.merchant_id,
 			   u.line_user_id, u.line_linked, u.email_verified, COALESCE(u.is_active, TRUE), u.created_at, u.updated_at
 		FROM users u
 		LEFT JOIN merchants m ON m.id = $1
@@ -363,7 +363,7 @@ func (r *userRepository) ListAdminUsers(search string, role string, status strin
 	offsetPosition := len(args) + 2
 	query := fmt.Sprintf(`
 		SELECT
-			u.id, u.name, u.email, u.phone, u.role,
+			u.id, u.name, COALESCE(u.email, ''), u.phone, u.role,
 			COALESCE(linked.id, owned.id)::text AS merchant_id,
 			COALESCE(linked.shop_name, owned.shop_name, '') AS merchant_name,
 			u.line_linked, u.email_verified, COALESCE(u.is_active, TRUE), u.created_at

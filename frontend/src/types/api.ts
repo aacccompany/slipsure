@@ -228,6 +228,16 @@ export interface Slip {
   transaction?: Transaction;
 }
 
+export interface AdminSlipHistoryItem {
+  slip: Slip;
+  transaction?: Transaction;
+}
+
+export interface AdminSlipHistoryResponse {
+  items: AdminSlipHistoryItem[];
+  pagination: Pagination;
+}
+
 export interface Pagination {
   page: number;
   limit: number;

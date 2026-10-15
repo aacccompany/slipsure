@@ -7,7 +7,9 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
+	"time"
 )
 
 // LINE Messaging Service handles LINE Bot API interactions
@@ -62,6 +64,66 @@ func (s *LINEMessagingService) PushMessage(userID string, messages []LINEMessage
 	return s.sendLINERequest("POST", url, request)
 }
 
+// PushMessageWithRetryKey sends an idempotent push for a persisted alert.
+func (s *LINEMessagingService) PushMessageWithRetryKey(userID string, messages []LINEMessage, retryKey string) error {
+	url := fmt.Sprintf("%s/message/push", s.apiEndpoint)
+	return s.sendLINERequest("POST", url, LINEPushRequest{To: userID, Messages: messages}, retryKey)
+}
+
+// CheckRecipient tests whether this channel can access a LINE user's profile.
+func (s *LINEMessagingService) CheckRecipient(userID string) (int, error) {
+	req, err := http.NewRequest(http.MethodGet, s.apiEndpoint+"/profile/"+url.PathEscape(userID), nil)
+	if err != nil {
+		return 0, err
+	}
+	req.Header.Set("Authorization", "Bearer "+s.accessToken)
+	resp, err := (&http.Client{Timeout: 10 * time.Second}).Do(req)
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+	return resp.StatusCode, nil
+}
+
+// ValidatePushMessage checks the alert body without sending it.
+func (s *LINEMessagingService) ValidatePushMessage(messages []LINEMessage) error {
+	return s.sendLINERequest(http.MethodPost, s.apiEndpoint+"/message/validate/push", struct {
+		Messages []LINEMessage `json:"messages"`
+	}{Messages: messages})
+}
+
+func (s *LINEMessagingService) GetBotInfo() (*LINEBotInfo, error) {
+	req, err := http.NewRequest(http.MethodGet, s.apiEndpoint+"/info", nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+s.accessToken)
+	resp, err := (&http.Client{Timeout: 10 * time.Second}).Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("LINE bot info returned status %d", resp.StatusCode)
+	}
+	var info LINEBotInfo
+	if err := json.NewDecoder(resp.Body).Decode(&info); err != nil {
+		return nil, err
+	}
+	return &info, nil
+}
+
+// LINEAPIError identifies a rejected Messaging API request.
+type LINEAPIError struct {
+	StatusCode int
+	Body       string
+	RequestID  string
+}
+
+func (e *LINEAPIError) Error() string {
+	return fmt.Sprintf("LINE API returned status %d (request %s): %s", e.StatusCode, e.RequestID, e.Body)
+}
+
 func (s *LINEMessagingService) GetMessageContent(messageID string) ([]byte, string, error) {
 	// Use the correct LINE Data API endpoint for downloading content
 	// Must use: https://api-data.line.me/v2/bot (NOT api.line.me or dl.line.biz)
@@ -109,7 +171,7 @@ func (s *LINEMessagingService) downloadFromURL(url string) ([]byte, string, erro
 }
 
 // sendLINERequest sends a request to LINE API
-func (s *LINEMessagingService) sendLINERequest(method, url string, body interface{}) error {
+func (s *LINEMessagingService) sendLINERequest(method, url string, body interface{}, retryKey ...string) error {
 	jsonData, err := json.Marshal(body)
 	if err != nil {
 		return fmt.Errorf("failed to marshal request: %w", err)
@@ -122,17 +184,23 @@ func (s *LINEMessagingService) sendLINERequest(method, url string, body interfac
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+s.accessToken)
+	if len(retryKey) > 0 && retryKey[0] != "" {
+		req.Header.Set("X-Line-Retry-Key", retryKey[0])
+	}
 
-	client := &http.Client{}
+	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to send request: %w", err)
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode == http.StatusConflict && len(retryKey) > 0 && retryKey[0] != "" && resp.Header.Get("x-line-accepted-request-id") != "" {
+		return nil
+	}
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("LINE API returned status %d: %s", resp.StatusCode, string(respBody))
+		return &LINEAPIError{StatusCode: resp.StatusCode, Body: string(respBody), RequestID: resp.Header.Get("x-line-request-id")}
 	}
 
 	return nil

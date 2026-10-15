@@ -3,6 +3,7 @@ package repositories
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -14,6 +15,8 @@ type SlipRepository interface {
 	Create(slip *models.Slip) error
 	FindByID(id uuid.UUID) (*models.Slip, error)
 	FindByMerchantID(merchantID uuid.UUID, limit, offset int) ([]*models.Slip, error)
+	ListHistoryByMerchant(merchantID uuid.UUID, filters models.SlipHistoryFilters) ([]*models.Slip, error)
+	CountHistoryByMerchant(merchantID uuid.UUID, filters models.SlipHistoryFilters) (int, error)
 	CountByMerchantID(merchantID uuid.UUID) (int, error)
 	GetStatsByMerchantID(merchantID uuid.UUID) (*models.SlipStatsResponse, error)
 	GetDailyStatsByMerchantID(merchantID uuid.UUID, days int) ([]models.DailySlipStats, error)
@@ -113,6 +116,69 @@ func (r *slipRepository) FindByMerchantID(merchantID uuid.UUID, limit, offset in
 	}
 
 	return slips, nil
+}
+
+func buildSlipHistoryWhere(merchantID uuid.UUID, filters models.SlipHistoryFilters) (string, []interface{}) {
+	conditions := []string{"s.merchant_id = $1"}
+	args := []interface{}{merchantID}
+	if filters.Status != "" {
+		if filters.Status == "duplicate" {
+			conditions = append(conditions, "s.fail_reason = 'DUPLICATE_SLIP'")
+		} else {
+			args = append(args, filters.Status)
+			conditions = append(conditions, fmt.Sprintf("s.status::text = $%d", len(args)))
+		}
+	}
+	if filters.StartDate != nil {
+		args = append(args, *filters.StartDate)
+		conditions = append(conditions, fmt.Sprintf("s.created_at >= $%d", len(args)))
+	}
+	if filters.EndDate != nil {
+		args = append(args, filters.EndDate.AddDate(0, 0, 1))
+		conditions = append(conditions, fmt.Sprintf("s.created_at < $%d", len(args)))
+	}
+	if search := strings.TrimSpace(filters.Search); search != "" {
+		args = append(args, "%"+search+"%")
+		p := len(args)
+		conditions = append(conditions, fmt.Sprintf(`(s.id::text ILIKE $%d OR s.fail_reason::text ILIKE $%d OR EXISTS (
+			SELECT 1 FROM transactions t WHERE t.slip_id = s.id AND (
+				t.reference_no ILIKE $%d OR t.provider_verification_id ILIKE $%d
+				OR t.sender_name ILIKE $%d OR t.receiver_name ILIKE $%d
+				OR t.sender_bank ILIKE $%d OR t.receiver_bank ILIKE $%d
+			)))`, p, p, p, p, p, p, p, p))
+	}
+	return " WHERE " + strings.Join(conditions, " AND "), args
+}
+
+func (r *slipRepository) ListHistoryByMerchant(merchantID uuid.UUID, filters models.SlipHistoryFilters) ([]*models.Slip, error) {
+	where, args := buildSlipHistoryWhere(merchantID, filters)
+	args = append(args, filters.Limit, filters.Offset)
+	query := fmt.Sprintf(`SELECT s.id, s.merchant_id, s.image_url, COALESCE(s.qr_raw_data, ''), s.status, s.fail_reason,
+		s.processing_started_at, s.processing_completed_at, s.created_at, s.updated_at
+		FROM slips s %s ORDER BY s.created_at DESC, s.id DESC LIMIT $%d OFFSET $%d`, where, len(args)-1, len(args))
+	rows, err := r.db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := make([]*models.Slip, 0)
+	for rows.Next() {
+		slip := &models.Slip{}
+		if err := rows.Scan(&slip.ID, &slip.MerchantID, &slip.ImageURL, &slip.QRRawData,
+			&slip.Status, &slip.FailReason, &slip.ProcessingStartedAt, &slip.ProcessingCompletedAt,
+			&slip.CreatedAt, &slip.UpdatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, slip)
+	}
+	return items, rows.Err()
+}
+
+func (r *slipRepository) CountHistoryByMerchant(merchantID uuid.UUID, filters models.SlipHistoryFilters) (int, error) {
+	where, args := buildSlipHistoryWhere(merchantID, filters)
+	var count int
+	err := r.db.QueryRow("SELECT COUNT(*) FROM slips s"+where, args...).Scan(&count)
+	return count, err
 }
 
 // CountByMerchantID counts all slips for a merchant.

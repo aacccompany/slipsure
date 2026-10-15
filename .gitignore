@@ -9,3 +9,4 @@ docker-compose.yml
 .env.uat
 .github
 docker-compose.deploy.yml
+go-build

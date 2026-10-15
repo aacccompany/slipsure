@@ -228,14 +228,16 @@ type AdminMerchantBillingSummary struct {
 
 // AdminMerchantDetailResponse represents full merchant detail for backoffice.
 type AdminMerchantDetailResponse struct {
-	Merchant      *MerchantProfile            `json:"merchant"`
-	Subscription  *Subscription               `json:"subscription,omitempty"`
-	Usage         AdminMerchantUsage          `json:"usage"`
-	Billing       AdminMerchantBillingSummary `json:"billing"`
-	LineConnected bool                        `json:"line_connected"`
-	LineWebhook   *LINEWebhookConfig          `json:"line_webhook,omitempty"`
-	Payments      []PaymentLog                `json:"payments"`
-	Users         []*User                     `json:"users"`
+	Merchant                      *MerchantProfile            `json:"merchant"`
+	Subscription                  *Subscription               `json:"subscription,omitempty"`
+	Usage                         AdminMerchantUsage          `json:"usage"`
+	Billing                       AdminMerchantBillingSummary `json:"billing"`
+	LineConnected                 bool                        `json:"line_connected"`
+	LineWebhook                   *LINEWebhookConfig          `json:"line_webhook,omitempty"`
+	Payments                      []PaymentLog                `json:"payments"`
+	Users                         []*User                     `json:"users"`
+	QuotaAlertRecipient           string                      `json:"quota_alert_recipient"`
+	QuotaAlertRecipientOverridden bool                        `json:"quota_alert_recipient_overridden"`
 }
 
 // AdminAnalyticsDashboard summarizes platform-level KPIs.

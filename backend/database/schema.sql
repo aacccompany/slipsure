@@ -43,6 +43,7 @@ DROP TABLE IF EXISTS merchants CASCADE;
 DROP TABLE IF EXISTS subscription_plans CASCADE;
 DROP TABLE IF EXISTS subscriptions CASCADE;
 DROP TABLE IF EXISTS payment_logs CASCADE;
+DROP TABLE IF EXISTS quota_alerts CASCADE;
 DROP TABLE IF EXISTS credit_lots CASCADE;
 DROP TABLE IF EXISTS slips CASCADE;
 DROP TABLE IF EXISTS transactions CASCADE;
@@ -55,7 +56,7 @@ DROP TABLE IF EXISTS system_logs CASCADE;
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
+    email VARCHAR(255) UNIQUE,
     phone VARCHAR(20),
     password_hash VARCHAR(255) NOT NULL,
     role user_role NOT NULL DEFAULT 'merchant',
@@ -82,6 +83,7 @@ CREATE TABLE merchants (
     line_channel_id VARCHAR(50),
     line_channel_secret VARCHAR(255),
     line_access_token TEXT,
+    quota_alert_recipient_line_user_id VARCHAR(255),
     line_webhook_verified BOOLEAN DEFAULT FALSE,
     free_plan_used BOOLEAN DEFAULT FALSE,
     is_active BOOLEAN DEFAULT TRUE,
@@ -102,7 +104,7 @@ CREATE TABLE subscription_plans (
     description TEXT,
     price_monthly DECIMAL(10, 2) DEFAULT 0,
     price_yearly DECIMAL(10, 2) DEFAULT 0,
-    quota_per_month INTEGER DEFAULT 50,
+    quota_per_month INTEGER DEFAULT 20,
     features JSONB DEFAULT '[]'::jsonb,
     is_popular BOOLEAN DEFAULT FALSE,
     is_active BOOLEAN DEFAULT TRUE,
@@ -290,6 +292,25 @@ CREATE TABLE credit_lots (
 -- System Logs Table
 -- ============================================
 
+CREATE TABLE quota_alerts (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    merchant_id UUID NOT NULL REFERENCES merchants(id) ON DELETE CASCADE,
+    cycle_lot_id UUID NOT NULL REFERENCES credit_lots(id) ON DELETE CASCADE,
+    kind VARCHAR(16) NOT NULL DEFAULT 'balance',
+    threshold SMALLINT NOT NULL CONSTRAINT quota_alerts_kind_threshold_check CHECK (
+        (kind = 'balance' AND threshold IN (20, 5, 0)) OR
+        (kind = 'expiry' AND threshold IN (7, 3, 1))
+    ),
+    recipient_line_user_id VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    next_attempt_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    sent_at TIMESTAMP WITH TIME ZONE,
+    failed_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT quota_alerts_lot_kind_threshold_key UNIQUE (merchant_id, cycle_lot_id, kind, threshold)
+);
+
 CREATE TABLE system_logs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     merchant_id UUID REFERENCES merchants(id) ON DELETE SET NULL,
@@ -346,6 +367,7 @@ CREATE INDEX idx_notifications_status ON notifications(status);
 CREATE INDEX idx_usage_counters_merchant_id ON usage_counters(merchant_id);
 CREATE INDEX idx_usage_counters_year_month ON usage_counters(year, month);
 CREATE INDEX idx_credit_lots_merchant_fifo ON credit_lots(merchant_id, expires_at, started_at) WHERE credits_remaining > 0;
+CREATE INDEX idx_quota_alerts_pending ON quota_alerts(next_attempt_at, created_at) WHERE sent_at IS NULL AND failed_at IS NULL;
 
 -- LINE Bot Clients
 CREATE INDEX idx_line_webhook_configs_webhook_ref_id ON line_webhook_configs(webhook_reference_id);
@@ -362,7 +384,7 @@ CREATE INDEX idx_system_logs_created_at ON system_logs(created_at);
 -- ============================================
 
 INSERT INTO subscription_plans (id, name, description, price_monthly, price_yearly, quota_per_month, features, is_popular) VALUES
-('plan-free', 'Free', 'Perfect for trying out SlipSure', 0, 0, 50, '["slip_verify", "line_notify", "csv_export", "analytics"]'::jsonb, FALSE),
+('plan-free', 'Free', 'Perfect for trying out SlipSure', 0, 0, 20, '["slip_verify", "line_notify", "csv_export", "analytics"]'::jsonb, FALSE),
 ('plan-mini', 'Mini', 'For very small teams', 49, 0, 150, '["slip_verify", "line_notify", "csv_export", "analytics"]'::jsonb, FALSE),
 ('plan-starter', 'Starter', 'For small businesses', 99, 0, 300, '["slip_verify", "line_notify", "csv_export", "analytics"]'::jsonb, FALSE),
 ('plan-basic', 'Basic', 'For steady daily usage', 179, 0, 600, '["slip_verify", "line_notify", "csv_export", "analytics"]'::jsonb, FALSE),

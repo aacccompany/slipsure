@@ -18,6 +18,7 @@ type SlipVerificationService struct {
 	transactionRepo      repositories.TransactionRepository
 	usageRepo            repositories.UsageCounterRepository
 	merchantRepo         repositories.MerchantRepository
+	quotaAlerts          *QuotaAlertService
 	storage              *StorageService
 	qrScanner            *QRScannerService
 	bankValidator        *BankValidationService
@@ -50,6 +51,11 @@ func (s *SlipVerificationService) SetVerificationCallback(callback func(slip *mo
 	s.verificationCallback = callback
 }
 
+// SetQuotaAlertService enables low-credit alerts after a credit is consumed.
+func (s *SlipVerificationService) SetQuotaAlertService(alerts *QuotaAlertService) {
+	s.quotaAlerts = alerts
+}
+
 func subscriptionAllowsVerification(subscription *models.Subscription) bool {
 	if subscription.ExpiresAt != nil && !subscription.ExpiresAt.After(time.Now()) {
 		return false
@@ -79,8 +85,23 @@ func (s *SlipVerificationService) UploadAndVerify(ctx context.Context, merchantI
 			quotaStatus.Used, quotaStatus.QuotaLimit, quotaStatus.ResetDate.Format("2006-01-02"))
 	}
 
+	var alertBefore *models.QuotaStatus
+	if s.quotaAlerts != nil {
+		alertBefore, err = s.quotaAlerts.Snapshot(merchantID)
+		if err != nil {
+			log.Printf("Failed to read alert balance for merchant %s: %v", merchantID, err)
+			alertBefore = nil
+		}
+	}
 	if err := s.incrementVerificationUsage(subscription, merchantID); err != nil {
 		return nil, fmt.Errorf("failed to record quota usage: %w", err)
+	}
+	if s.quotaAlerts != nil && alertBefore != nil {
+		if after, err := s.quotaAlerts.Snapshot(merchantID); err != nil {
+			log.Printf("Failed to read quota after scan for merchant %s: %v", merchantID, err)
+		} else if err := s.quotaAlerts.QueueThreshold(merchantID, alertBefore, after); err != nil {
+			log.Printf("Failed to queue quota alert for merchant %s: %v", merchantID, err)
+		}
 	}
 
 	// Create slip record

@@ -95,8 +95,8 @@ export default function AdminMerchantDetailPage() {
   const billing = detail.billing;
   const quotaExtra = detail.subscription?.quota_override ?? 0;
   const packageQuota = Math.max(0, usage.quota - quotaExtra);
-  const quotaPercent = usage.quota > 0 ? Math.min(100, (usage.this_month / usage.quota) * 100) : 0;
-  const quota = quotaTone(quotaPercent);
+  const remainingPercent = usage.quota > 0 ? Math.min(100, Math.max(0, (usage.remaining / usage.quota) * 100)) : 0;
+  const quota = quotaTone(usage.quota > 0 ? 100 - remainingPercent : 100);
   const initials = detail.merchant.shop_name.slice(0, 2).toUpperCase();
   const planName = detail.subscription?.plan?.name || detail.subscription?.plan_id || 'No plan';
   const renewsAt = detail.subscription?.expires_at || detail.usage.next_reset;
@@ -205,16 +205,16 @@ export default function AdminMerchantDetailPage() {
           <section className="bg-white p-5" style={{ border: '1px solid var(--border)' }}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Quota Utilization</p>
-                <p className="mt-1 text-2xl font-black" style={{ color: 'var(--navy)' }}>{usage.this_month.toLocaleString()} / {usage.quota.toLocaleString()}</p>
+                <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Quota Remaining</p>
+                <p className="mt-1 text-2xl font-black" style={{ color: 'var(--navy)' }}>{usage.remaining.toLocaleString()} / {usage.quota.toLocaleString()}</p>
               </div>
               <Activity className="h-6 w-6" style={{ color: quota.text }} />
             </div>
             <div className="mt-4 h-2 overflow-hidden rounded-full" style={{ background: 'var(--border)' }}>
-              <div className="h-full rounded-full" style={{ width: `${quotaPercent}%`, background: quota.bar }} />
+              <div className="h-full rounded-full" style={{ width: `${remainingPercent}%`, background: quota.bar }} />
             </div>
             <div className="mt-2 flex justify-between text-xs">
-              <span style={{ color: 'var(--text-muted)' }}>{usage.remaining.toLocaleString()} slips remaining</span>
+              <span style={{ color: 'var(--text-muted)' }}>{usage.this_month.toLocaleString()} scans recorded this month</span>
               <span className="font-bold" style={{ color: quota.text }}>{quota.label}</span>
             </div>
           </section>
@@ -283,9 +283,9 @@ export default function AdminMerchantDetailPage() {
 
             <div className="grid gap-4 md:grid-cols-[160px_1fr]">
               <div className="flex flex-col items-center justify-center rounded-lg p-4" style={{ background: 'var(--bg-subtle)' }}>
-                <div className="relative flex h-28 w-28 items-center justify-center rounded-full" style={{ background: `conic-gradient(${quota.bar} ${quotaPercent * 3.6}deg, #E5E7EB 0deg)` }}>
+                <div className="relative flex h-28 w-28 items-center justify-center rounded-full" style={{ background: `conic-gradient(${quota.bar} ${remainingPercent * 3.6}deg, #E5E7EB 0deg)` }}>
                   <div className="absolute h-20 w-20 rounded-full bg-white" />
-                  <span className="relative text-2xl font-black" style={{ color: 'var(--navy)' }}>{quotaPercent.toFixed(0)}%</span>
+                  <span className="relative text-2xl font-black" style={{ color: 'var(--navy)' }}>{remainingPercent.toFixed(0)}%</span>
                 </div>
                 <p className="mt-3 text-sm font-bold" style={{ color: 'var(--navy)' }}>{usage.remaining.toLocaleString()} slips remaining</p>
                 <p className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Resets {formatShortDate(usage.next_reset)}</p>

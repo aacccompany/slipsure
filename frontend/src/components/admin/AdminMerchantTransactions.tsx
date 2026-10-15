@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Code2, Eye, Loader2, RefreshCw, Search, X } from 'lucide-react';
 import { api } from '@/lib/api-client';
-import type { Transaction, TransactionStatus } from '@/types/api';
+import type { AdminSlipHistoryItem, Slip, Transaction } from '@/types/api';
 
 type Props = {
   merchantId: string;
@@ -124,17 +124,45 @@ function TransactionDetailModal({
   );
 }
 
+function RejectedSlipDetailModal({ slip, onClose }: { slip: Slip; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+      <div className="w-full max-w-lg rounded-lg bg-white shadow-xl" onClick={(event) => event.stopPropagation()}>
+        <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-4">
+          <div>
+            <p className="font-mono text-[10px] uppercase" style={{ color: 'var(--text-muted)' }}>Slip detail</p>
+            <h2 className="break-all text-lg font-bold" style={{ color: 'var(--navy)' }}>{slip.id}</h2>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Close slip detail" className="rounded-md border border-zinc-200 p-2">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="p-6">
+          <DetailLine label="Status" value={slip.status} />
+          <DetailLine label="Reason" value={slip.fail_reason?.replaceAll('_', ' ') || '-'} />
+          <DetailLine label="SlipSure plan credits" value={1} />
+          <DetailLine label="Submitted" value={formatDate(slip.created_at)} />
+          <DetailLine label="Completed" value={formatDate(slip.processing_completed_at)} />
+          <p className="mt-4 text-sm" style={{ color: 'var(--text-muted)' }}>
+            No transaction was recorded for this rejected slip.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function AdminMerchantTransactions({ merchantId }: Props) {
   const [page, setPage] = useState(1);
-  const [status, setStatus] = useState<'' | TransactionStatus>('');
+  const [status, setStatus] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [search, setSearch] = useState('');
-  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [selectedItem, setSelectedItem] = useState<AdminSlipHistoryItem | null>(null);
 
   const transactionsQuery = useQuery({
-    queryKey: ['admin-merchant-transactions', merchantId, page, status, startDate, endDate, search],
-    queryFn: () => api.getAdminMerchantTransactions(merchantId, {
+    queryKey: ['admin-merchant-slip-history', merchantId, page, status, startDate, endDate, search],
+    queryFn: () => api.getAdminMerchantSlipHistory(merchantId, {
       page,
       limit: 20,
       status: status || undefined,
@@ -184,16 +212,17 @@ export function AdminMerchantTransactions({ merchantId }: Props) {
             <select
               value={status}
               onChange={(event) => {
-                setStatus(event.target.value as '' | TransactionStatus);
+                setStatus(event.target.value);
                 setPage(1);
               }}
               className="mt-1 h-10 w-full px-3 text-sm outline-none"
               style={{ border: '1px solid var(--border)', color: 'var(--navy)', background: '#fff' }}
             >
               <option value="">ทั้งหมด</option>
-              <option value="success">สำเร็จ</option>
+              <option value="verified">สำเร็จ</option>
               <option value="pending">รอตรวจสอบ</option>
               <option value="failed">ไม่สำเร็จ</option>
+              <option value="duplicate">สลิปซ้ำ</option>
               <option value="processing">กำลังประมวลผล</option>
             </select>
           </label>
@@ -280,8 +309,10 @@ export function AdminMerchantTransactions({ merchantId }: Props) {
           <div className="flex h-48 items-center justify-center">
             <Loader2 className="h-5 w-5 animate-spin" style={{ color: 'var(--blue)' }} />
           </div>
+        ) : transactionsQuery.isError ? (
+          <p role="alert" className="p-5 text-sm text-red-700">Could not load slip history. Please refresh and try again.</p>
         ) : transactions.length === 0 ? (
-          <p className="p-5 text-sm" style={{ color: 'var(--text-muted)' }}>No transaction logs yet.</p>
+          <p className="p-5 text-sm" style={{ color: 'var(--text-muted)' }}>No slip attempts yet.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
@@ -295,35 +326,39 @@ export function AdminMerchantTransactions({ merchantId }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {transactions.map((transaction) => (
-                  <tr key={transaction.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                {transactions.map((item) => {
+                  const { slip, transaction } = item;
+                  const isDuplicate = slip.fail_reason === 'DUPLICATE_SLIP' || Boolean(transaction?.is_duplicate);
+                  const displayStatus = isDuplicate && slip.status === 'failed' ? 'duplicate' : slip.status;
+                  return (
+                  <tr key={slip.id} style={{ borderBottom: '1px solid var(--border)' }}>
                     <td className="px-4 py-3">
-                      <span className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-black uppercase" style={{ background: transaction.status === 'success' ? '#DCFCE7' : transaction.status === 'failed' ? '#FEE2E2' : '#FEF3C7', color: transaction.status === 'success' ? '#047857' : transaction.status === 'failed' ? '#DC2626' : '#D97706' }}>
-                        <span className="h-1.5 w-1.5 rounded-full" style={{ background: transaction.status === 'success' ? '#10B981' : transaction.status === 'failed' ? '#EF4444' : '#F59E0B' }} />
-                        {transaction.status}
+                      <span className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-black uppercase" style={{ background: slip.status === 'verified' ? '#DCFCE7' : slip.status === 'failed' ? '#FEE2E2' : '#FEF3C7', color: slip.status === 'verified' ? '#047857' : slip.status === 'failed' ? '#DC2626' : '#D97706' }}>
+                        <span className="h-1.5 w-1.5 rounded-full" style={{ background: slip.status === 'verified' ? '#10B981' : slip.status === 'failed' ? '#EF4444' : '#F59E0B' }} />
+                        {displayStatus}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-base font-black" style={{ color: 'var(--navy)' }}>฿{transaction.amount.toLocaleString('en-US')}</td>
+                    <td className="px-4 py-3 text-base font-black" style={{ color: 'var(--navy)' }}>{transaction ? formatAmount(transaction.amount) : '-'}</td>
                     <td className="px-4 py-3">
                       <p className="max-w-[340px] truncate font-bold" style={{ color: 'var(--navy)' }}>
-                        {transaction.sender_name || transaction.sender_bank || '-'} → {transaction.receiver_name || transaction.receiver_bank || '-'}
+                        {transaction ? `${transaction.sender_name || transaction.sender_bank || '-'} → ${transaction.receiver_name || transaction.receiver_bank || '-'}` : slip.fail_reason?.replaceAll('_', ' ') || '-'}
                       </p>
-                      <p className="font-mono text-[10px]" style={{ color: 'var(--text-muted)' }}>{transaction.reference_no || transaction.id}</p>
+                      <p className="font-mono text-[10px]" style={{ color: 'var(--text-muted)' }}>{transaction?.reference_no || slip.id}</p>
                     </td>
                     <td className="px-4 py-3 font-black" style={{ color: 'var(--navy)' }}>1</td>
-                    <td className="px-4 py-3 font-mono text-xs" style={{ color: 'var(--text-muted)' }}>{formatDate(transaction.created_at)}</td>
+                    <td className="px-4 py-3 font-mono text-xs" style={{ color: 'var(--text-muted)' }}>{formatDate(slip.created_at)}</td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-2">
                         <button
                           type="button"
-                          onClick={() => setSelectedTransaction(transaction)}
+                          onClick={() => setSelectedItem(item)}
                           className="inline-flex items-center gap-2 px-3 py-2 text-sm font-bold"
                           style={{ border: '1px solid var(--border)', color: 'var(--navy)', background: '#fff' }}
                         >
                           <Eye className="h-4 w-4" />
                           ดูรายละเอียด
                         </button>
-                        {transaction.is_duplicate && (
+                        {isDuplicate && (
                           <span className="inline-flex items-center px-3 py-2 text-xs font-bold" style={{ border: '1px solid #F59E0B', color: '#D97706' }}>
                             Duplicate
                           </span>
@@ -331,7 +366,8 @@ export function AdminMerchantTransactions({ merchantId }: Props) {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -359,11 +395,14 @@ export function AdminMerchantTransactions({ merchantId }: Props) {
         )}
       </section>
 
-      {selectedTransaction && (
+      {selectedItem?.transaction && (
         <TransactionDetailModal
-          transaction={selectedTransaction}
-          onClose={() => setSelectedTransaction(null)}
+          transaction={selectedItem.transaction}
+          onClose={() => setSelectedItem(null)}
         />
+      )}
+      {selectedItem && !selectedItem.transaction && (
+        <RejectedSlipDetailModal slip={selectedItem.slip} onClose={() => setSelectedItem(null)} />
       )}
     </div>
   );

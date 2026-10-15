@@ -15,7 +15,6 @@ var migrationFiles embed.FS
 // seeds are excluded because they would change existing data.
 var migrations = []string{
 	"000004_add_stripe_columns.sql",
-	"20250609_update_line_webhook_columns.up.sql",
 	"20250611_create_line_webhook_configs.sql",
 	"20260709_add_free_plan_used_to_merchants.sql",
 	"20260814_create_line_bot_clients.sql",
@@ -24,6 +23,11 @@ var migrations = []string{
 	"20261013_add_subscription_quota_override.sql",
 	"20261014_add_user_active_status.sql",
 	"20261014_add_credit_lots.sql",
+	"20261015_add_quota_alerts.sql",
+	"20261015_add_quota_alert_recipient.sql",
+	"20261015_allow_users_without_email.sql",
+	"20261015_add_quota_expiry_alerts.sql",
+	"20261015_set_free_plan_quota_20.sql",
 }
 
 // RunMigrations applies pending migrations once, in order. A fresh database is
@@ -50,7 +54,8 @@ func RunMigrations() error {
 		(SELECT COUNT(*) FROM pg_tables WHERE schemaname = 'public'
 		 AND tablename IN ('users', 'merchants', 'subscription_plans', 'subscriptions',
 		 'payment_logs', 'credit_lots', 'slips', 'transactions', 'notifications',
-		 'usage_counters', 'line_webhook_configs', 'line_bot_clients', 'system_logs'))`).Scan(&usersExists, &merchantsExists, &applicationTables); err != nil {
+		 'usage_counters', 'line_webhook_configs', 'line_bot_clients', 'system_logs',
+		 'quota_alerts'))`).Scan(&usersExists, &merchantsExists, &applicationTables); err != nil {
 		return fmt.Errorf("check database schema: %w", err)
 	}
 	if usersExists != merchantsExists || (!usersExists && applicationTables > 0) {
