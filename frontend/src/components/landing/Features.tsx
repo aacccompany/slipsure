@@ -44,7 +44,7 @@ const features: Feature[] = [
 export const Features = () => {
   return (
     <section className="px-4 py-16 md:px-8 md:py-24" style={{ background: 'var(--bg)' }}>
-      <div className="mx-auto max-w-7xl">
+      <div className="mx-auto max-w-5xl">
         <div className="mb-10 flex flex-wrap items-end justify-between gap-4 md:mb-14">
           <div>
             <span

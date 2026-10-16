@@ -80,7 +80,7 @@ export default function ServicesPage() {
       <div aria-hidden className="pointer-events-none absolute -right-32 top-10 h-[26rem] w-[26rem] rounded-full" style={{ background: 'var(--cyan-pale)' }} />
       <div aria-hidden className="pointer-events-none absolute -left-40 top-[28rem] h-[24rem] w-[24rem] rounded-full" style={{ background: 'var(--blue-pale)', opacity: 0.7 }} />
 
-      <div className="relative mx-auto max-w-7xl">
+      <div className="relative mx-auto max-w-5xl">
         {/* หัวข้อ */}
         <div className="pop-in mx-auto mb-16 max-w-3xl text-center md:mb-24">
           <span

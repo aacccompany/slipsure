@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 
 const columns = [
@@ -29,7 +30,7 @@ export const Footer = () => {
   return (
     <footer className="px-3 pb-3 pt-6 md:px-5 md:pb-5" style={{ background: 'var(--bg)' }}>
       <div
-        className="relative mx-auto max-w-7xl overflow-hidden rounded-[2.5rem] px-7 py-12 md:rounded-[3rem] md:px-14"
+        className="relative mx-auto max-w-5xl overflow-hidden rounded-[2.5rem] px-7 py-12 md:rounded-[3rem] md:px-14"
         style={{ background: 'var(--navy)' }}
       >
         {/* decorative bubbles */}
@@ -47,12 +48,9 @@ export const Footer = () => {
         <div className="relative mb-12 flex flex-col justify-between gap-12 md:flex-row">
           {/* Brand */}
           <div className="max-w-sm space-y-4">
-            <span
-              className="block text-2xl font-extrabold tracking-tight"
-              style={{ color: '#fff', fontFamily: 'var(--font-display)' }}
-            >
-              flow<span style={{ color: 'var(--cyan)' }}>slip</span>.ai
-            </span>
+            <Link href="/" className="inline-flex items-center rounded-full bg-white px-5 py-1">
+              <Image src="/logo.png" alt="Flowslip" width={160} height={53} className="-my-2 h-14 w-auto" />
+            </Link>
             <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.6)' }}>
               ระบบตรวจสอบสลิปโอนเงิน ผ่าน Bank Gateway โดยตรง แม่นยำ รวดเร็ว ไม่มีการเดา
             </p>

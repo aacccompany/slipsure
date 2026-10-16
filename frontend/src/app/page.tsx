@@ -95,7 +95,7 @@ export default function Home() {
 
       {/* ── Stats bento ─────────────────────────────────────── */}
       <section className="px-4 py-12 md:px-8 md:py-16">
-        <div className="mx-auto grid max-w-7xl gap-4 md:grid-cols-6 md:gap-5">
+        <div className="mx-auto grid max-w-5xl gap-4 md:grid-cols-6 md:gap-5">
           {stats.map((s) => (
             <div
               key={s.label}
@@ -128,7 +128,7 @@ export default function Home() {
 
       {/* ── Why FlowSlip — fake vs real ─────────────────────── */}
       <section className="px-4 pb-16 md:px-8 md:pb-24">
-        <div className="mx-auto max-w-7xl">
+        <div className="mx-auto max-w-5xl">
           <div className="mb-10 text-center md:mb-14">
             <SectionTag>ทำไมต้อง FlowSlip</SectionTag>
             <h2 className="font-display text-4xl font-extrabold leading-[1.2] md:text-6xl" style={{ color: 'var(--navy)' }}>
@@ -207,7 +207,7 @@ export default function Home() {
       {/* ── 3 steps ─────────────────────────────────────────── */}
       <section className="px-4 py-4 md:px-8">
         <div
-          className="mx-auto max-w-7xl rounded-[2.5rem] px-6 py-14 md:rounded-[3.5rem] md:px-14 md:py-20"
+          className="mx-auto max-w-5xl rounded-[2.5rem] px-6 py-14 md:rounded-[3.5rem] md:px-14 md:py-20"
           style={{ background: 'var(--blue-pale)' }}
         >
           <div className="mb-12 flex flex-wrap items-end justify-between gap-4">
@@ -260,7 +260,7 @@ export default function Home() {
 
       {/* ── FAQ ─────────────────────────────────────────────── */}
       <section id="faq" className="scroll-mt-24 px-4 py-16 md:px-8 md:py-24">
-        <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1fr_2fr] lg:gap-16">
+        <div className="mx-auto grid max-w-5xl gap-10 lg:grid-cols-[1fr_2fr] lg:gap-16">
           <div className="self-start lg:sticky lg:top-28">
             <SectionTag>FAQ</SectionTag>
             <h2 className="font-display mb-5 text-4xl font-extrabold leading-[1.2] md:text-5xl" style={{ color: 'var(--navy)' }}>
@@ -292,7 +292,7 @@ export default function Home() {
       {/* ── CTA ─────────────────────────────────────────────── */}
       <section className="px-4 pb-4 md:px-8">
         <div
-          className="relative mx-auto max-w-7xl overflow-hidden rounded-[2.5rem] md:rounded-[3.5rem]"
+          className="relative mx-auto max-w-5xl overflow-hidden rounded-[2.5rem] md:rounded-[3.5rem]"
           style={{ background: 'var(--navy)' }}
         >
           <div aria-hidden className="absolute -right-24 -top-24 h-96 w-96 rounded-full" style={{ background: 'var(--blue)', opacity: 0.55 }} />

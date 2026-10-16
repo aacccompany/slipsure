@@ -103,7 +103,7 @@ export default function PricingPage() {
         onConfirm={activateFreePlan}
       />
 
-      <div className="relative mx-auto max-w-7xl">
+      <div className="relative mx-auto max-w-5xl">
         {/* หัวข้อ */}
         <div className="pop-in mx-auto mb-12 max-w-3xl text-center">
           <span

@@ -152,7 +152,7 @@ export const Hero = () => {
         style={{ background: 'var(--cyan-pale)' }}
       />
 
-      <div className="relative mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-[1.15fr_1fr]">
+      <div className="relative mx-auto grid max-w-5xl items-center gap-14 lg:grid-cols-[1.15fr_1fr]">
         {/* Left */}
         <div>
           <span
