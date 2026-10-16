@@ -2,22 +2,22 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { ArrowUpRight, Check, Plus, X } from 'lucide-react';
 import { Hero } from '@/components/landing/Hero';
 import { Marquee } from '@/components/landing/Marquee';
 import { Features } from '@/components/landing/Features';
-import { ChevronDown } from 'lucide-react';
 
 const stats = [
-  { value: '<1 วิ',  label: 'เวลาตรวจสอบ',     sub: 'ต่อสลิป' },
-  { value: '8+',     label: 'ธนาคารที่รองรับ',   sub: 'ทุกธนาคารหลัก' },
-  { value: '24 ชม.', label: 'ตรวจสลิปซ้ำ',       sub: 'ย้อนหลัง' },
-  { value: '100%',   label: 'Bank API',           sub: 'ไม่ใช่การอ่านภาพ' },
+  { value: '<1 วิ', label: 'เวลาตรวจสอบ', sub: 'ต่อสลิป', bg: 'var(--blue)', ink: '#fff', mute: 'rgba(255,255,255,0.7)', span: 'md:col-span-3' },
+  { value: '8+', label: 'ธนาคารที่รองรับ', sub: 'ทุกธนาคารหลัก', bg: '#fff', ink: 'var(--navy)', mute: 'var(--text-muted)', span: 'md:col-span-3' },
+  { value: '24 ชม.', label: 'ตรวจสลิปซ้ำ', sub: 'ย้อนหลัง', bg: 'var(--cyan)', ink: 'var(--navy)', mute: 'rgba(0,24,71,0.65)', span: 'md:col-span-2' },
+  { value: '100%', label: 'Bank API', sub: 'ไม่ใช่การอ่านภาพ', bg: 'var(--navy)', ink: '#fff', mute: 'rgba(255,255,255,0.65)', span: 'md:col-span-4' },
 ];
 
 const steps = [
-  { num: '01', title: 'สมัครฟรี',               desc: 'สร้างบัญชีภายใน 1 นาที ไม่ต้องใช้บัตรเครดิต รับโควต้า 50 สลิปทันที' },
-  { num: '02', title: 'ตั้งค่า LINE OA หรือ API', desc: 'เชื่อมต่อ LINE OA ผ่าน Dashboard หรือรับ Token เพื่อใช้งานผ่าน API' },
-  { num: '03', title: 'รับสลิป ตรวจอัตโนมัติ',   desc: 'ลูกค้าส่งสลิปมา ระบบตรวจสอบและตอบกลับให้อัตโนมัติทันที' },
+  { num: '1', title: 'สมัครฟรี', desc: 'สร้างบัญชีภายใน 1 นาที ไม่ต้องใช้บัตรเครดิต รับโควต้า 20 สลิปทันที' },
+  { num: '2', title: 'ตั้งค่า LINE OA หรือ API', desc: 'เชื่อมต่อ LINE OA ผ่าน Dashboard หรือรับ Token เพื่อใช้งานผ่าน API' },
+  { num: '3', title: 'รับสลิป ตรวจอัตโนมัติ', desc: 'ลูกค้าส่งสลิปมา ระบบตรวจสอบและตอบกลับให้อัตโนมัติทันที' },
 ];
 
 const faqs = [
@@ -29,31 +29,57 @@ const faqs = [
   { q: 'ยกเลิกแผนได้ไหม?', a: 'ยกเลิกได้ทุกเมื่อจาก Dashboard โดยไม่มีค่าปรับ แผนจะยังใช้งานได้จนสิ้นรอบบิลปัจจุบัน' },
 ];
 
+const extras = [
+  { title: 'เชื่อมต่อ LINE OA', desc: 'ลูกค้าส่งสลิปผ่าน LINE รับผลยืนยันอัตโนมัติ' },
+  { title: 'ป้องกันสลิปซ้ำ', desc: 'ตรวจย้อนหลัง 24 ชั่วโมง ป้องกัน Double Spend' },
+  { title: 'ดูสถิติ Real-time', desc: 'ติดตามสลิปทุกใบและสถิติย้อนหลังใน Dashboard' },
+  { title: 'REST API', desc: 'เชื่อมต่อเข้ากับระบบหลังร้านของคุณได้โดยตรง' },
+];
+
+const trust = ['ข้อมูลเข้ารหัส AES-256', 'ลบสลิปอัตโนมัติหลัง 90 วัน', 'ยืนยันตรงจาก Bank API', 'ไม่แชร์ข้อมูลกับบุคคลภายนอก'];
+
+function SectionTag({ children }: { children: React.ReactNode }) {
+  return (
+    <span
+      className="mb-4 inline-block rounded-full px-4 py-1.5 text-sm font-bold"
+      style={{ background: 'var(--blue-pale)', color: 'var(--blue)' }}
+    >
+      {children}
+    </span>
+  );
+}
+
 function FAQItem({ q, a }: { q: string; a: string }) {
   const [open, setOpen] = useState(false);
   return (
-    <div style={{ borderBottom: '1px solid var(--border)' }}>
+    <div
+      className="overflow-hidden rounded-[1.75rem] transition-colors"
+      style={{
+        background: open ? 'var(--navy)' : '#fff',
+        boxShadow: open ? 'none' : '0 0 0 1px rgba(0,24,71,0.07)',
+      }}
+    >
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-start justify-between py-5 text-left gap-6 group"
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-6 px-6 py-5 text-left md:px-8"
       >
-        <span
-          className="text-base font-semibold leading-snug transition-colors"
-          style={{ color: open ? 'var(--blue)' : 'var(--navy)' }}
-        >
+        <span className="text-base font-bold leading-snug md:text-lg" style={{ color: open ? '#fff' : 'var(--navy)' }}>
           {q}
         </span>
-        <ChevronDown
-          className="w-4 h-4 mt-0.5 shrink-0 transition-all duration-200"
+        <span
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-transform duration-300"
           style={{
-            color: 'var(--blue)',
-            transform: open ? 'rotate(180deg)' : 'rotate(0)',
-            opacity: open ? 1 : 0.5,
+            background: open ? 'var(--cyan)' : 'var(--blue-pale)',
+            color: open ? 'var(--navy)' : 'var(--blue)',
+            transform: open ? 'rotate(135deg)' : 'rotate(0)',
           }}
-        />
+        >
+          <Plus className="h-4 w-4" />
+        </span>
       </button>
       {open && (
-        <p className="text-sm leading-relaxed pb-5 max-w-2xl" style={{ color: 'var(--text-muted)' }}>
+        <p className="pop-in max-w-2xl px-6 pb-6 text-sm leading-relaxed md:px-8 md:text-base" style={{ color: 'rgba(255,255,255,0.75)' }}>
           {a}
         </p>
       )}
@@ -67,174 +93,163 @@ export default function Home() {
       <Hero />
       <Marquee />
 
-      {/* ── Stats — raw numbers, no cards ──────────────────── */}
-      <section style={{ background: 'var(--navy)' }}>
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-4">
-            {stats.map((s, i) => (
+      {/* ── Stats bento ─────────────────────────────────────── */}
+      <section className="px-4 py-12 md:px-8 md:py-16">
+        <div className="mx-auto grid max-w-7xl gap-4 md:grid-cols-6 md:gap-5">
+          {stats.map((s) => (
+            <div
+              key={s.label}
+              className={`group relative overflow-hidden rounded-[2.25rem] p-8 transition-transform duration-300 hover:-translate-y-1 md:p-10 ${s.span}`}
+              style={{ background: s.bg, boxShadow: s.bg === '#fff' ? '0 0 0 1px rgba(0,24,71,0.07)' : undefined }}
+            >
               <div
-                key={s.label}
-                className="py-14 px-8 text-center group transition-colors hover:bg-[rgba(0,82,255,0.07)]"
-                style={{ borderRight: i < 3 ? '1px solid rgba(0,82,255,0.12)' : 'none' }}
+                aria-hidden
+                className="absolute -bottom-10 -right-10 h-36 w-36 rounded-full transition-transform duration-500 group-hover:scale-125"
+                style={{ background: s.ink, opacity: 0.07 }}
+              />
+              <div
+                className="font-display relative text-[3.2rem] font-extrabold leading-none md:text-[4.5rem]"
+                style={{ color: s.ink, letterSpacing: '-0.02em' }}
               >
-                <div
-                  className="font-bold mb-1 tracking-tight"
-                  style={{ fontSize: 'clamp(2.2rem, 5vw, 3.5rem)', color: 'var(--blue)', letterSpacing: '-0.03em', lineHeight: 1 }}
-                >
-                  {s.value}
-                </div>
-                <p className="text-sm font-medium mb-0.5" style={{ color: 'rgba(248,250,252,0.75)' }}>{s.label}</p>
-                <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'rgba(248,250,252,0.28)' }}>{s.sub}</p>
+                {s.value}
               </div>
-            ))}
-          </div>
+              <p className="relative mt-4 text-lg font-bold" style={{ color: s.ink }}>
+                {s.label}
+              </p>
+              <p className="relative text-sm" style={{ color: s.mute }}>
+                {s.sub}
+              </p>
+            </div>
+          ))}
         </div>
       </section>
 
       <Features />
 
-      {/* ── Why FlowSlip — giant ✗ / ✓ ─────────────────────── */}
-      <section style={{ borderBottom: '1px solid var(--border)' }}>
-        <div className="max-w-7xl mx-auto">
-
-          {/* Section label */}
-          <div className="px-6 md:px-12 pt-14 pb-10 flex items-center gap-4">
-            <span className="inline-block w-2 h-2 rotate-45" style={{ background: 'var(--blue)' }} />
-            <span className="font-mono text-[11px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-              ทำไมต้อง FlowSlip
-            </span>
+      {/* ── Why FlowSlip — fake vs real ─────────────────────── */}
+      <section className="px-4 pb-16 md:px-8 md:pb-24">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-10 text-center md:mb-14">
+            <SectionTag>ทำไมต้อง FlowSlip</SectionTag>
+            <h2 className="font-display text-4xl font-extrabold leading-[1.2] md:text-6xl" style={{ color: 'var(--navy)' }}>
+              ภาพหลอกตาได้
+              <br />
+              <span style={{ color: 'var(--blue)' }}>ธนาคารหลอกไม่ได้</span>
+            </h2>
           </div>
 
-          {/* Giant ✗ / ✓ comparison — the human touch */}
-          <div className="grid gap-5 px-6 md:grid-cols-2 md:px-12 pb-8">
-
-            {/* ✗ side */}
-            <div
-              className="relative overflow-hidden rounded-3xl bg-white px-10 pt-10 pb-14"
-              style={{ border: '1px solid var(--border)' }}
-            >
-              {/* Giant decorative ✗ */}
-              <div
-                className="absolute -top-4 -left-2 select-none pointer-events-none font-black leading-none"
-                style={{ fontSize: '14rem', color: 'rgba(239,68,68,0.06)', letterSpacing: '-0.05em' }}
+          <div className="grid gap-5 md:grid-cols-2">
+            <div className="relative overflow-hidden rounded-[2.5rem] bg-white p-9 md:p-12" style={{ boxShadow: '0 0 0 1px rgba(0,24,71,0.07)' }}>
+              <span
+                className="mb-6 inline-flex h-14 w-14 items-center justify-center rounded-2xl"
+                style={{ background: 'var(--fake-pale)', color: 'var(--fake)' }}
               >
-                ✗
-              </div>
-              <div className="relative">
-                <span className="font-mono text-[10px] uppercase tracking-widest text-red-400 block mb-4">
-                  ไม่ปลอดภัย
-                </span>
-                <h3
-                  className="font-bold mb-3"
-                  style={{ fontSize: 'clamp(1.4rem, 3vw, 2rem)', color: 'var(--navy)', lineHeight: 1.2 }}
-                >
-                  OCR / AI อ่านภาพสลิป
-                </h3>
-                <p className="text-base leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-                  แอปสร้างสลิปปลอมมีให้ดาวน์โหลดฟรีบนมือถือ
-                  AI วิเคราะห์ภาพถูกหลอกได้ง่าย ไม่ว่าระบบจะฉลาดแค่ไหน
-                </p>
-              </div>
+                <X className="h-7 w-7" strokeWidth={3} />
+              </span>
+              <span className="mb-3 block text-sm font-bold" style={{ color: 'var(--fake)' }}>
+                ไม่ปลอดภัย
+              </span>
+              <h3 className="mb-4 text-2xl font-extrabold md:text-3xl" style={{ color: 'var(--navy)' }}>
+                OCR / AI อ่านภาพสลิป
+              </h3>
+              <p className="text-base leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+                แอปสร้างสลิปปลอมมีให้ดาวน์โหลดฟรีบนมือถือ AI วิเคราะห์ภาพถูกหลอกได้ง่าย ไม่ว่าระบบจะฉลาดแค่ไหน
+              </p>
             </div>
 
-            {/* ✓ side */}
-            <div
-              className="relative overflow-hidden rounded-3xl px-10 pt-10 pb-14"
-              style={{ background: 'var(--blue-pale)' }}
-            >
-              {/* Giant decorative ✓ */}
+            <div className="relative overflow-hidden rounded-[2.5rem] p-9 md:p-12" style={{ background: 'var(--navy)' }}>
               <div
-                className="absolute -top-4 -left-2 select-none pointer-events-none font-black leading-none"
-                style={{ fontSize: '14rem', color: 'rgba(0,82,255,0.07)', letterSpacing: '-0.05em' }}
+                aria-hidden
+                className="absolute -right-16 -top-16 h-56 w-56 rounded-full"
+                style={{ background: 'var(--blue)', opacity: 0.5 }}
+              />
+              <span
+                className="relative mb-6 inline-flex h-14 w-14 items-center justify-center rounded-2xl"
+                style={{ background: 'var(--cyan)', color: 'var(--navy)' }}
               >
-                ✓
-              </div>
-              <div className="relative">
+                <Check className="h-7 w-7" strokeWidth={3} />
+              </span>
+              <span className="relative mb-3 block text-sm font-bold" style={{ color: 'var(--cyan)' }}>
+                ปลอดภัย 100%
+              </span>
+              <h3 className="relative mb-4 text-2xl font-extrabold text-white md:text-3xl">ยืนยันผ่าน Bank Gateway</h3>
+              <p className="relative text-base leading-relaxed" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                ผลมาจากธนาคารโดยตรง ปลอมแปลงไม่ได้ ไม่ว่าสลิปจะถูกสร้างมาอย่างดีแค่ไหน ระบบธนาคารไม่มีรายการนั้น
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {extras.map((item, i) => (
+              <div
+                key={item.title}
+                className="rounded-[1.75rem] p-7 transition-colors hover:bg-[var(--blue-pale)]"
+                style={{ background: 'rgba(255,255,255,0.7)', boxShadow: '0 0 0 1px rgba(0,24,71,0.07)' }}
+              >
                 <span
-                  className="font-mono text-[10px] uppercase tracking-widest block mb-4"
-                  style={{ color: 'var(--blue)' }}
+                  className="mb-4 flex h-9 w-9 items-center justify-center rounded-full text-sm font-extrabold"
+                  style={{ background: 'var(--blue)', color: '#fff' }}
                 >
-                  ปลอดภัย 100%
+                  {i + 1}
                 </span>
-                <h3
-                  className="font-bold mb-3"
-                  style={{ fontSize: 'clamp(1.4rem, 3vw, 2rem)', color: 'var(--navy)', lineHeight: 1.2 }}
-                >
-                  ยืนยันผ่าน Bank Gateway
-                </h3>
-                <p className="text-base leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-                  ผลมาจากธนาคารโดยตรง ปลอมแปลงไม่ได้
-                  ไม่ว่าสลิปจะถูกสร้างมาอย่างดีแค่ไหน ระบบธนาคารไม่มีรายการนั้น
+                <p className="mb-1.5 text-base font-bold" style={{ color: 'var(--navy)' }}>
+                  {item.title}
                 </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Feature list — 4 items below comparison */}
-          <div className="grid gap-4 px-6 pb-14 sm:grid-cols-2 md:px-12 lg:grid-cols-4">
-            {[
-              { num: '01', title: 'เชื่อมต่อ LINE OA', desc: 'ลูกค้าส่งสลิปผ่าน LINE รับผลยืนยันอัตโนมัติ' },
-              { num: '02', title: 'ป้องกันสลิปซ้ำ', desc: 'ตรวจย้อนหลัง 24 ชั่วโมง ป้องกัน Double Spend' },
-              { num: '03', title: 'ดูสถิติ Real-time', desc: 'ติดตามสลิปทุกใบและสถิติย้อนหลังใน Dashboard' },
-              { num: '04', title: 'REST API', desc: 'เชื่อมต่อเข้ากับระบบหลังร้านของคุณได้โดยตรง' },
-            ].map((item) => (
-              <div
-                key={item.num}
-                className="rounded-2xl bg-white p-7"
-                style={{ border: '1px solid var(--border)' }}
-              >
-                <span className="font-mono text-[10px] uppercase tracking-widest block mb-3" style={{ color: 'var(--blue)' }}>
-                  {item.num}
-                </span>
-                <p className="font-bold text-sm mb-1.5" style={{ color: 'var(--navy)' }}>{item.title}</p>
-                <p className="text-sm leading-relaxed" style={{ color: 'var(--text-muted)' }}>{item.desc}</p>
+                <p className="text-sm leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+                  {item.desc}
+                </p>
               </div>
             ))}
           </div>
-
         </div>
       </section>
 
-      {/* ── เริ่มใช้งาน 3 ขั้นตอน ──────────────────────────── */}
-      <section className="py-20 px-6 md:px-12" style={{ background: '#fff', borderBottom: '1px solid var(--border)' }}>
-        <div className="max-w-7xl mx-auto">
-
-          <div className="flex items-baseline justify-between mb-14 flex-wrap gap-4">
-            <h2
-              className="font-bold tracking-tight"
-              style={{ fontSize: 'clamp(2rem, 5vw, 3.5rem)', color: 'var(--navy)', letterSpacing: '-0.02em', lineHeight: 1 }}
-            >
+      {/* ── 3 steps ─────────────────────────────────────────── */}
+      <section className="px-4 py-4 md:px-8">
+        <div
+          className="mx-auto max-w-7xl rounded-[2.5rem] px-6 py-14 md:rounded-[3.5rem] md:px-14 md:py-20"
+          style={{ background: 'var(--blue-pale)' }}
+        >
+          <div className="mb-12 flex flex-wrap items-end justify-between gap-4">
+            <h2 className="font-display text-4xl font-extrabold leading-[1.2] md:text-6xl" style={{ color: 'var(--navy)' }}>
               พร้อมใช้งานใน
-              <span style={{ color: 'var(--blue)' }}> 3 ขั้นตอน</span>
+              <br />
+              <span style={{ color: 'var(--blue)' }}>3 ขั้นตอน</span>
             </h2>
             <Link
               href="/register"
-              className="font-mono text-[11px] uppercase tracking-widest transition-colors shrink-0"
-              style={{ color: 'var(--blue)' }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--navy)')}
-              onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--blue)')}
+              className="group inline-flex items-center gap-2 rounded-full bg-white py-2 pl-6 pr-2 text-sm font-bold transition-transform hover:scale-[1.03]"
+              style={{ color: 'var(--navy)' }}
             >
-              สมัครฟรีเลย →
+              สมัครฟรีเลย
+              <span
+                className="flex h-9 w-9 items-center justify-center rounded-full transition-transform group-hover:rotate-45"
+                style={{ background: 'var(--navy)', color: '#fff' }}
+              >
+                <ArrowUpRight className="h-4 w-4" />
+              </span>
             </Link>
           </div>
 
-          <div className="grid gap-5 md:grid-cols-3">
-            {steps.map((step) => (
+          <div className="relative grid gap-5 md:grid-cols-3">
+            {steps.map((step, i) => (
               <div
                 key={step.num}
-                className="rounded-3xl p-8 md:p-10 transition-colors hover:bg-[var(--bg-subtle)]"
-                style={{ border: '1px solid var(--border)' }}
+                className="relative rounded-[2rem] bg-white p-8 transition-transform duration-300 hover:-translate-y-1.5 md:p-9"
               >
-                <div
-                  className="font-black mb-6 leading-none select-none"
-                  style={{ fontSize: '4.5rem', color: 'var(--border)', letterSpacing: '-0.04em' }}
+                <span
+                  className="font-display mb-6 flex h-16 w-16 items-center justify-center rounded-full text-3xl font-extrabold"
+                  style={{
+                    background: i === 1 ? 'var(--cyan)' : i === 2 ? 'var(--blue)' : 'var(--navy)',
+                    color: i === 1 ? 'var(--navy)' : '#fff',
+                  }}
                 >
                   {step.num}
-                </div>
-                <h3 className="font-bold text-xl mb-3" style={{ color: 'var(--navy)', lineHeight: 1.2 }}>
+                </span>
+                <h3 className="mb-3 text-xl font-extrabold leading-snug" style={{ color: 'var(--navy)' }}>
                   {step.title}
                 </h3>
-                <p className="text-sm leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+                <p className="text-sm leading-relaxed md:text-base" style={{ color: 'var(--text-muted)' }}>
                   {step.desc}
                 </p>
               </div>
@@ -243,126 +258,106 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── FAQ ────────────────────────────────────────────── */}
-      <section className="py-20 px-6 md:px-12" style={{ borderBottom: '1px solid var(--border)' }}>
-        <div className="max-w-7xl mx-auto">
+      {/* ── FAQ ─────────────────────────────────────────────── */}
+      <section id="faq" className="scroll-mt-24 px-4 py-16 md:px-8 md:py-24">
+        <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1fr_2fr] lg:gap-16">
+          <div className="self-start lg:sticky lg:top-28">
+            <SectionTag>FAQ</SectionTag>
+            <h2 className="font-display mb-5 text-4xl font-extrabold leading-[1.2] md:text-5xl" style={{ color: 'var(--navy)' }}>
+              คำถาม
+              <br />
+              <span style={{ color: 'var(--blue)' }}>ที่พบบ่อย</span>
+            </h2>
+            <p className="mb-6 text-base" style={{ color: 'var(--text-muted)' }}>
+              ไม่เจอคำตอบที่ต้องการ?
+            </p>
+            <a
+              href="mailto:hello@flowslip.ai"
+              className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-bold transition-colors hover:bg-[var(--blue-pale)]"
+              style={{ color: 'var(--navy)', boxShadow: '0 0 0 1.5px rgba(0,24,71,0.12)' }}
+            >
+              ติดต่อเราโดยตรง
+              <ArrowUpRight className="h-4 w-4" />
+            </a>
+          </div>
 
-          <div className="grid lg:grid-cols-[1fr_2fr] gap-16">
-
-            {/* Left — sticky label */}
-            <div className="lg:sticky lg:top-24 self-start">
-              <h2
-                className="font-bold tracking-tight mb-4"
-                style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', color: 'var(--navy)', letterSpacing: '-0.02em', lineHeight: 1.1 }}
-              >
-                คำถาม<br />
-                <span style={{ color: 'var(--blue)' }}>ที่พบบ่อย</span>
-              </h2>
-              <p className="text-sm leading-relaxed mb-6" style={{ color: 'var(--text-muted)' }}>
-                ไม่เจอคำตอบที่ต้องการ?
-              </p>
-              <a
-                href="mailto:hello@flowslip.ai"
-                className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest transition-colors"
-                style={{ color: 'var(--navy)' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--blue)')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--navy)')}
-              >
-                ติดต่อเราโดยตรง →
-              </a>
-            </div>
-
-            {/* Right — FAQ items, open layout */}
-            <div style={{ borderTop: '1px solid var(--border)' }}>
-              {faqs.map((faq) => <FAQItem key={faq.q} q={faq.q} a={faq.a} />)}
-            </div>
-
+          <div className="space-y-3">
+            {faqs.map((faq) => (
+              <FAQItem key={faq.q} q={faq.q} a={faq.a} />
+            ))}
           </div>
         </div>
       </section>
 
-      {/* ── Trust strip — quiet ──────────────────────────────── */}
-      <section style={{ background: 'var(--bg-subtle)', borderBottom: '1px solid var(--border)' }}>
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex flex-wrap items-center justify-center gap-8 md:gap-12">
-            {[
-              ['🔒', 'ข้อมูลเข้ารหัส AES-256'],
-              ['🗑️', 'ลบสลิปอัตโนมัติหลัง 90 วัน'],
-              ['🏦', 'ยืนยันตรงจาก Bank API'],
-              ['📵', 'ไม่แชร์ข้อมูลกับบุคคลภายนอก'],
-            ].map(([icon, text]) => (
-              <div key={String(text)} className="flex items-center gap-2">
-                <span>{icon}</span>
-                <span className="text-sm" style={{ color: 'var(--text-muted)' }}>{text as string}</span>
+      {/* ── CTA ─────────────────────────────────────────────── */}
+      <section className="px-4 pb-4 md:px-8">
+        <div
+          className="relative mx-auto max-w-7xl overflow-hidden rounded-[2.5rem] md:rounded-[3.5rem]"
+          style={{ background: 'var(--navy)' }}
+        >
+          <div aria-hidden className="absolute -right-24 -top-24 h-96 w-96 rounded-full" style={{ background: 'var(--blue)', opacity: 0.55 }} />
+          <div aria-hidden className="absolute -bottom-28 left-1/4 h-64 w-64 rounded-full" style={{ background: 'var(--cyan)', opacity: 0.14 }} />
+
+          <div className="relative px-7 py-16 md:px-14 md:py-24">
+            <div className="grid items-end gap-10 md:grid-cols-[1fr_auto]">
+              <div>
+                <span
+                  className="mb-6 inline-block rounded-full px-4 py-1.5 text-sm font-bold"
+                  style={{ background: 'rgba(255,255,255,0.1)', color: 'var(--cyan)' }}
+                >
+                  เริ่มต้นวันนี้
+                </span>
+                <h2
+                  className="font-display mb-6 text-[2.8rem] font-extrabold leading-[1.15] text-white sm:text-6xl lg:text-7xl"
+                >
+                  ปกป้องธุรกิจ
+                  <br />
+                  ของคุณจาก
+                  <br />
+                  <span style={{ color: 'var(--cyan)' }}>สลิปปลอม</span>
+                </h2>
+                <p className="max-w-md text-base leading-relaxed md:text-lg" style={{ color: 'rgba(255,255,255,0.65)' }}>
+                  เชื่อมต่อ LINE OA ภายใน 5 นาที ไม่ต้องเขียนโค้ด ไม่ต้องติดตั้งอะไรเพิ่ม
+                </p>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      {/* ── CTA ────────────────────────────────────────────── */}
-      <section className="px-4 py-10 md:px-8 md:py-14">
-      <div
-        className="relative mx-auto max-w-7xl overflow-hidden rounded-[2rem]"
-        style={{ background: 'var(--navy)' }}
-      >
-        <div className="thai-pattern absolute inset-0 pointer-events-none" style={{ opacity: 0.05 }} />
-
-        <div className="relative px-6 md:px-12 py-20">
-          <div className="grid md:grid-cols-[1fr_auto] gap-12 items-end">
-
-            <div>
-              <p className="font-mono text-[10px] uppercase tracking-widest mb-6" style={{ color: 'rgba(0,82,255,0.55)' }}>
-                เริ่มต้นวันนี้
-              </p>
-              <h2
-                className="font-bold tracking-tight mb-6"
-                style={{
-                  fontSize: 'clamp(2.5rem, 7vw, 6rem)',
-                  color: 'rgba(248,250,252,0.95)',
-                  lineHeight: 1,
-                  letterSpacing: '-0.03em',
-                }}
-              >
-                ปกป้องธุรกิจ<br />
-                ของคุณจาก<br />
-                <span style={{ color: 'var(--cyan)' }}>สลิปปลอม</span>
-              </h2>
-              <p className="text-base leading-relaxed max-w-md" style={{ color: 'rgba(248,250,252,0.45)' }}>
-                เชื่อมต่อ LINE OA ภายใน 5 นาที ไม่ต้องเขียนโค้ด ไม่ต้องติดตั้งอะไรเพิ่ม
-              </p>
+              <div className="flex shrink-0 flex-col gap-3">
+                <Link
+                  href="/register"
+                  className="group inline-flex items-center justify-between gap-4 rounded-full py-2 pl-8 pr-2 text-base font-bold transition-transform hover:scale-[1.03]"
+                  style={{ background: 'var(--cyan)', color: 'var(--navy)' }}
+                >
+                  สมัครใช้งานฟรี
+                  <span
+                    className="flex h-12 w-12 items-center justify-center rounded-full transition-transform group-hover:rotate-45"
+                    style={{ background: 'var(--navy)', color: 'var(--cyan)' }}
+                  >
+                    <ArrowUpRight className="h-5 w-5" />
+                  </span>
+                </Link>
+                <Link
+                  href="/pricing"
+                  className="inline-flex items-center justify-center rounded-full px-8 py-4 text-base font-bold text-white transition-colors hover:bg-white/10"
+                  style={{ boxShadow: 'inset 0 0 0 1.5px rgba(255,255,255,0.3)' }}
+                >
+                  ดูแผนราคา
+                </Link>
+              </div>
             </div>
 
-            <div className="flex flex-col gap-3 shrink-0">
-              <Link
-                href="/register"
-                className="inline-flex items-center justify-center gap-2 px-8 py-4 text-sm font-bold transition-all hover:opacity-90"
-                style={{ background: 'var(--blue)', color: '#fff' }}
-              >
-                สมัครใช้งานฟรี →
-              </Link>
-              <Link
-                href="/pricing"
-                className="inline-flex items-center justify-center gap-2 px-8 py-4 text-sm font-medium border transition-all hover:opacity-75"
-                style={{ borderColor: 'rgba(0,82,255,0.3)', color: 'rgba(248,250,252,0.6)' }}
-              >
-                ดูแผนราคา
-              </Link>
+            <div className="mt-14 flex flex-wrap gap-2 pt-8" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
+              {['ฟรี 20 สลิป/เดือน', 'ไม่ต้องใช้บัตรเครดิต', 'ยกเลิกได้ทุกเมื่อ', 'รองรับทุกธนาคารไทย', ...trust].map((t) => (
+                <span
+                  key={t}
+                  className="rounded-full px-4 py-1.5 text-sm font-medium"
+                  style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)' }}
+                >
+                  {t}
+                </span>
+              ))}
             </div>
           </div>
-
-          <div
-            className="mt-16 pt-8 flex flex-wrap gap-y-2 gap-x-8"
-            style={{ borderTop: '1px solid rgba(0,82,255,0.15)' }}
-          >
-            {['ฟรี 50 สลิป/เดือน', 'ไม่ต้องใช้บัตรเครดิต', 'ยกเลิกได้ทุกเมื่อ', 'รองรับทุกธนาคารไทย'].map((t) => (
-              <span key={t} className="font-mono text-[10px] uppercase tracking-wider" style={{ color: 'rgba(248,250,252,0.3)' }}>
-                {t}
-              </span>
-            ))}
-          </div>
         </div>
-      </div>
       </section>
     </main>
   );

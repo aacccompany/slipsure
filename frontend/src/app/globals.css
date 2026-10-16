@@ -5,6 +5,7 @@
 @theme inline {
   --font-sans: var(--font-jakarta), var(--font-anuphan), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), var(--font-anuphan), ui-monospace, monospace;
+  --font-display: var(--font-bricolage), var(--font-anuphan), var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
 }
 
 /* ── Logo-Referenced Color System ──────────────────────────
@@ -42,6 +43,40 @@
   --gold-pale:    #DBEAFE;
   --gold-shimmer-start: #0052FF;
   --gold-shimmer-end:   #00D4FF;
+
+  /* Semantic colour for "fake slip" states on the public site */
+  --fake:         #EF4444;
+  --fake-pale:    #FEE2E2;
+}
+
+/* ── Responsive scale ──────────────────────────────────────
+   Tailwind sizes are rem-based, so nudging the root font size scales
+   type, spacing and max-widths together. Small phones shrink slightly,
+   large monitors / TVs grow so the layout doesn't float in empty space. */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+@media (max-width: 359px)  { html { font-size: 93.75%; } }
+@media (min-width: 1680px) { html { font-size: 106.25%; } }
+@media (min-width: 1920px) { html { font-size: 112.5%; } }
+@media (min-width: 2400px) { html { font-size: 131.25%; } }
+@media (min-width: 3000px) { html { font-size: 162.5%; } }
+
+/* Never let a stray element create sideways scrolling */
+body { overflow-x: clip; }
+
+/* A bare `grid` has one implicit `auto` column that grows to fit its widest
+   child (long tables, nowrap text) and pushes the page sideways. Make that
+   single column shrinkable. Lives in @layer base so grid-cols-* utilities win. */
+@layer base {
+  .grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Mobile browsers: 100vh includes the collapsing URL bar, dvh doesn't */
+@supports (min-height: 100dvh) {
+  .min-h-screen { min-height: 100dvh; }
 }
 
 /* ── Base ───────────────────────────────────────────────── */
@@ -236,6 +271,55 @@ body {
    would render a synthetic heavy face, so cap it at 800 inside the dashboards. */
 .soft-ui .font-black {
   font-weight: 800;
+}
+
+/* ── Public site motion ("Bubble Bank") ──────────────────────
+   Slip scanner: a 10s loop. A beam sweeps the slip, then either the
+   "real" stamp (0-50%) or the "fake" stamp (50-100%) lands on it. */
+@keyframes scan-beam {
+  0%, 100% { top: 0%;   opacity: 0; }
+  3%       { opacity: 1; }
+  15%      { top: 100%; opacity: 1; }
+  17%      { top: 100%; opacity: 0; }
+  50%      { top: 0%;   opacity: 0; }
+  53%      { opacity: 1; }
+  65%      { top: 100%; opacity: 1; }
+  67%      { top: 100%; opacity: 0; }
+}
+@keyframes stamp-real {
+  0%, 15%  { opacity: 0; transform: scale(2.2) rotate(-24deg); }
+  19%      { opacity: 1; transform: scale(1)   rotate(-10deg); }
+  46%      { opacity: 1; transform: scale(1)   rotate(-10deg); }
+  50%, 100%{ opacity: 0; transform: scale(0.9) rotate(-10deg); }
+}
+@keyframes stamp-fake {
+  0%, 65%  { opacity: 0; transform: scale(2.2) rotate(20deg); }
+  69%      { opacity: 1; transform: scale(1)   rotate(9deg); }
+  96%      { opacity: 1; transform: scale(1)   rotate(9deg); }
+  100%     { opacity: 0; transform: scale(0.9) rotate(9deg); }
+}
+@keyframes status-real { 0%, 15% { opacity: 0; } 19%, 46% { opacity: 1; } 50%, 100% { opacity: 0; } }
+@keyframes status-fake { 0%, 65% { opacity: 0; } 69%, 96% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes bob {
+  0%, 100% { transform: translateY(0) rotate(var(--r, 0deg)); }
+  50%      { transform: translateY(-10px) rotate(var(--r, 0deg)); }
+}
+@keyframes pop-in {
+  0%   { opacity: 0; transform: translateY(18px) scale(0.96); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.slip-beam    { animation: scan-beam 10s ease-in-out infinite; }
+.slip-stamp-real { animation: stamp-real 10s cubic-bezier(.2,.9,.3,1.2) infinite; }
+.slip-stamp-fake { animation: stamp-fake 10s cubic-bezier(.2,.9,.3,1.2) infinite; }
+.slip-status-real { animation: status-real 10s linear infinite; }
+.slip-status-fake { animation: status-fake 10s linear infinite; }
+.bob      { animation: bob 6s ease-in-out infinite; }
+.bob-slow { animation: bob 9s ease-in-out infinite; }
+.pop-in   { animation: pop-in 0.7s cubic-bezier(.2,.8,.2,1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .slip-beam, .slip-stamp-fake, .slip-status-fake, .bob, .bob-slow, .pop-in, .animate-marquee { animation: none; }
+  .slip-stamp-real, .slip-status-real { animation: none; opacity: 1; transform: rotate(-10deg); }
+  .slip-status-real { transform: none; }
 }
 
 /* ── Scrollbar ──────────────────────────────────────────── */

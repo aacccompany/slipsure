@@ -51,7 +51,7 @@ export default function RegisterPage() {
     <div className="min-h-screen grid md:grid-cols-[420px_1fr]">
 
       {/* Left panel */}
-      <div className="hidden md:flex flex-col justify-between p-10 relative overflow-hidden" style={{ background: 'var(--navy)' }}>
+      <div className="hidden md:flex flex-col justify-between px-10 pb-10 pt-24 relative overflow-hidden" style={{ background: 'var(--navy)' }}>
         <div className="thai-pattern absolute inset-0 pointer-events-none" style={{ opacity: 0.07 }} />
 
         <Link href="/" className="relative font-mono text-[11px] uppercase tracking-widest" style={{ color: 'var(--cyan)' }}>
@@ -62,7 +62,7 @@ export default function RegisterPage() {
           <div className="font-black select-none leading-none" style={{ fontSize: '7rem', color: 'rgba(0,82,255,0.1)', letterSpacing: '-0.04em' }}>01</div>
           <h2 className="font-bold leading-tight" style={{ fontSize: '1.75rem', color: 'rgba(248,250,252,0.9)', letterSpacing: '-0.02em' }}>
             เริ่มต้นฟรี<br />
-            <span style={{ color: 'var(--cyan)' }}>50 สลิป/เดือน</span>
+            <span style={{ color: 'var(--cyan)' }}>20 สลิป/เดือน</span>
           </h2>
           <p className="text-sm leading-relaxed" style={{ color: 'rgba(248,250,252,0.45)' }}>
             ไม่ต้องใช้บัตรเครดิต ไม่มีสัญญาผูกมัด
@@ -83,7 +83,7 @@ export default function RegisterPage() {
       </div>
 
       {/* Right — form */}
-      <div className="flex flex-col justify-center px-8 py-12 md:px-16" style={{ background: 'var(--bg)' }}>
+      <div className="flex flex-col justify-center px-8 pb-12 pt-24 md:px-16" style={{ background: 'var(--bg)' }}>
         <div className="w-full max-w-sm mx-auto">
           <Link href="/" className="md:hidden inline-block font-mono text-[10px] uppercase tracking-widest mb-8" style={{ color: 'var(--text-muted)' }}>
             ← FLOWSLIP
@@ -93,7 +93,7 @@ export default function RegisterPage() {
             <h1 className="font-bold mb-1" style={{ fontSize: '1.75rem', color: 'var(--navy)', letterSpacing: '-0.02em' }}>
               สมัครสมาชิก
             </h1>
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>ฟรี 50 สลิป/เดือน ไม่ต้องใช้บัตรเครดิต</p>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>ฟรี 20 สลิป/เดือน ไม่ต้องใช้บัตรเครดิต</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">

@@ -106,7 +106,7 @@ function LoginContent() {
 
       {/* Left — navy brand panel */}
       <div
-        className="hidden md:flex flex-col justify-between p-10 relative overflow-hidden"
+        className="hidden md:flex flex-col justify-between px-10 pb-10 pt-24 relative overflow-hidden"
         style={{ background: 'var(--navy)' }}
       >
         <div className="thai-pattern absolute inset-0 pointer-events-none" style={{ opacity: 0.07 }} />
@@ -151,7 +151,7 @@ function LoginContent() {
       </div>
 
       {/* Right — form */}
-      <div className="flex flex-col justify-center px-8 py-12 md:px-16" style={{ background: 'var(--bg)' }}>
+      <div className="flex flex-col justify-center px-8 pb-12 pt-24 md:px-16" style={{ background: 'var(--bg)' }}>
         <div className="w-full max-w-sm mx-auto">
 
           {/* Mobile back */}

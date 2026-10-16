@@ -4,126 +4,122 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+const columns = [
+  {
+    title: 'บริการ',
+    links: [
+      { label: 'ตรวจสอบสลิป', href: '/services' },
+      { label: 'Enterprise', href: '/services' },
+    ],
+  },
+  {
+    title: 'ข้อมูล',
+    links: [
+      { label: 'ราคา', href: '/pricing' },
+      { label: 'FAQ', href: '/#faq' },
+    ],
+  },
+];
+
 export const Footer = () => {
   const pathname = usePathname();
   if (pathname?.startsWith('/dashboard')) return null;
   if (pathname?.startsWith('/admin')) return null;
 
   return (
-    <footer style={{ background: 'var(--navy)', borderTop: '2px solid var(--blue)' }}>
-      <div className="max-w-7xl mx-auto px-6 py-12">
+    <footer className="px-3 pb-3 pt-6 md:px-5 md:pb-5" style={{ background: 'var(--bg)' }}>
+      <div
+        className="relative mx-auto max-w-7xl overflow-hidden rounded-[2.5rem] px-7 py-12 md:rounded-[3rem] md:px-14"
+        style={{ background: 'var(--navy)' }}
+      >
+        {/* decorative bubbles */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full opacity-30"
+          style={{ background: 'var(--blue)' }}
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -bottom-10 left-1/3 h-28 w-28 rounded-full opacity-90"
+          style={{ background: 'var(--cyan)', opacity: 0.12 }}
+        />
 
-        <div className="flex flex-col md:flex-row justify-between gap-12 mb-12">
-
+        <div className="relative mb-12 flex flex-col justify-between gap-12 md:flex-row">
           {/* Brand */}
-          <div className="space-y-4">
+          <div className="max-w-sm space-y-4">
             <span
-              className="font-mono text-sm font-bold block tracking-widest"
-              style={{ color: 'var(--cyan)' }}
+              className="block text-2xl font-extrabold tracking-tight"
+              style={{ color: '#fff', fontFamily: 'var(--font-display)' }}
             >
-              FLOWSLIP.AI
+              flow<span style={{ color: 'var(--cyan)' }}>slip</span>.ai
             </span>
-            <p className="text-sm leading-relaxed max-w-xs" style={{ color: 'rgba(248,250,252,0.5)' }}>
-              ระบบตรวจสอบสลิปโอนเงิน ผ่าน Bank Gateway โดยตรง
-              แม่นยำ รวดเร็ว ไม่มีการเดา
+            <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.6)' }}>
+              ระบบตรวจสอบสลิปโอนเงิน ผ่าน Bank Gateway โดยตรง แม่นยำ รวดเร็ว ไม่มีการเดา
             </p>
-            <div className="flex items-center gap-2">
-              <span
-                className="w-1.5 h-1.5 rounded-full"
-                style={{ background: '#22C55E' }}
-              />
-              <span className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'rgba(248,250,252,0.35)' }}>
-                All systems online
-              </span>
-            </div>
+            <span
+              className="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-semibold"
+              style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.75)' }}
+            >
+              <span className="h-2 w-2 rounded-full" style={{ background: 'var(--cyan)' }} />
+              All systems online
+            </span>
           </div>
 
           {/* Links */}
-          <div className="grid grid-cols-2 gap-x-8 gap-y-8 text-sm sm:grid-cols-3 sm:gap-10">
+          <div className="grid grid-cols-2 gap-x-10 gap-y-8 text-sm sm:grid-cols-3 sm:gap-14">
+            {columns.map((col) => (
+              <div key={col.title} className="space-y-3">
+                <p className="mb-4 text-xs font-bold" style={{ color: 'var(--cyan)' }}>
+                  {col.title}
+                </p>
+                {col.links.map((l) => (
+                  <Link
+                    key={l.href + l.label}
+                    href={l.href}
+                    className="block text-sm font-medium transition-colors hover:text-white"
+                    style={{ color: 'rgba(255,255,255,0.6)' }}
+                  >
+                    {l.label}
+                  </Link>
+                ))}
+              </div>
+            ))}
             <div className="space-y-3">
-              <p
-                className="font-mono text-[10px] uppercase tracking-widest mb-4"
-                style={{ color: 'var(--cyan)', opacity: 0.7 }}
-              >
-                บริการ
-              </p>
-              {[
-                { label: 'ตรวจสอบสลิป', href: '/services' },
-                { label: 'Enterprise', href: '/services' },
-              ].map((l) => (
-                <Link
-                  key={l.href + l.label}
-                  href={l.href}
-                  className="block text-sm transition-colors"
-                  style={{ color: 'rgba(248,250,252,0.45)' }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--gold)')}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(248,250,252,0.45)')}
-                >
-                  {l.label}
-                </Link>
-              ))}
-            </div>
-
-            <div className="space-y-3">
-              <p
-                className="font-mono text-[10px] uppercase tracking-widest mb-4"
-                style={{ color: 'var(--cyan)', opacity: 0.7 }}
-              >
-                ข้อมูล
-              </p>
-              {[
-                { label: 'ราคา', href: '/pricing' },
-                { label: 'FAQ', href: '#' },
-              ].map((l) => (
-                <Link
-                  key={l.href + l.label}
-                  href={l.href}
-                  className="block text-sm transition-colors"
-                  style={{ color: 'rgba(248,250,252,0.45)' }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--gold)')}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(248,250,252,0.45)')}
-                >
-                  {l.label}
-                </Link>
-              ))}
-            </div>
-
-            <div className="space-y-3">
-              <p
-                className="font-mono text-[10px] uppercase tracking-widest mb-4"
-                style={{ color: 'var(--cyan)', opacity: 0.7 }}
-              >
+              <p className="mb-4 text-xs font-bold" style={{ color: 'var(--cyan)' }}>
                 ติดต่อ
               </p>
-              <p className="break-all text-sm" style={{ color: 'rgba(248,250,252,0.45)' }}>hello@flowslip.ai</p>
+              <a
+                href="mailto:hello@flowslip.ai"
+                className="block break-all text-sm font-medium transition-colors hover:text-white"
+                style={{ color: 'rgba(255,255,255,0.6)' }}
+              >
+                hello@flowslip.ai
+              </a>
             </div>
           </div>
         </div>
 
         {/* Bottom bar */}
         <div
-          className="pt-6 flex flex-col md:flex-row items-center justify-between gap-4"
-          style={{ borderTop: '1px solid rgba(0,82,255,0.2)' }}
+          className="relative flex flex-col items-center justify-between gap-4 pt-6 md:flex-row"
+          style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}
         >
-          <span className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'rgba(248,250,252,0.25)' }}>
+          <span className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
             © 2026 FLOWSLIP — ALL RIGHTS RESERVED
           </span>
-          <div className="flex gap-6">
+          <div className="flex gap-2">
             {['Privacy', 'Terms'].map((item) => (
               <a
                 key={item}
                 href="#"
-                className="font-mono text-[10px] uppercase tracking-widest transition-colors"
-                style={{ color: 'rgba(248,250,252,0.25)' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--gold)')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(248,250,252,0.25)')}
+                className="rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors hover:bg-white/10"
+                style={{ color: 'rgba(255,255,255,0.55)' }}
               >
                 {item}
               </a>
             ))}
           </div>
         </div>
-
       </div>
     </footer>
   );

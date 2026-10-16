@@ -201,7 +201,7 @@ export default function AccountPage() {
         <section className="grid gap-4 lg:grid-cols-3">
           {[
             { icon: CreditCard, label: 'Current Plan', value: subscription?.plan?.name || 'Free', sub: `Status: ${effectivePlanStatus}` },
-            { icon: Shield, label: 'Quota', value: `${quota?.used ?? 0} / ${quota?.quota_limit ?? 50}`, sub: `${quota?.remaining ?? 0} remaining` },
+            { icon: Shield, label: 'Quota', value: `${quota?.used ?? 0} / ${quota?.quota_limit ?? 20}`, sub: `${quota?.remaining ?? 0} remaining` },
             { icon: Calendar, label: 'Next Reset', value: quota?.reset_date ? new Date(quota.reset_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }) : '-', sub: 'Monthly quota reset' },
           ].map(({ icon: Icon, label, value, sub }) => (
             <div key={label} className="rounded-lg border border-zinc-200 bg-white p-5">

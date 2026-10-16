@@ -70,7 +70,7 @@ function getPlanQuota(plan?: string) {
   if (normalized.includes('enterprise')) return 4000;
   if (normalized.includes('pro')) return 1000;
   if (normalized.includes('starter')) return 200;
-  if (normalized.includes('free')) return 50;
+  if (normalized.includes('free')) return 20;
   return 0;
 }
 

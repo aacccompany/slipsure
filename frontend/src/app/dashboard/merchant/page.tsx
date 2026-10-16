@@ -182,8 +182,8 @@ export default function MerchantProfilePage() {
           <div className="space-y-2">
             {[
               ['Status', subscription?.status || 'trial'],
-              ['Quota Used', `${quota?.used ?? 0} / ${quota?.quota_limit ?? 50}`],
-              ['Remaining', `${quota?.remaining ?? 50}`],
+              ['Quota Used', `${quota?.used ?? 0} / ${quota?.quota_limit ?? 20}`],
+              ['Remaining', `${quota?.remaining ?? 20}`],
             ].map(([label, value]) => (
               <div key={String(label)} className="flex justify-between text-sm">
                 <span style={{ color: 'var(--text-muted)' }}>{label}</span>

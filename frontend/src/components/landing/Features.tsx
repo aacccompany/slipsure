@@ -1,96 +1,109 @@
 'use client';
 
 import React from 'react';
+import { Copy, Landmark, QrCode } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
-const features = [
+type Feature = {
+  tag: string;
+  title: string;
+  desc: string;
+  icon: LucideIcon;
+  /** card surface / ink / icon bubble */
+  tone: { bg: string; ink: string; sub: string; bubble: string; bubbleInk: string; tag: string };
+  span: string;
+};
+
+const features: Feature[] = [
   {
-    number: '01',
     tag: 'QR Extraction',
     title: 'ดึงข้อมูล QR โดยตรง',
     desc: 'ระบบอ่านค่า EMVCo จาก QR Code ในสลิปโดยตรง ไม่ใช้ OCR ไม่มีการเดา อ่านได้แม้ภาพไม่คมชัด',
+    icon: QrCode,
+    tone: { bg: '#fff', ink: 'var(--navy)', sub: 'var(--text-muted)', bubble: 'var(--blue-pale)', bubbleInk: 'var(--blue)', tag: 'var(--blue)' },
+    span: 'md:col-span-3',
   },
   {
-    number: '02',
     tag: 'Bank Verify',
     title: 'ยืนยันผ่านธนาคารจริง',
     desc: 'ส่งข้อมูลตรวจสอบผ่าน Bank Gateway ของจริงทุกครั้ง ผลลัพธ์มาจากธนาคาร ไม่ใช่การวิเคราะห์ภาพ',
+    icon: Landmark,
+    tone: { bg: 'var(--navy)', ink: '#fff', sub: 'rgba(255,255,255,0.65)', bubble: 'var(--cyan)', bubbleInk: 'var(--navy)', tag: 'var(--cyan)' },
+    span: 'md:col-span-3',
   },
   {
-    number: '03',
     tag: 'Duplicate Detection',
     title: 'ตรวจจับสลิปซ้ำ',
     desc: 'ตรวจสอบรายการซ้ำย้อนหลัง 24 ชั่วโมงอัตโนมัติ ป้องกันการนำสลิปเก่ามาใช้ซ้ำได้ทันที',
+    icon: Copy,
+    tone: { bg: 'var(--blue)', ink: '#fff', sub: 'rgba(255,255,255,0.75)', bubble: '#fff', bubbleInk: 'var(--blue)', tag: 'var(--cyan)' },
+    span: 'md:col-span-6',
   },
 ];
 
 export const Features = () => {
   return (
-    <section style={{ borderBottom: '1px solid var(--border)' }}>
-      <div className="max-w-7xl mx-auto">
-
-        {/* Section label — left-aligned, tight */}
-        <div
-          className="px-6 md:px-12 pt-16 pb-8 flex items-center justify-between"
-        >
-          <span className="font-mono text-[11px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-            ระบบทำงานอย่างไร
-          </span>
-          <span className="font-mono text-[11px] uppercase tracking-widest" style={{ color: 'var(--border-strong)' }}>
-            3 ขั้นตอน
-          </span>
+    <section className="px-4 py-16 md:px-8 md:py-24" style={{ background: 'var(--bg)' }}>
+      <div className="mx-auto max-w-7xl">
+        <div className="mb-10 flex flex-wrap items-end justify-between gap-4 md:mb-14">
+          <div>
+            <span
+              className="mb-4 inline-block rounded-full px-4 py-1.5 text-sm font-bold"
+              style={{ background: 'var(--blue-pale)', color: 'var(--blue)' }}
+            >
+              ระบบทำงานอย่างไร
+            </span>
+            <h2
+              className="font-display text-4xl font-extrabold leading-[1.2] md:text-6xl"
+              style={{ color: 'var(--navy)' }}
+            >
+              3 อย่างที่ทำให้
+              <br />
+              <span style={{ color: 'var(--blue)' }}>สลิปปลอมไม่รอด</span>
+            </h2>
+          </div>
         </div>
 
-        {/* Editorial numbered list — not cards */}
-        <div className="px-6 md:px-12 pb-16">
+        <div className="grid gap-4 md:grid-cols-6 md:gap-5">
           {features.map((f, i) => (
             <div
-              key={f.number}
-              className="group grid grid-cols-[auto_1fr] gap-8 md:gap-16 py-10 transition-colors"
+              key={f.tag}
+              className={`group relative flex min-h-[15rem] flex-col justify-between overflow-hidden rounded-[2.25rem] p-8 transition-transform duration-300 hover:-translate-y-1 md:p-10 ${f.span}`}
               style={{
-                borderTop: '1px solid var(--border)',
-                borderBottom: i === features.length - 1 ? '1px solid var(--border)' : 'none',
+                background: f.tone.bg,
+                boxShadow: f.tone.bg === '#fff' ? '0 0 0 1px rgba(0,24,71,0.07)' : undefined,
               }}
             >
-              {/* Big ghost number — decorative, not functional */}
-              <div
-                className="font-bold select-none transition-colors duration-300 w-16 md:w-24"
-                style={{
-                  fontSize: 'clamp(3rem, 6vw, 5rem)',
-                  lineHeight: 1,
-                  color: 'var(--border)',
-                  letterSpacing: '-0.04em',
-                }}
+              {/* oversized ghost number */}
+              <span
+                aria-hidden
+                className="font-display pointer-events-none absolute -right-2 -top-6 select-none text-[9rem] font-extrabold leading-none"
+                style={{ color: f.tone.ink, opacity: 0.06 }}
               >
-                {f.number}
-              </div>
+                0{i + 1}
+              </span>
 
-              {/* Content */}
-              <div className="py-1">
-                <p
-                  className="font-mono text-[10px] uppercase tracking-widest mb-2"
-                  style={{ color: 'var(--blue)' }}
-                >
+              <span
+                className="relative flex h-14 w-14 items-center justify-center rounded-2xl transition-transform duration-300 group-hover:rotate-6 group-hover:scale-110"
+                style={{ background: f.tone.bubble, color: f.tone.bubbleInk }}
+              >
+                <f.icon className="h-7 w-7" />
+              </span>
+
+              <div className="relative mt-10 max-w-xl">
+                <p className="mb-2 text-sm font-bold" style={{ color: f.tone.tag }}>
                   {f.tag}
                 </p>
-                <h3
-                  className="font-bold mb-3 transition-colors duration-200"
-                  style={{
-                    fontSize: 'clamp(1.2rem, 2.5vw, 1.6rem)',
-                    color: 'var(--navy)',
-                    letterSpacing: '-0.01em',
-                    lineHeight: 1.2,
-                  }}
-                >
+                <h3 className="mb-3 text-2xl font-extrabold md:text-3xl" style={{ color: f.tone.ink }}>
                   {f.title}
                 </h3>
-                <p className="text-base leading-relaxed max-w-lg" style={{ color: 'var(--text-muted)' }}>
+                <p className="text-base leading-relaxed" style={{ color: f.tone.sub }}>
                   {f.desc}
                 </p>
               </div>
             </div>
           ))}
         </div>
-
       </div>
     </section>
   );
