@@ -22,10 +22,14 @@ const columns = [
   },
 ];
 
+const authPaths = ['/login', '/register', '/forgot-password', '/reset-password', '/auth'];
+
 export const Footer = () => {
   const pathname = usePathname();
   if (pathname?.startsWith('/dashboard')) return null;
   if (pathname?.startsWith('/admin')) return null;
+  // auth flows are full-height focused screens: no footer
+  if (authPaths.some((p) => pathname?.startsWith(p))) return null;
 
   return (
     <footer className="px-3 pb-3 pt-6 md:px-5 md:pb-5" style={{ background: 'var(--bg)' }}>
