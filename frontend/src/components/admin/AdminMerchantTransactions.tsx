@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Code2, Eye, Loader2, RefreshCw, Search, X } from 'lucide-react';
+import { Code2, Eye, RefreshCw, Search, X } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import type { AdminSlipHistoryItem, Slip, Transaction } from '@/types/api';
+import { TableSkeleton } from '@/components/ui/Skeleton';
 
 type Props = {
   merchantId: string;
@@ -306,9 +307,7 @@ export function AdminMerchantTransactions({ merchantId }: Props) {
           )}
         </div>
         {transactionsQuery.isLoading ? (
-          <div className="flex h-48 items-center justify-center">
-            <Loader2 className="h-5 w-5 animate-spin" style={{ color: 'var(--blue)' }} />
-          </div>
+          <TableSkeleton rows={4} cols={5} />
         ) : transactionsQuery.isError ? (
           <p role="alert" className="p-5 text-sm text-red-700">Could not load slip history. Please refresh and try again.</p>
         ) : transactions.length === 0 ? (

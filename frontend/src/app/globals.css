@@ -316,7 +316,28 @@ body {
 .bob      { animation: bob 6s ease-in-out infinite; }
 .bob-slow { animation: bob 9s ease-in-out infinite; }
 .pop-in   { animation: pop-in 0.7s cubic-bezier(.2,.8,.2,1) both; }
+
+/* skeleton placeholder */
+.skeleton { position: relative; overflow: hidden; border-radius: 0.75rem; background: rgba(0, 24, 71, 0.07); }
+.skeleton::after {
+  content: ''; position: absolute; inset: 0; transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.7), transparent);
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+}
+@keyframes skeleton-shimmer { to { transform: translateX(100%); } }
+
+/* scroll reveal — armed/in are set by <ScrollReveal />; unmarked elements stay visible */
+@keyframes reveal-up {
+  from { opacity: 0; transform: translateY(1.75rem); }
+  to   { opacity: 1; transform: none; }
+}
+[data-reveal][data-rv="armed"] { opacity: 0; }
+[data-reveal][data-rv="in"]    { animation: reveal-up 0.75s cubic-bezier(.2,.8,.2,1) var(--rd, 0s) backwards; }
+html { scroll-behavior: smooth; }
 @media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .skeleton::after { animation: none; }
+  [data-reveal] { opacity: 1 !important; animation: none !important; }
   .slip-beam, .slip-stamp-fake, .slip-status-fake, .bob, .bob-slow, .pop-in, .animate-marquee { animation: none; }
   .slip-stamp-real, .slip-status-real { animation: none; opacity: 1; transform: rotate(-10deg); }
   .slip-status-real { transform: none; }

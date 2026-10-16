@@ -147,7 +147,7 @@ export default function ServicesPage() {
         </div>
 
         {/* CTA */}
-        <div className="relative overflow-hidden rounded-[2.5rem] p-8 md:rounded-[3.5rem] md:p-16" style={{ background: 'var(--navy)' }}>
+        <div data-reveal className="relative overflow-hidden rounded-[2.5rem] p-8 md:rounded-[3.5rem] md:p-16" style={{ background: 'var(--navy)' }}>
           <div aria-hidden className="absolute -right-20 -top-24 h-80 w-80 rounded-full" style={{ background: 'var(--blue)', opacity: 0.55 }} />
           <div aria-hidden className="absolute -bottom-24 left-10 h-56 w-56 rounded-full" style={{ background: 'var(--cyan)', opacity: 0.13 }} />
 

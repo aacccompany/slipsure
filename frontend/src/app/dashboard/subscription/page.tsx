@@ -5,6 +5,7 @@ import { Check, Zap, ArrowRight, CreditCard, Clock, History, Loader2, X } from '
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
 import { toast } from 'sonner';
+import { PageSkeleton } from '@/components/ui/Skeleton';
 
 export default function SubscriptionPage() {
   const queryClient = useQueryClient();
@@ -92,11 +93,7 @@ export default function SubscriptionPage() {
   };
 
   if (subLoading) {
-    return (
-      <div className="flex h-[80vh] items-center justify-center">
-        <Loader2 className="h-10 w-10 animate-spin text-blue-800" />
-      </div>
-    );
+    return <PageSkeleton />;
   }
 
   const resetDays = quota

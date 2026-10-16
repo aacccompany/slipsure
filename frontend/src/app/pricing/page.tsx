@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { ArrowUpRight, Check, Loader2, Sparkles } from 'lucide-react';
+import { PricingSkeleton } from '@/components/ui/Skeleton';
 import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -128,9 +129,7 @@ export default function PricingPage() {
         </div>
 
         {isLoading ? (
-          <div className="flex justify-center py-24">
-            <Loader2 className="h-6 w-6 animate-spin" style={{ color: 'var(--blue)' }} />
-          </div>
+          <PricingSkeleton />
         ) : (
           <>
             {/* ตัวช่วยเลือกแผน */}

@@ -13,6 +13,7 @@ import { AdminShell } from '@/components/admin/AdminShell';
 import { RejectedSlipDetailModal, TransactionDetailModal } from '@/components/admin/AdminMerchantTransactions';
 import { EmptyState } from '@/components/dashboard/EmptyState';
 import type { AdminAnalyticsDashboard, AdminBankStatus, AdminMerchantPerformanceAnalytics, AdminPaymentDetail, AdminRevenueAnalytics, AdminSlipHistoryItem, PaymentLog, SubscriptionPlan } from '@/types/api';
+import { AnalyticsSkeleton, LinesSkeleton, TableSkeleton } from '@/components/ui/Skeleton';
 
 type Tab = 'merchants' | 'users' | 'billing' | 'analytics' | 'transactions';
 
@@ -179,9 +180,7 @@ function StripePaymentDetailModal({
         </div>
 
         {isLoading ? (
-          <div className="flex h-64 items-center justify-center">
-            <Loader2 className="h-5 w-5 animate-spin" style={{ color: 'var(--blue)' }} />
-          </div>
+          <LinesSkeleton lines={6} />
         ) : !payment ? (
           <div className="p-8 text-center text-sm" style={{ color: 'var(--text-muted)' }}>Payment detail not found.</div>
         ) : (
@@ -621,9 +620,7 @@ function BankApiStatusWidget({ status, isLoading }: { status?: AdminBankStatus; 
         ) : null}
       </div>
       {isLoading ? (
-        <div className="flex h-20 items-center justify-center">
-          <Loader2 className="h-4 w-4 animate-spin" style={{ color: 'var(--blue)' }} />
-        </div>
+        <LinesSkeleton lines={3} className="py-2" />
       ) : !status?.configured || (status.banks ?? []).length === 0 ? (
         <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
           {status?.message || 'Bank API is not configured.'}
@@ -668,11 +665,7 @@ function AdminAnalyticsOverview({
   isLoading: boolean;
 }) {
   if (isLoading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-5 w-5 animate-spin" style={{ color: 'var(--blue)' }} />
-      </div>
-    );
+    return <AnalyticsSkeleton />;
   }
 
   const successBase = (dashboard?.successful_transactions ?? 0) + (dashboard?.failed_transactions ?? 0);
@@ -1471,9 +1464,7 @@ function AdminBackofficeContent() {
         >
           {tab === 'transactions' ? (
             transactionsQuery.isLoading ? (
-              <div className="flex h-64 items-center justify-center">
-                <Loader2 className="h-5 w-5 animate-spin" style={{ color: 'var(--blue)' }} />
-              </div>
+              <TableSkeleton rows={6} cols={6} />
             ) : (
               <>
                 <div className="grid min-w-[980px] grid-cols-[1.1fr_1fr_2fr_0.7fr_1fr_1.2fr] px-5 py-3 font-mono text-[9px] uppercase tracking-widest" style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>
@@ -1564,9 +1555,7 @@ function AdminBackofficeContent() {
             )
           ) : tab === 'billing' ? (
             paymentsQuery.isLoading ? (
-              <div className="flex h-64 items-center justify-center">
-                <Loader2 className="h-5 w-5 animate-spin" style={{ color: 'var(--blue)' }} />
-              </div>
+              <TableSkeleton rows={6} cols={5} />
             ) : (
               <BillingWorkspace
                 payments={payments}
@@ -1599,9 +1588,7 @@ function AdminBackofficeContent() {
               </button>
             </div>
           ) : isTableLoading ? (
-            <div className="flex h-64 items-center justify-center">
-              <Loader2 className="h-5 w-5 animate-spin" style={{ color: 'var(--blue)' }} />
-            </div>
+            <TableSkeleton rows={6} cols={5} />
           ) : tab === 'merchants' ? (
             <>
               <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4" style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-subtle)' }}>

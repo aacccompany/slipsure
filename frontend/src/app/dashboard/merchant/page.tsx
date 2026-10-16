@@ -3,11 +3,12 @@
 import React from 'react';
 import {
   Store, MapPin, Phone, Mail, Settings, ChevronRight,
-  Loader2, MessageSquare, CreditCard, User, CheckCircle, AlertCircle,
+  MessageSquare, CreditCard, User, CheckCircle, AlertCircle,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
 import Link from 'next/link';
+import { PageSkeleton } from '@/components/ui/Skeleton';
 
 export default function MerchantProfilePage() {
   const { data: merchantData, isLoading: merchantLoading } = useQuery({
@@ -33,11 +34,7 @@ export default function MerchantProfilePage() {
   const lineConfig = lineConfigData?.data?.config;
 
   if (merchantLoading || subscriptionLoading || quotaLoading || lineConfigLoading) {
-    return (
-      <div className="flex h-[80vh] items-center justify-center">
-        <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'var(--blue)' }} />
-      </div>
-    );
+    return <PageSkeleton />;
   }
 
   const quickActions = [

@@ -45,7 +45,7 @@ export const Features = () => {
   return (
     <section className="px-4 py-16 md:px-8 md:py-24" style={{ background: 'var(--bg)' }}>
       <div className="mx-auto max-w-5xl">
-        <div className="mb-10 flex flex-wrap items-end justify-between gap-4 md:mb-14">
+        <div data-reveal className="mb-10 flex flex-wrap items-end justify-between gap-4 md:mb-14">
           <div>
             <span
               className="mb-4 inline-block rounded-full px-4 py-1.5 text-sm font-bold"
@@ -68,6 +68,7 @@ export const Features = () => {
           {features.map((f, i) => (
             <div
               key={f.tag}
+              data-reveal={i}
               className={`group relative flex min-h-[15rem] flex-col justify-between overflow-hidden rounded-[2.25rem] p-8 transition-transform duration-300 hover:-translate-y-1 md:p-10 ${f.span}`}
               style={{
                 background: f.tone.bg,

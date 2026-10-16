@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { api } from '@/lib/api-client';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import { PageSkeleton } from '@/components/ui/Skeleton';
 
 export default function AccountPage() {
   const { user } = useAuth();
@@ -54,11 +55,7 @@ export default function AccountPage() {
       : subscription?.status || 'trial';
 
   if (!user || subscriptionLoading || quotaLoading) {
-    return (
-      <div className="flex h-[80vh] items-center justify-center">
-        <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'var(--blue)' }} />
-      </div>
-    );
+    return <PageSkeleton />;
   }
 
   const initials = user.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U';

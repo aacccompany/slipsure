@@ -2,7 +2,8 @@
 
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Eye, Loader2, RefreshCw, Search, X } from 'lucide-react';
+import { ArrowLeft, Eye, RefreshCw, Search, X } from 'lucide-react';
+import { TableSkeleton } from '@/components/ui/Skeleton';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
 import type { PaymentLog } from '@/types/api';
@@ -169,9 +170,7 @@ export default function OrdersPage() {
             </div>
 
             {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-6 w-6 animate-spin" style={{ color: 'var(--blue)' }} />
-              </div>
+              <TableSkeleton rows={6} cols={6} />
             ) : filteredOrders.length > 0 ? filteredOrders.map((payment) => {
               const paidOrCreatedAt = payment.paid_at || payment.created_at;
               return (

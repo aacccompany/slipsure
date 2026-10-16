@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
 import { toast } from 'sonner';
+import { PageSkeleton } from '@/components/ui/Skeleton';
 
 export default function MerchantLinePage() {
   const queryClient = useQueryClient();
@@ -65,11 +66,7 @@ export default function MerchantLinePage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex h-[80vh] items-center justify-center">
-        <Loader2 className="h-10 w-10 animate-spin text-blue-800" />
-      </div>
-    );
+    return <PageSkeleton />;
   }
 
   const config = configData?.data?.config;

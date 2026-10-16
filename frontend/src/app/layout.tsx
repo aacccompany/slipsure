@@ -3,6 +3,7 @@ import { Anuphan, Bricolage_Grotesque, IBM_Plex_Mono, Plus_Jakarta_Sans } from "
 import "./globals.css";
 import { Navbar } from "@/components/ui/Navbar";
 import { Footer } from "@/components/ui/Footer";
+import { ScrollReveal } from "@/components/ui/ScrollReveal";
 import Providers from "./providers";
 
 // Latin + numerals come from Plus Jakarta Sans, Thai glyphs from Anuphan
@@ -47,6 +48,7 @@ export default function RootLayout({
           <Navbar />
           {children}
           <Footer />
+          <ScrollReveal />
         </Providers>
       </body>
     </html>

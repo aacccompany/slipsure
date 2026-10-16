@@ -10,6 +10,7 @@ import { api } from '@/lib/api-client';
 import { useAuth } from '@/contexts/auth-context';
 import { AdminShell } from '@/components/admin/AdminShell';
 import { AdminMerchantTransactions } from '@/components/admin/AdminMerchantTransactions';
+import { PageSkeleton } from '@/components/ui/Skeleton';
 
 function formatMoney(value?: number) {
   return `THB ${(value ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
@@ -67,10 +68,18 @@ export default function AdminMerchantDetailPage() {
     },
   });
 
-  if (isLoading || !user || user.role !== 'admin' || detailQuery.isLoading) {
+  if (isLoading || !user || user.role !== 'admin') {
     return (
       <div className="flex min-h-screen items-center justify-center" style={{ background: 'var(--bg)' }}>
         <Loader2 className="h-6 w-6 animate-spin" style={{ color: 'var(--blue)' }} />
+      </div>
+    );
+  }
+
+  if (detailQuery.isLoading) {
+    return (
+      <div className="min-h-screen" style={{ background: 'var(--bg)' }}>
+        <PageSkeleton />
       </div>
     );
   }

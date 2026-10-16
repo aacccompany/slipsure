@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import {
   ScanLine, CheckCircle2,
-  Loader2, AlertCircle, ArrowUpRight, Users,
+  AlertCircle, ArrowUpRight, Users,
   BarChart3, RefreshCw, Calendar, Info, Search, Eye,
   X, Coins, CreditCard,
 } from 'lucide-react';
@@ -11,6 +11,7 @@ import { StatCard } from '@/components/dashboard/StatCard';
 import { QuotaHero } from '@/components/dashboard/QuotaHero';
 import { EmptyState } from '@/components/dashboard/EmptyState';
 import { RecentSlips } from '@/components/dashboard/RecentSlips';
+import { DashboardSkeleton, TableSkeleton } from '@/components/ui/Skeleton';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
 import Link from 'next/link';
@@ -276,11 +277,7 @@ export default function DashboardPage() {
   };
 
   if (quotaLoading || statsLoading || usageLoading || subLoading) {
-    return (
-      <div className="flex h-[80vh] items-center justify-center">
-        <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'var(--blue)' }} />
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   // Day + month only for the hero card (the full date stays in the Account page).
@@ -832,9 +829,7 @@ export default function DashboardPage() {
             </div>
 
             {transactionsFetching && dashboardTransactions.length === 0 ? (
-              <div className="flex items-center justify-center py-10">
-                <Loader2 className="h-5 w-5 animate-spin" style={{ color: 'var(--blue)' }} />
-              </div>
+              <TableSkeleton rows={5} cols={6} />
             ) : dashboardTransactions.length > 0 ? dashboardTransactions.map(({ slip, transaction }) => {
               const transactionDate = transaction?.transfer_at || slip.created_at;
               const sender = transaction?.sender_name || transaction?.sender_account || '-';

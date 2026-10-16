@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Code2, Download, Eye, ImageIcon, Loader2, MessageSquare, RefreshCw, Search, X } from 'lucide-react';
 import { api } from '@/lib/api-client';
+import { TableSkeleton } from '@/components/ui/Skeleton';
 import { toast } from 'sonner';
 import type { AdminSlipHistoryItem, Slip, SlipStatus, Transaction, TransactionStatus } from '@/types/api';
 
@@ -595,9 +596,7 @@ export default function SlipsPage() {
         </div>
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="h-5 w-5 animate-spin" style={{ color: 'var(--blue)' }} />
-          </div>
+          <TableSkeleton rows={8} cols={6} />
         ) : transactions.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
             <div className="flex h-12 w-12 items-center justify-center" style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border)' }}>

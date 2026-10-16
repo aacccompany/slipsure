@@ -96,9 +96,10 @@ export default function Home() {
       {/* ── Stats bento ─────────────────────────────────────── */}
       <section className="px-4 py-12 md:px-8 md:py-16">
         <div className="mx-auto grid max-w-5xl gap-4 md:grid-cols-6 md:gap-5">
-          {stats.map((s) => (
+          {stats.map((s, i) => (
             <div
               key={s.label}
+              data-reveal={i}
               className={`group relative overflow-hidden rounded-[2.25rem] p-8 transition-transform duration-300 hover:-translate-y-1 md:p-10 ${s.span}`}
               style={{ background: s.bg, boxShadow: s.bg === '#fff' ? '0 0 0 1px rgba(0,24,71,0.07)' : undefined }}
             >
@@ -129,7 +130,7 @@ export default function Home() {
       {/* ── Why FlowSlip — fake vs real ─────────────────────── */}
       <section className="px-4 pb-16 md:px-8 md:pb-24">
         <div className="mx-auto max-w-5xl">
-          <div className="mb-10 text-center md:mb-14">
+          <div data-reveal className="mb-10 text-center md:mb-14">
             <SectionTag>ทำไมต้อง FlowSlip</SectionTag>
             <h2 className="font-display text-4xl font-extrabold leading-[1.2] md:text-6xl" style={{ color: 'var(--navy)' }}>
               ภาพหลอกตาได้
@@ -139,7 +140,7 @@ export default function Home() {
           </div>
 
           <div className="grid gap-5 md:grid-cols-2">
-            <div className="relative overflow-hidden rounded-[2.5rem] bg-white p-9 md:p-12" style={{ boxShadow: '0 0 0 1px rgba(0,24,71,0.07)' }}>
+            <div data-reveal="1" className="relative overflow-hidden rounded-[2.5rem] bg-white p-9 md:p-12" style={{ boxShadow: '0 0 0 1px rgba(0,24,71,0.07)' }}>
               <span
                 className="mb-6 inline-flex h-14 w-14 items-center justify-center rounded-2xl"
                 style={{ background: 'var(--fake-pale)', color: 'var(--fake)' }}
@@ -157,7 +158,7 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="relative overflow-hidden rounded-[2.5rem] p-9 md:p-12" style={{ background: 'var(--navy)' }}>
+            <div data-reveal="2" className="relative overflow-hidden rounded-[2.5rem] p-9 md:p-12" style={{ background: 'var(--navy)' }}>
               <div
                 aria-hidden
                 className="absolute -right-16 -top-16 h-56 w-56 rounded-full"
@@ -183,6 +184,7 @@ export default function Home() {
             {extras.map((item, i) => (
               <div
                 key={item.title}
+                data-reveal={i}
                 className="rounded-[1.75rem] p-7 transition-colors hover:bg-[var(--blue-pale)]"
                 style={{ background: 'rgba(255,255,255,0.7)', boxShadow: '0 0 0 1px rgba(0,24,71,0.07)' }}
               >
@@ -210,7 +212,7 @@ export default function Home() {
           className="mx-auto max-w-5xl rounded-[2.5rem] px-6 py-14 md:rounded-[3.5rem] md:px-14 md:py-20"
           style={{ background: 'var(--blue-pale)' }}
         >
-          <div className="mb-12 flex flex-wrap items-end justify-between gap-4">
+          <div data-reveal className="mb-12 flex flex-wrap items-end justify-between gap-4">
             <h2 className="font-display text-4xl font-extrabold leading-[1.2] md:text-6xl" style={{ color: 'var(--navy)' }}>
               พร้อมใช้งานใน
               <br />
@@ -235,6 +237,7 @@ export default function Home() {
             {steps.map((step, i) => (
               <div
                 key={step.num}
+                data-reveal={i}
                 className="relative rounded-[2rem] bg-white p-8 transition-transform duration-300 hover:-translate-y-1.5 md:p-9"
               >
                 <span
@@ -261,7 +264,7 @@ export default function Home() {
       {/* ── FAQ ─────────────────────────────────────────────── */}
       <section id="faq" className="scroll-mt-24 px-4 py-16 md:px-8 md:py-24">
         <div className="mx-auto grid max-w-5xl gap-10 lg:grid-cols-[1fr_2fr] lg:gap-16">
-          <div className="self-start lg:sticky lg:top-28">
+          <div data-reveal className="self-start lg:sticky lg:top-28">
             <SectionTag>FAQ</SectionTag>
             <h2 className="font-display mb-5 text-4xl font-extrabold leading-[1.2] md:text-5xl" style={{ color: 'var(--navy)' }}>
               คำถาม
@@ -282,8 +285,10 @@ export default function Home() {
           </div>
 
           <div className="space-y-3">
-            {faqs.map((faq) => (
-              <FAQItem key={faq.q} q={faq.q} a={faq.a} />
+            {faqs.map((faq, i) => (
+              <div key={faq.q} data-reveal={Math.min(i, 3)}>
+                <FAQItem q={faq.q} a={faq.a} />
+              </div>
             ))}
           </div>
         </div>
@@ -292,6 +297,7 @@ export default function Home() {
       {/* ── CTA ─────────────────────────────────────────────── */}
       <section className="px-4 pb-4 md:px-8">
         <div
+          data-reveal
           className="relative mx-auto max-w-5xl overflow-hidden rounded-[2.5rem] md:rounded-[3.5rem]"
           style={{ background: 'var(--navy)' }}
         >

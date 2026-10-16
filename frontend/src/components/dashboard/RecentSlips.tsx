@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { ImageIcon, Loader2 } from 'lucide-react';
+import { ImageIcon } from 'lucide-react';
+import { SlipListSkeleton } from '@/components/ui/Skeleton';
 import { api } from '@/lib/api-client';
 import { STATUS_LABEL, FAIL_LABEL, statusStyle, formatTime } from '@/lib/transaction-format';
 
@@ -30,9 +31,7 @@ export function RecentSlips() {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-5 w-5 animate-spin" style={{ color: 'var(--blue)' }} />
-        </div>
+        <SlipListSkeleton rows={5} />
       ) : transactions.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
           <ImageIcon className="h-5 w-5" style={{ color: 'var(--text-muted)' }} />
