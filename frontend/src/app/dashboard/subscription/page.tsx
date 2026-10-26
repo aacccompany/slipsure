@@ -7,6 +7,18 @@ import { api } from '@/lib/api-client';
 import { toast } from 'sonner';
 import { PageSkeleton } from '@/components/ui/Skeleton';
 
+const techHuntPlan = {
+  price: 9252,
+  quota: 45000,
+  features: [
+    'เชื่อมต่อไลน์บอท',
+    'ตรวจสอบสลิปและตรวจจับสลิปซ้ำ',
+    'ส่งออกข้อมูล CSV',
+    'ดูสถิติการใช้งาน',
+    'ซัพพอร์ตด่วน',
+  ],
+};
+
 export default function SubscriptionPage() {
   const queryClient = useQueryClient();
 
@@ -266,6 +278,59 @@ export default function SubscriptionPage() {
               </article>
             );
           })}
+          <article className="flex flex-col rounded-lg border border-zinc-200 bg-white p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-base font-black text-blue-950">Tech Hunt</h2>
+                <p className="mt-1 text-xs text-zinc-500">สำหรับการตรวจสอบสลิปปริมาณสูง</p>
+              </div>
+              <span className="shrink-0 rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-700 ring-1 ring-amber-200">
+                ตัวอย่างแผน
+              </span>
+            </div>
+
+            <div className="mt-7 flex items-end gap-2">
+              <span className="text-4xl font-black text-zinc-950">{techHuntPlan.quota.toLocaleString()}</span>
+              <span className="pb-1 text-xs font-bold uppercase text-blue-950">credit / เดือน</span>
+            </div>
+            <p className="mt-2 text-sm font-semibold text-blue-950">
+              {formatTHB(techHuntPlan.price)} / เดือน
+            </p>
+
+            <div className="mt-5 rounded-md border border-sky-100 bg-sky-50 p-4 text-sm">
+              <div className="flex justify-between gap-3 py-1 text-zinc-600">
+                <span>ราคาก่อน VAT</span>
+                <span className="font-bold text-blue-950">{formatTHB(techHuntPlan.price / 1.07)}</span>
+              </div>
+              <div className="flex justify-between gap-3 py-1 text-zinc-600">
+                <span>VAT 7%</span>
+                <span className="font-bold text-blue-950">{formatTHB(techHuntPlan.price - techHuntPlan.price / 1.07)}</span>
+              </div>
+              <div className="mt-2 flex justify-between gap-3 border-t border-sky-100 pt-3 font-bold text-zinc-950">
+                <span>ราคารวมทั้งหมด</span>
+                <span>{formatTHB(techHuntPlan.price)}</span>
+              </div>
+            </div>
+
+            <div className="mt-5 flex-1 space-y-3">
+              <div className="flex items-center gap-3">
+                <Check className="h-4 w-4 shrink-0 text-emerald-500" />
+                <span className="text-sm font-medium text-zinc-700">
+                  สลิปคิด {formatBaht(techHuntPlan.price / techHuntPlan.quota)} ต่อสลิป
+                </span>
+              </div>
+              {techHuntPlan.features.map((feature) => (
+                <div key={feature} className="flex items-center gap-3">
+                  <Check className="h-4 w-4 shrink-0 text-emerald-500" />
+                  <span className="text-sm font-medium text-zinc-700">{feature}</span>
+                </div>
+              ))}
+            </div>
+
+            <p className="mt-8 rounded-md bg-zinc-100 px-4 py-3 text-center text-sm font-bold text-zinc-600">
+              ยังไม่เปิดให้ซื้อ
+            </p>
+          </article>
         </section>
 
         {subscription && subscription.status === 'active' && (
