@@ -28,11 +28,11 @@ export type AdminMenuItem = {
 };
 
 export const adminMenuItems: AdminMenuItem[] = [
-  { name: 'Overview', href: '/admin?tab=analytics', icon: BarChart3, matchPath: '/admin', matchTab: 'analytics' },
-  { name: 'Merchants', href: '/admin?tab=merchants', icon: Store, matchPath: '/admin', matchTab: 'merchants' },
-  { name: 'Transactions', href: '/admin?tab=transactions', icon: ReceiptText, matchPath: '/admin', matchTab: 'transactions' },
-  { name: 'Users', href: '/admin?tab=users', icon: Users, matchPath: '/admin', matchTab: 'users' },
-  { name: 'Billing', href: '/admin?tab=billing', icon: CreditCard, matchPath: '/admin', matchTab: 'billing' },
+  { name: 'ภาพรวม', href: '/admin?tab=analytics', icon: BarChart3, matchPath: '/admin', matchTab: 'analytics' },
+  { name: 'ร้านค้า', href: '/admin?tab=merchants', icon: Store, matchPath: '/admin', matchTab: 'merchants' },
+  { name: 'รายการสลิป', href: '/admin?tab=transactions', icon: ReceiptText, matchPath: '/admin', matchTab: 'transactions' },
+  { name: 'ผู้ใช้งาน', href: '/admin?tab=users', icon: Users, matchPath: '/admin', matchTab: 'users' },
+  { name: 'การชำระเงิน', href: '/admin?tab=billing', icon: CreditCard, matchPath: '/admin', matchTab: 'billing' },
 ];
 
 function isMenuActive(item: AdminMenuItem, pathname: string, activeTab?: string) {
@@ -83,8 +83,8 @@ export function AdminShell({
           <Link href="/admin?tab=analytics" onClick={() => setSidebarOpen(false)}>
             <Image src="/logo.png" alt="FlowSlip" width={96} height={26} className="h-6 w-auto brightness-0 invert" priority />
           </Link>
-          <p className="mt-1.5 font-mono text-[9px] uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.4)' }}>
-            Backoffice
+          <p className="mt-1.5 font-mono text-xs uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.4)' }}>
+            ระบบหลังบ้าน
           </p>
         </div>
 
@@ -128,7 +128,7 @@ export function AdminShell({
             }}
           >
             <LogOut className="h-4 w-4 shrink-0" />
-            <span>Log Out</span>
+            <span>ออกจากระบบ</span>
           </button>
         </div>
       </aside>
@@ -172,7 +172,7 @@ export function AdminShell({
 
             <div className="flex items-center gap-2.5">
               <div
-                className="w-8 h-8 flex items-center justify-center rounded-xl text-white text-[11px] font-bold font-mono"
+                className="w-8 h-8 flex items-center justify-center rounded-xl text-white text-xs font-bold font-mono"
                 style={{ background: 'var(--navy)' }}
               >
                 {initials}
@@ -181,15 +181,15 @@ export function AdminShell({
                 <p className="text-sm font-semibold leading-none mb-0.5" style={{ color: 'var(--ink)' }}>
                   {user?.name || '—'}
                 </p>
-                <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-                  Admin
+                <p className="font-mono text-xs uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+                  ผู้ดูแลระบบ
                 </p>
               </div>
             </div>
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-[1600px]">{children}</main>
+        <main className="mx-auto w-full max-w-[100rem]">{children}</main>
       </div>
     </div>
   );

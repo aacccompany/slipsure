@@ -76,17 +76,17 @@ export function AdminReportExportDialog({ open, onClose }: { open: boolean; onCl
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onClose(); }}>
-      <div role="dialog" aria-modal="true" aria-labelledby="admin-report-title" className="w-full max-w-md border border-zinc-200 bg-white p-6 shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay)] p-4" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onClose(); }}>
+      <div role="dialog" aria-modal="true" aria-labelledby="admin-report-title" className="w-full max-w-md border border-[var(--border)] bg-[var(--bg-card)] p-6 shadow-xl">
         <div className="mb-5 flex items-start justify-between gap-3">
           <div>
-            <h2 id="admin-report-title" className="text-lg font-bold text-slate-950">ดาวน์โหลดรายงานแพลตฟอร์ม</h2>
-            <p className="mt-1 text-xs text-slate-500">ร้านค้าทั้งหมด · Excel (.xlsx)</p>
+            <h2 id="admin-report-title" className="text-lg font-bold text-[var(--ink)]">ดาวน์โหลดรายงานแพลตฟอร์ม</h2>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">ร้านค้าทั้งหมด · Excel (.xlsx)</p>
           </div>
-          <button type="button" onClick={onClose} disabled={busy} aria-label="ปิด" className="p-1 text-slate-500 hover:text-slate-950"><X className="h-5 w-5" /></button>
+          <button type="button" onClick={onClose} disabled={busy} aria-label="ปิด" className="p-1 text-[var(--text-muted)] hover:text-[var(--ink)]"><X className="h-5 w-5" /></button>
         </div>
-        <label htmlFor="admin-report-period" className="mb-1 block text-xs font-semibold text-slate-700">ช่วงเวลารายงาน</label>
-        <select id="admin-report-period" value={period} onChange={(event) => setPeriod(event.target.value as ReportPeriod)} className="w-full border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950">
+        <label htmlFor="admin-report-period" className="mb-1 block text-xs font-semibold text-[var(--text)]">ช่วงเวลารายงาน</label>
+        <select id="admin-report-period" value={period} onChange={(event) => setPeriod(event.target.value as ReportPeriod)} className="w-full border border-[var(--border-strong)] bg-[var(--bg-card)] px-3 py-2 text-sm text-[var(--ink)]">
           <option value="all">ทั้งหมด</option>
           <option value="today">วันนี้</option>
           <option value="7d">7 วันที่ผ่านมา</option>
@@ -96,17 +96,17 @@ export function AdminReportExportDialog({ open, onClose }: { open: boolean; onCl
           <option value="custom">กำหนดช่วงวันที่</option>
         </select>
         {period === 'selectedMonth' && <div className="mt-3">
-          <label htmlFor="admin-report-month" className="mb-1 block text-xs text-slate-700">เดือนและปี</label>
-          <input id="admin-report-month" type="month" value={selectedMonth} onChange={(event) => setSelectedMonth(event.target.value)} className="w-full min-w-0 border border-slate-300 px-2 py-2 text-sm" />
+          <label htmlFor="admin-report-month" className="mb-1 block text-xs text-[var(--text)]">เดือนและปี</label>
+          <input id="admin-report-month" type="month" value={selectedMonth} onChange={(event) => setSelectedMonth(event.target.value)} className="w-full min-w-0 border border-[var(--border-strong)] bg-[var(--bg-card)] px-2 py-2 text-sm text-[var(--ink)]" />
         </div>}
         {period === 'custom' && <div className="mt-3 grid grid-cols-2 gap-3">
-          <div><label htmlFor="admin-report-start" className="mb-1 block text-xs text-slate-700">วันที่เริ่ม</label><input id="admin-report-start" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} className="w-full min-w-0 border border-slate-300 px-2 py-2 text-sm" /></div>
-          <div><label htmlFor="admin-report-end" className="mb-1 block text-xs text-slate-700">วันที่สิ้นสุด</label><input id="admin-report-end" type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} className="w-full min-w-0 border border-slate-300 px-2 py-2 text-sm" /></div>
+          <div><label htmlFor="admin-report-start" className="mb-1 block text-xs text-[var(--text)]">วันที่เริ่ม</label><input id="admin-report-start" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} className="w-full min-w-0 border border-[var(--border-strong)] bg-[var(--bg-card)] px-2 py-2 text-sm text-[var(--ink)]" /></div>
+          <div><label htmlFor="admin-report-end" className="mb-1 block text-xs text-[var(--text)]">วันที่สิ้นสุด</label><input id="admin-report-end" type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} className="w-full min-w-0 border border-[var(--border-strong)] bg-[var(--bg-card)] px-2 py-2 text-sm text-[var(--ink)]" /></div>
         </div>}
-        <p className="mt-5 text-xs font-semibold text-slate-700">รายงานฉบับเต็ม (6 ชีต)</p>
+        <p className="mt-5 text-xs font-semibold text-[var(--text)]">รายงานฉบับเต็ม (6 ชีต)</p>
         <div className="mt-6 flex justify-end gap-2">
-          <button type="button" onClick={onClose} disabled={busy} className="border border-slate-300 px-4 py-2 text-sm text-slate-700">ยกเลิก</button>
-          <button type="button" onClick={download} disabled={busy} className="inline-flex items-center gap-2 bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+          <button type="button" onClick={onClose} disabled={busy} className="border border-[var(--border-strong)] px-4 py-2 text-sm text-[var(--text)]">ยกเลิก</button>
+          <button type="button" onClick={download} disabled={busy} className="inline-flex items-center gap-2 bg-[var(--navy)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} ดาวน์โหลด XLSX
           </button>
         </div>

@@ -141,22 +141,22 @@ export function AdminCSVExportDialog({
     }
   };
 
-  const inputClass = 'h-10 w-full min-w-0 border border-slate-300 bg-white px-3 text-sm text-slate-950';
+  const inputClass = 'h-10 w-full min-w-0 border border-[var(--border-strong)] bg-[var(--bg-card)] px-3 text-sm text-[var(--ink)]';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onClose(); }}>
-      <div role="dialog" aria-modal="true" aria-labelledby="admin-transactions-export-title" className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto border border-zinc-200 bg-white p-5 shadow-xl sm:p-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay)] p-4" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onClose(); }}>
+      <div role="dialog" aria-modal="true" aria-labelledby="admin-transactions-export-title" className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto border border-[var(--border)] bg-[var(--bg-card)] p-5 shadow-xl sm:p-6">
         <div className="mb-5 flex items-start justify-between gap-3">
           <div>
-            <h2 id="admin-transactions-export-title" className="text-lg font-bold text-slate-950">{exportTitles[kind]}</h2>
-            <p className="mt-1 text-xs text-slate-500">CSV · ข้อมูลทั้งหมดตามตัวกรอง</p>
+            <h2 id="admin-transactions-export-title" className="text-lg font-bold text-[var(--ink)]">{exportTitles[kind]}</h2>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">CSV · ข้อมูลทั้งหมดตามตัวกรอง</p>
           </div>
-          <button type="button" onClick={onClose} disabled={busy} aria-label="ปิด" className="p-1 text-slate-500 hover:text-slate-950 disabled:opacity-50"><X className="h-5 w-5" /></button>
+          <button type="button" onClick={onClose} disabled={busy} aria-label="ปิด" className="p-1 text-[var(--text-muted)] hover:text-[var(--ink)] disabled:opacity-50"><X className="h-5 w-5" /></button>
         </div>
 
         <div className="space-y-4">
           <div>
-            <label htmlFor="admin-transactions-export-period" className="mb-1 block text-xs font-semibold text-slate-700">ช่วงเวลา</label>
+            <label htmlFor="admin-transactions-export-period" className="mb-1 block text-xs font-semibold text-[var(--text)]">ช่วงเวลา</label>
             <select id="admin-transactions-export-period" value={period} onChange={(event) => setPeriod(event.target.value as ExportPeriod)} className={inputClass}>
               <option value="all">ทั้งหมด</option>
               <option value="last7">7 วันที่ผ่านมา</option>
@@ -167,25 +167,25 @@ export function AdminCSVExportDialog({
           </div>
           {period === 'selectedMonth' && (
             <div>
-              <label htmlFor="admin-transactions-export-month" className="mb-1 block text-xs font-semibold text-slate-700">เดือนและปี</label>
+              <label htmlFor="admin-transactions-export-month" className="mb-1 block text-xs font-semibold text-[var(--text)]">เดือนและปี</label>
               <input id="admin-transactions-export-month" type="month" value={month} onChange={(event) => setMonth(event.target.value)} className={inputClass} />
             </div>
           )}
           {period === 'custom' && (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
-                <label htmlFor="admin-transactions-export-start" className="mb-1 block text-xs font-semibold text-slate-700">วันที่เริ่ม</label>
+                <label htmlFor="admin-transactions-export-start" className="mb-1 block text-xs font-semibold text-[var(--text)]">วันที่เริ่ม</label>
                 <input id="admin-transactions-export-start" type="date" value={startDate} max={endDate || undefined} onChange={(event) => setStartDate(event.target.value)} className={inputClass} />
               </div>
               <div>
-                <label htmlFor="admin-transactions-export-end" className="mb-1 block text-xs font-semibold text-slate-700">วันที่สิ้นสุด</label>
+                <label htmlFor="admin-transactions-export-end" className="mb-1 block text-xs font-semibold text-[var(--text)]">วันที่สิ้นสุด</label>
                 <input id="admin-transactions-export-end" type="date" value={endDate} min={startDate || undefined} onChange={(event) => setEndDate(event.target.value)} className={inputClass} />
               </div>
             </div>
           )}
           {kind === 'users' && (
             <div>
-              <label htmlFor="admin-csv-export-role" className="mb-1 block text-xs font-semibold text-slate-700">ประเภทผู้ใช้</label>
+              <label htmlFor="admin-csv-export-role" className="mb-1 block text-xs font-semibold text-[var(--text)]">ประเภทผู้ใช้</label>
               <select id="admin-csv-export-role" value={role} onChange={(event) => setRole(event.target.value)} className={inputClass}>
                 <option value="merchant">ผู้ใช้ร้านค้า</option>
                 <option value="admin">ผู้ดูแลระบบ</option>
@@ -194,21 +194,21 @@ export function AdminCSVExportDialog({
             </div>
           )}
           <div>
-            <label htmlFor="admin-transactions-export-status" className="mb-1 block text-xs font-semibold text-slate-700">สถานะ</label>
+            <label htmlFor="admin-transactions-export-status" className="mb-1 block text-xs font-semibold text-[var(--text)]">สถานะ</label>
             <select id="admin-transactions-export-status" value={status} onChange={(event) => setStatus(event.target.value)} className={inputClass}>
               <option value="">ทั้งหมด</option>
               {statusOptions[kind].map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
             </select>
           </div>
           {kind !== 'billing' && <div>
-            <label htmlFor="admin-transactions-export-search" className="mb-1 block text-xs font-semibold text-slate-700">คำค้นหา</label>
+            <label htmlFor="admin-transactions-export-search" className="mb-1 block text-xs font-semibold text-[var(--text)]">คำค้นหา</label>
             <input id="admin-transactions-export-search" type="search" value={search} onChange={(event) => setSearch(event.target.value)} className={inputClass} />
           </div>}
         </div>
 
         <div className="mt-6 flex justify-end gap-2">
-          <button type="button" onClick={onClose} disabled={busy} className="h-10 border border-slate-300 px-4 text-sm text-slate-700 disabled:opacity-50">ยกเลิก</button>
-          <button type="button" onClick={download} disabled={busy} className="inline-flex h-10 items-center justify-center gap-2 bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50">
+          <button type="button" onClick={onClose} disabled={busy} className="h-10 border border-[var(--border-strong)] px-4 text-sm text-[var(--text)] disabled:opacity-50">ยกเลิก</button>
+          <button type="button" onClick={download} disabled={busy} className="inline-flex h-10 items-center justify-center gap-2 bg-[var(--navy)] px-4 text-sm font-semibold text-white hover:bg-[var(--navy-light)] disabled:opacity-50">
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
             ดาวน์โหลด CSV
           </button>
