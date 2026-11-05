@@ -384,6 +384,23 @@ class ApiClient {
     return response.blob();
   }
 
+  async exportMerchantReport(params: {
+    type: 'full' | 'slips' | 'summary';
+    start_date?: string;
+    end_date?: string;
+  }): Promise<Blob> {
+    const queryString = toQueryString(params);
+    const token = this.getAuthHeader();
+    const response = await fetch(`${this.baseURL}/v1/merchants/me/report/export?${queryString}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.error || 'Failed to export report');
+    }
+    return response.blob();
+  }
+
   // LINE Webhook Configuration
   async getLINEWebhookConfig(): Promise<ApiResponse<{ config: LINEWebhookConfig }>> {
     const response = await this.request<{ config: LINEWebhookConfig } | LINEWebhookConfig>('/v1/merchants/me/line-webhook') as ApiResponse<{ config: LINEWebhookConfig } | LINEWebhookConfig> & {
@@ -504,6 +521,28 @@ class ApiClient {
   }
 
   // Admin Backoffice
+  async exportAdminReport(params: {
+    report_period: 'all' | 'today' | '7d' | '30d' | 'month' | 'custom';
+    export_type: 'full';
+    format: 'xlsx';
+    timezone: 'Asia/Bangkok';
+    start_date?: string;
+    end_date?: string;
+  }): Promise<Blob> {
+    const token = this.getAuthHeader();
+    const response = await fetch(`${this.baseURL}/v1/admin/reports/export`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify(params),
+      cache: 'no-store',
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.error || 'ดาวน์โหลดรายงานแพลตฟอร์มไม่สำเร็จ');
+    }
+    return response.blob();
+  }
+
   async getAdminUsers(params?: {
     page?: number;
     limit?: number;
@@ -531,7 +570,7 @@ class ApiClient {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to export users');
+      throw new Error('ส่งออกรายชื่อผู้ใช้ไม่สำเร็จ');
     }
 
     return response.blob();
@@ -572,7 +611,7 @@ class ApiClient {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to export merchants');
+      throw new Error('ส่งออกรายชื่อร้านค้าไม่สำเร็จ');
     }
 
     return response.blob();
@@ -622,6 +661,23 @@ class ApiClient {
     return this.request(`/v1/admin/slip-history${queryString ? `?${queryString}` : ''}`);
   }
 
+  async exportAdminSlipHistory(params?: {
+    status?: string;
+    start_date?: string;
+    end_date?: string;
+    search?: string;
+  }): Promise<Blob> {
+    const queryString = toQueryString(params);
+    const token = this.getAuthHeader();
+    const response = await fetch(`${this.baseURL}/v1/admin/slip-history/export${queryString ? `?${queryString}` : ''}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    if (!response.ok) {
+      throw new Error('ส่งออกประวัติการตรวจสลิปไม่สำเร็จ');
+    }
+    return response.blob();
+  }
+
   async getSlipHistory(
     params?: { page?: number; limit?: number; status?: string; start_date?: string; end_date?: string; search?: string }
   ): Promise<ApiResponse<AdminSlipHistoryResponse>> {
@@ -668,7 +724,7 @@ class ApiClient {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to export payments');
+      throw new Error('ส่งออกรายการชำระเงินไม่สำเร็จ');
     }
 
     return response.blob();

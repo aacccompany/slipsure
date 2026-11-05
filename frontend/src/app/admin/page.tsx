@@ -13,6 +13,8 @@ import { AdminShell } from '@/components/admin/AdminShell';
 import { RejectedSlipDetailModal, TransactionDetailModal } from '@/components/admin/AdminMerchantTransactions';
 import { EmptyState } from '@/components/dashboard/EmptyState';
 import type { AdminAnalyticsDashboard, AdminBankStatus, AdminMerchantPerformanceAnalytics, AdminPaymentDetail, AdminRevenueAnalytics, AdminSlipHistoryItem, PaymentLog, SubscriptionPlan } from '@/types/api';
+import { AdminReportExportDialog } from '@/components/admin/AdminReportExportDialog';
+import { AdminCSVExportDialog, type AdminCSVExportKind } from '@/components/admin/AdminCSVExportDialog';
 import { AnalyticsSkeleton, LinesSkeleton, TableSkeleton } from '@/components/ui/Skeleton';
 
 type Tab = 'merchants' | 'users' | 'billing' | 'analytics' | 'transactions';
@@ -1024,7 +1026,8 @@ function AdminBackofficeContent() {
   const [selectedSlip, setSelectedSlip] = useState<AdminSlipHistoryItem | null>(null);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [isExporting, setIsExporting] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [csvExportKind, setCsvExportKind] = useState<AdminCSVExportKind | null>(null);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -1156,37 +1159,6 @@ function AdminBackofficeContent() {
     enabled: user?.role === 'admin' && tab === 'transactions',
   });
 
-  const handleExport = async () => {
-    setIsExporting(true);
-    try {
-      const dateParams = { start_date: startDate || undefined, end_date: endDate || undefined };
-      let blob: Blob;
-      if (tab === 'users') {
-        blob = await api.exportAdminUsers({ search: userSearch.trim() || undefined, role: 'merchant', status: userStatus || undefined, ...dateParams });
-      } else if (tab === 'merchants') {
-        blob = await api.exportAdminMerchants({ search: merchantSearch.trim() || undefined, ...dateParams });
-      } else if (tab === 'transactions') {
-        throw new Error('Transaction export is not available yet');
-      } else if (tab === 'billing') {
-        blob = await api.exportAdminPayments({ status: billingStatus || undefined, ...dateParams });
-      } else {
-        blob = await api.exportAdminPayments(dateParams);
-      }
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `admin-${tab}-${new Date().toISOString().slice(0, 10)}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to export data');
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
   if (isLoading || !user || user.role !== 'admin') {
     return (
       <div className="flex min-h-screen items-center justify-center" style={{ background: 'var(--bg)' }}>
@@ -1219,10 +1191,27 @@ function AdminBackofficeContent() {
           <p className="font-mono text-[10px] uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>
             {meta.crumb}
           </p>
-          <h1 className="font-bold tracking-tight" style={{ fontSize: '1.4rem', color: 'var(--navy)', letterSpacing: '-0.02em' }}>
-            {meta.title}
-          </h1>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h1 className="font-bold tracking-tight" style={{ fontSize: '1.4rem', color: 'var(--navy)', letterSpacing: '-0.02em' }}>
+              {meta.title}
+            </h1>
+            {tab === 'analytics' && <button type="button" onClick={() => setReportOpen(true)} className="inline-flex items-center gap-2 bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">
+              <Download className="h-4 w-4" /> ดาวน์โหลดรายงาน
+            </button>}
+          </div>
         </div>
+
+        <AdminReportExportDialog open={reportOpen} onClose={() => setReportOpen(false)} />
+        {csvExportKind && <AdminCSVExportDialog
+          kind={csvExportKind}
+          onClose={() => setCsvExportKind(null)}
+          initialFilters={{
+            status: csvExportKind === 'transactions' ? transactionStatus : csvExportKind === 'users' ? userStatus : csvExportKind === 'billing' ? billingStatus : '',
+            search: csvExportKind === 'transactions' ? transactionSearch : csvExportKind === 'users' ? userSearch : csvExportKind === 'merchants' ? merchantSearch : '',
+            startDate,
+            endDate,
+          }}
+        />}
 
         {tab === 'merchants' && !merchantsQuery.isError ? (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -1332,12 +1321,11 @@ function AdminBackofficeContent() {
             </div>
             <button
               type="button"
-              onClick={handleExport}
-              disabled={isExporting}
-              className="inline-flex items-center justify-center gap-2 border border-zinc-200 bg-white px-4 py-2 text-xs font-semibold text-zinc-700 transition-colors hover:border-zinc-900 hover:text-zinc-900 disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={() => setCsvExportKind(tab as AdminCSVExportKind)}
+              className="inline-flex items-center justify-center gap-2 border border-zinc-200 bg-white px-4 py-2 text-xs font-semibold text-zinc-700 transition-colors hover:border-zinc-900 hover:text-zinc-900"
             >
-              {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-              Export CSV
+              <Download className="h-4 w-4" />
+              ส่งออก CSV
             </button>
           </div>
         ) : null}
@@ -1426,7 +1414,7 @@ function AdminBackofficeContent() {
                   />
                 </div>
               </label>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
                   className="px-4 py-2 text-sm font-bold"
@@ -1453,6 +1441,15 @@ function AdminBackofficeContent() {
                   <RefreshCw className={`h-4 w-4 ${transactionsQuery.isFetching ? 'animate-spin' : ''}`} />
                   รีเฟรชข้อมูล
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setCsvExportKind('transactions')}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold"
+                  style={{ border: '1px solid var(--border)', color: 'var(--navy)', background: '#fff' }}
+                >
+                  <Download className="h-4 w-4" />
+                  ส่งออก CSV
+                </button>
               </div>
             </div>
           </section>
@@ -1467,7 +1464,7 @@ function AdminBackofficeContent() {
               <TableSkeleton rows={6} cols={6} />
             ) : (
               <>
-                <div className="grid min-w-[980px] grid-cols-[1.1fr_1fr_2fr_0.7fr_1fr_1.2fr] px-5 py-3 font-mono text-[9px] uppercase tracking-widest" style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>
+                <div className="grid min-w-[980px] grid-cols-[1.1fr_1fr_2fr_0.7fr_1fr_160px] gap-3 px-5 py-3 font-mono text-[9px] uppercase tracking-widest" style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>
                   <span>สถานะ</span>
                   <span>ยอดเงิน</span>
                   <span>ต้นทาง - ปลายทาง</span>
@@ -1488,11 +1485,11 @@ function AdminBackofficeContent() {
                         const { slip, transaction } = item;
                         const isDuplicate = slip.status === 'failed' && slip.fail_reason === 'DUPLICATE_SLIP';
                         return (
-                        <div key={slip.id} className="grid grid-cols-[1.1fr_1fr_2fr_0.7fr_1fr_1.2fr] items-center gap-3 px-5 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
+                        <div key={slip.id} className="grid grid-cols-[1.1fr_1fr_2fr_0.7fr_1fr_160px] items-center gap-3 px-5 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
                           <div className="flex items-center gap-3">
-                            <span className="h-1.5 w-1.5 rounded-full" style={{ background: slip.status === 'verified' ? '#10B981' : slip.status === 'failed' ? '#EF4444' : '#F59E0B' }} />
-                            <span className="rounded-full px-3 py-1 text-xs font-black uppercase" style={{ background: slip.status === 'verified' ? '#DCFCE7' : slip.status === 'failed' ? '#FEE2E2' : '#FEF3C7', color: slip.status === 'verified' ? '#047857' : slip.status === 'failed' ? '#DC2626' : '#D97706' }}>
-                              {slip.status === 'verified' ? 'success' : slip.status}
+                            <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: slip.status === 'verified' ? '#10B981' : isDuplicate ? '#F59E0B' : slip.status === 'failed' ? '#EF4444' : '#F59E0B' }} />
+                            <span className="whitespace-nowrap rounded-full px-3 py-1 text-xs font-bold" style={{ background: slip.status === 'verified' ? '#DCFCE7' : isDuplicate ? '#FEF3C7' : slip.status === 'failed' ? '#FEE2E2' : '#FEF3C7', color: slip.status === 'verified' ? '#047857' : isDuplicate ? '#B45309' : slip.status === 'failed' ? '#DC2626' : '#D97706' }}>
+                              {isDuplicate ? 'สลิปซ้ำ' : slip.status === 'verified' ? 'สำเร็จ' : slip.status === 'failed' ? 'ไม่สำเร็จ' : slip.status === 'pending' ? 'รอตรวจสอบ' : 'กำลังตรวจสอบ'}
                             </span>
                           </div>
                           <p className="text-base font-black" style={{ color: 'var(--navy)' }}>{transaction ? `฿${transaction.amount.toLocaleString('en-US')}` : '-'}</p>
@@ -1506,21 +1503,16 @@ function AdminBackofficeContent() {
                           </div>
                           <p className="font-black" style={{ color: 'var(--navy)' }}>1</p>
                           <p className="font-mono text-xs" style={{ color: 'var(--text-muted)' }}>{formatDate(slip.created_at)}</p>
-                          <div className="flex justify-end gap-2">
+                          <div className="flex justify-end">
                             <button
                               type="button"
                               onClick={() => setSelectedSlip(item)}
-                              className="inline-flex items-center gap-2 px-3 py-2 text-sm font-bold"
-                              style={{ border: '1px solid var(--border)', color: 'var(--navy)', background: '#fff' }}
+                              className="inline-flex h-9 w-36 items-center justify-center gap-2 whitespace-nowrap bg-white px-3 text-sm font-bold transition-colors hover:bg-slate-50"
+                              style={{ border: '1px solid var(--border)', color: 'var(--navy)' }}
                             >
                               <Eye className="h-4 w-4" />
                               ดูรายละเอียด
                             </button>
-                            {isDuplicate && (
-                              <span className="inline-flex items-center px-3 py-2 text-xs font-bold" style={{ border: '1px solid #F59E0B', color: '#D97706' }}>
-                                Duplicate
-                              </span>
-                            )}
                           </div>
                         </div>
                         );
@@ -1605,12 +1597,11 @@ function AdminBackofficeContent() {
                 </div>
                 <button
                   type="button"
-                  onClick={handleExport}
-                  disabled={isExporting}
-                  className="inline-flex items-center gap-2 border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 transition-colors hover:border-zinc-900 disabled:opacity-50"
+                  onClick={() => setCsvExportKind('merchants')}
+                  className="inline-flex items-center gap-2 border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 transition-colors hover:border-zinc-900"
                 >
-                  {isExporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-                  Export CSV
+                  <Download className="h-3.5 w-3.5" />
+                  ส่งออก CSV
                 </button>
               </div>
               <div className="overflow-x-auto">

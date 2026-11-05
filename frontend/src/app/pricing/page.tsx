@@ -61,7 +61,10 @@ export default function PricingPage() {
 
   const plans = plansData?.data?.plans?.filter((p) => p.is_active) ?? [];
   const freePlanUsed = subscriptionData?.data?.free_plan_used ?? false;
-  const currentPlanId = subscriptionData?.data?.subscription?.plan_id;
+  const currentSubscription = subscriptionData?.data?.subscription;
+  const currentPlanId = currentSubscription?.status === 'active' &&
+    (!currentSubscription.expires_at || new Date(currentSubscription.expires_at).getTime() > Date.now())
+    ? currentSubscription.plan_id : undefined;
   const visiblePlans = plans.filter((plan) => !(plan.id === 'plan-free' && freePlanUsed));
   const freePlan = visiblePlans.find((p) => p.id === 'plan-free');
   const paidPlans = visiblePlans.filter((p) => p.id !== 'plan-free');

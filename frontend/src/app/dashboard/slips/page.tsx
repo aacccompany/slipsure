@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Code2, Download, Eye, ImageIcon, Loader2, MessageSquare, RefreshCw, Search, X } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { TableSkeleton } from '@/components/ui/Skeleton';
+import { ReportExportDialog } from '@/components/dashboard/ReportExportDialog';
 import { toast } from 'sonner';
 import type { AdminSlipHistoryItem, Slip, SlipStatus, Transaction, TransactionStatus } from '@/types/api';
 
@@ -40,6 +41,8 @@ type FilterState = {
   search: string;
 };
 
+type DateMode = 'all' | 'this_month' | 'last_month' | 'month' | 'this_year' | 'year' | 'custom';
+
 const EMPTY_FILTERS: FilterState = {
   status: '',
   channel: '',
@@ -47,6 +50,18 @@ const EMPTY_FILTERS: FilterState = {
   endDate: '',
   search: '',
 };
+
+const MONTH_LABELS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+
+function monthRange(value: string) {
+  const [year, month] = value.split('-').map(Number);
+  const lastDay = new Date(year, month, 0).getDate();
+  return { startDate: `${value}-01`, endDate: `${value}-${String(lastDay).padStart(2, '0')}` };
+}
+
+function yearRange(value: string) {
+  return { startDate: `${value}-01-01`, endDate: `${value}-12-31` };
+}
 
 function statusStyle(status: SlipStatus) {
   switch (status) {
@@ -313,6 +328,7 @@ function TransactionRow({
 }
 
 export default function SlipsPage() {
+  const [reportOpen, setReportOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [selectedRejectedSlip, setSelectedRejectedSlip] = useState<Slip | null>(null);
@@ -320,6 +336,10 @@ export default function SlipsPage() {
   const [isExporting, setIsExporting] = useState(false);
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
   const [appliedFilters, setAppliedFilters] = useState<FilterState>(EMPTY_FILTERS);
+  const [dateMode, setDateMode] = useState<DateMode>('all');
+  const [selectedMonth, setSelectedMonth] = useState('');
+  const [selectedYear, setSelectedYear] = useState('');
+  const yearOptions = Array.from({ length: new Date().getFullYear() - 1999 }, (_, index) => new Date().getFullYear() - index);
 
   const { data: listData, isLoading, isFetching, refetch } = useQuery({
     queryKey: ['slip-history', page, appliedFilters],
@@ -331,24 +351,24 @@ export default function SlipsPage() {
   const totalPages = Math.max(1, pagination?.total_pages ?? 1);
   const hasActiveFilters = JSON.stringify(appliedFilters) !== JSON.stringify(EMPTY_FILTERS);
 
-  const downloadTransactions = async () => {
-    setIsExporting(true);
-    try {
-      const blob = await api.exportSlipHistory(transactionQueryParams(appliedFilters));
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `slip-history-${new Date().toISOString().slice(0, 10)}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to export slip history');
-    } finally {
-      setIsExporting(false);
-    }
-  };
+  // const downloadTransactions = async () => {
+  //   setIsExporting(true);
+  //   try {
+  //     const blob = await api.exportSlipHistory(transactionQueryParams(appliedFilters));
+  //     const url = URL.createObjectURL(blob);
+  //     const link = document.createElement('a');
+  //     link.href = url;
+  //     link.download = `slip-history-${new Date().toISOString().slice(0, 10)}.csv`;
+  //     document.body.appendChild(link);
+  //     link.click();
+  //     link.remove();
+  //     URL.revokeObjectURL(url);
+  //   } catch (error) {
+  //     toast.error(error instanceof Error ? error.message : 'Failed to export slip history');
+  //   } finally {
+  //     setIsExporting(false);
+  //   }
+  // };
 
   const applyFilters = () => {
     const nextFilters = { ...filters, search: filters.search.trim() };
@@ -365,6 +385,7 @@ export default function SlipsPage() {
     setPage(1);
     setFilters(EMPTY_FILTERS);
     setAppliedFilters(EMPTY_FILTERS);
+    setDateMode('all');
   };
 
   const updateFilters = (nextFilters: FilterState, applyNow = true) => {
@@ -374,6 +395,31 @@ export default function SlipsPage() {
 
     setPage(1);
     setAppliedFilters({ ...nextFilters, search: nextFilters.search.trim() });
+  };
+
+  const selectDateMode = (mode: DateMode) => {
+    setDateMode(mode);
+    if (mode === 'custom') return;
+    if (mode === 'all') {
+      updateFilters({ ...filters, startDate: '', endDate: '' });
+      return;
+    }
+
+    const today = new Date();
+    const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+    const lastMonthDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const lastMonth = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`;
+    const month = mode === 'last_month' ? lastMonth : mode === 'month' ? selectedMonth || currentMonth : currentMonth;
+    const year = mode === 'year' ? selectedYear || String(today.getFullYear()) : String(today.getFullYear());
+    if (mode === 'month') setSelectedMonth(month);
+    if (mode === 'year') setSelectedYear(year);
+    updateFilters({ ...filters, ...(mode === 'this_year' || mode === 'year' ? yearRange(year) : monthRange(month)) });
+  };
+
+  const selectMonthYear = (year: string, month: string) => {
+    const value = `${year}-${month}`;
+    setSelectedMonth(value);
+    updateFilters({ ...filters, ...monthRange(value) });
   };
 
   const openTransactionDetail = async (transaction: Transaction) => {
@@ -408,6 +454,7 @@ export default function SlipsPage() {
 
   return (
     <div className="p-6 md:p-8" style={{ background: 'var(--bg)' }}>
+      <ReportExportDialog open={reportOpen} onClose={() => setReportOpen(false)} startDate={appliedFilters.startDate} endDate={appliedFilters.endDate} />
       <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="mb-1 font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
@@ -420,13 +467,19 @@ export default function SlipsPage() {
 
         <div className="flex gap-2">
           <button
+            onClick={() => setReportOpen(true)}
+            className="inline-flex items-center gap-2 bg-zinc-950 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-zinc-800"
+          >
+            <Download className="h-4 w-4" /> ดาวน์โหลดรายงาน
+          </button>
+          {/* <button
             onClick={downloadTransactions}
             disabled={isExporting}
             className="inline-flex items-center gap-2 border border-zinc-200 bg-white px-4 py-2 text-xs font-semibold text-zinc-700 transition-colors hover:border-zinc-900 hover:text-zinc-900 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-            Export CSV
-          </button>
+            ส่งออก CSV
+          </button> */}
           <button
             onClick={() => refetch()}
             className="inline-flex items-center gap-2 border border-zinc-200 bg-white px-4 py-2 text-xs font-semibold text-zinc-700 transition-colors hover:border-zinc-900 hover:text-zinc-900"
@@ -513,24 +566,91 @@ export default function SlipsPage() {
           </label>
 
           <label className="space-y-1 text-xs font-bold" style={{ color: 'var(--navy)' }}>
-            วันที่เริ่ม
-            <input
-              type="date"
-              value={filters.startDate}
-              onChange={(event) => updateFilters({ ...filters, startDate: event.target.value })}
+            ช่วงเวลา
+            <select
+              value={dateMode}
+              onChange={(event) => selectDateMode(event.target.value as DateMode)}
               className="h-10 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm font-medium outline-none transition-colors focus:border-blue-500"
-            />
+            >
+              <option value="all">ทั้งหมด</option>
+              <option value="this_month">เดือนนี้</option>
+              <option value="last_month">เดือนที่แล้ว</option>
+              <option value="month">เลือกเดือน</option>
+              <option value="this_year">ปีนี้</option>
+              <option value="year">เลือกปี</option>
+              <option value="custom">กำหนดช่วงวันที่</option>
+            </select>
           </label>
 
-          <label className="space-y-1 text-xs font-bold" style={{ color: 'var(--navy)' }}>
-            วันที่สิ้นสุด
-            <input
-              type="date"
-              value={filters.endDate}
-              onChange={(event) => updateFilters({ ...filters, endDate: event.target.value })}
-              className="h-10 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm font-medium outline-none transition-colors focus:border-blue-500"
-            />
-          </label>
+          {dateMode === 'month' && (
+            <div className="grid min-w-0 grid-cols-2 gap-2">
+              <label className="min-w-0 space-y-1 text-xs font-bold" style={{ color: 'var(--navy)' }}>
+                ปี
+                <select
+                  value={selectedMonth.slice(0, 4)}
+                  onChange={(event) => selectMonthYear(event.target.value, selectedMonth.slice(5))}
+                  className="h-10 w-full rounded-md border border-zinc-200 bg-white px-2 text-sm font-medium outline-none transition-colors focus:border-blue-500"
+                >
+                  {yearOptions.map((year) => <option key={year} value={year}>{year}</option>)}
+                </select>
+              </label>
+              <label className="min-w-0 space-y-1 text-xs font-bold" style={{ color: 'var(--navy)' }}>
+                เดือน
+                <select
+                  value={selectedMonth.slice(5)}
+                  onChange={(event) => selectMonthYear(selectedMonth.slice(0, 4), event.target.value)}
+                  className="h-10 w-full rounded-md border border-zinc-200 bg-white px-2 text-sm font-medium outline-none transition-colors focus:border-blue-500"
+                >
+                  {MONTH_LABELS.map((label, index) => (
+                    <option key={label} value={String(index + 1).padStart(2, '0')}>{label}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          )}
+
+          {dateMode === 'year' && (
+            <label className="space-y-1 text-xs font-bold" style={{ color: 'var(--navy)' }}>
+              ปี
+              <select
+                value={selectedYear}
+                onChange={(event) => {
+                  setSelectedYear(event.target.value);
+                  updateFilters({ ...filters, ...yearRange(event.target.value) });
+                }}
+                className="h-10 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm font-medium outline-none transition-colors focus:border-blue-500"
+              >
+                {yearOptions.map((year) => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          {dateMode === 'custom' && (
+            <div className="grid gap-3 sm:grid-cols-2 lg:col-span-2">
+              <label className="space-y-1 text-xs font-bold" style={{ color: 'var(--navy)' }}>
+                วันที่เริ่ม
+                <input
+                  type="date"
+                  value={filters.startDate}
+                  max={filters.endDate || undefined}
+                  onChange={(event) => updateFilters({ ...filters, startDate: event.target.value })}
+                  className="h-10 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm font-medium outline-none transition-colors focus:border-blue-500"
+                />
+              </label>
+              <label className="space-y-1 text-xs font-bold" style={{ color: 'var(--navy)' }}>
+                วันที่สิ้นสุด
+                <input
+                  type="date"
+                  value={filters.endDate}
+                  min={filters.startDate || undefined}
+                  onChange={(event) => updateFilters({ ...filters, endDate: event.target.value })}
+                  className="h-10 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm font-medium outline-none transition-colors focus:border-blue-500"
+                />
+              </label>
+            </div>
+          )}
         </div>
 
         <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(260px,1fr)_auto] lg:items-end">

@@ -900,6 +900,11 @@ func (h *MerchantHandler) activateSubscription(userID uuid.UUID, checkoutSession
 		if err := h.merchantRepo.ResetUsageCounter(merchant.ID, periodStart.Year(), int(periodStart.Month())); err != nil {
 			return fmt.Errorf("failed to reset quota usage: %w", err)
 		}
+	} else {
+		startedAt = existingSubscription.StartedAt
+		if existingSubscription.ExpiresAt != nil {
+			expiresAt = *existingSubscription.ExpiresAt
+		}
 	}
 
 	subscription := &models.Subscription{
@@ -914,8 +919,12 @@ func (h *MerchantHandler) activateSubscription(userID uuid.UUID, checkoutSession
 		AutoRenew:            true,
 	}
 
-	if err := h.merchantRepo.CreateSubscription(subscription); err != nil {
-		return fmt.Errorf("failed to create subscription: %w", err)
+	if isNewCheckout {
+		if err := h.merchantRepo.CreateSubscription(subscription); err != nil {
+			return fmt.Errorf("failed to create subscription: %w", err)
+		}
+	} else {
+		subscription = existingSubscription
 	}
 
 	amount, currency, err := h.stripeService.GetCheckoutSessionPayment(checkoutSessionID)

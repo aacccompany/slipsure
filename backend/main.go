@@ -113,6 +113,8 @@ func main() {
 	transactionRepo := repositories.NewTransactionRepository(database.DB)
 	merchantService := services.NewMerchantService(merchantRepo, stripeService, userRepo)
 	merchantHandler := handlers.NewMerchantHandler(merchantService, stripeService, userRepo, merchantRepo, transactionRepo)
+	merchantReportHandler := handlers.NewMerchantReportHandler(database.DB, merchantRepo)
+	adminReportHandler := handlers.NewAdminReportHandler(database.DB)
 
 	// Initialize storage service (DigitalOcean Spaces)
 	log.Println(" Attempting to initialize DigitalOcean Spaces storage service...")
@@ -222,11 +224,13 @@ func main() {
 		admin := v1.Group("/admin")
 		admin.Use(middleware.AuthMiddleware(userRepo), middleware.RequireRole("admin"))
 		{
+			admin.POST("/reports/export", adminReportHandler.Export)
 			admin.GET("/payments", merchantHandler.GetAdminPayments)
 			admin.GET("/payments/export", merchantHandler.ExportAdminPayments)
 			admin.GET("/payments/:id", merchantHandler.GetAdminPaymentDetail)
 			admin.GET("/transactions", merchantHandler.GetAdminTransactions)
 			admin.GET("/slip-history", merchantHandler.GetAdminSlipHistory)
+			admin.GET("/slip-history/export", merchantHandler.ExportAdminSlipHistory)
 			admin.GET("/users", merchantHandler.GetAdminUsers)
 			admin.GET("/users/export", merchantHandler.ExportAdminUsers)
 			admin.PATCH("/users/:id/status", merchantHandler.UpdateAdminUserStatus)
@@ -278,6 +282,7 @@ func main() {
 			merchants.GET("/analytics/dashboard", merchantHandler.GetMerchantAnalyticsDashboard)
 			merchants.GET("/analytics/usage", merchantHandler.GetMerchantAnalyticsUsage)
 			merchants.GET("/analytics/export", merchantHandler.ExportMerchantAnalytics)
+			merchants.GET("/report/export", merchantReportHandler.Export)
 		}
 
 		// Alternative protected routes (removed duplicate /me endpoint)

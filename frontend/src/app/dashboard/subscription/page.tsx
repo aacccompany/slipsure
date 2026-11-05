@@ -135,7 +135,7 @@ export default function SubscriptionPage() {
           {subscription && (
             <div className="inline-flex h-9 items-center gap-2 self-start rounded-full border border-blue-100 bg-blue-50 px-4 text-xs font-bold uppercase tracking-widest text-blue-900 md:self-auto">
               <Zap className="h-4 w-4" />
-              {subscription.status} plan
+              {isSubscriptionExpired ? 'Expired plan' : `${subscription.status} plan`}
             </div>
           )}
         </div>
@@ -191,7 +191,7 @@ export default function SubscriptionPage() {
 
         <section className="grid gap-4 lg:grid-cols-3">
           {planCards.map(({ id, plan, billingCycle, price, badge }) => {
-            const isCurrentPlan = plan.id === subscription?.plan_id && subscription?.billing_cycle === billingCycle;
+            const isCurrentPlan = !isSubscriptionExpired && subscription?.status === 'active' && plan.id === subscription.plan_id && subscription.billing_cycle === billingCycle;
             const isPopular = plan.is_popular && billingCycle === 'monthly';
             const beforeVat = price / 1.07;
             const vat = price - beforeVat;

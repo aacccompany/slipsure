@@ -28,6 +28,8 @@ var migrations = []string{
 	"20261015_allow_users_without_email.sql",
 	"20261015_add_quota_expiry_alerts.sql",
 	"20261015_set_free_plan_quota_20.sql",
+	"20261103_add_credit_usage_events.sql",
+	"20261105_repair_missing_paid_credit_lots.sql",
 }
 
 // RunMigrations applies pending migrations once, in order. A fresh database is

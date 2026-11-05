@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { QuotaHero } from '@/components/dashboard/QuotaHero';
+import { ReportExportDialog } from '@/components/dashboard/ReportExportDialog';
 import { EmptyState } from '@/components/dashboard/EmptyState';
 import { RecentSlips } from '@/components/dashboard/RecentSlips';
 import { DashboardSkeleton, TableSkeleton } from '@/components/ui/Skeleton';
@@ -67,6 +68,7 @@ const transactionQueryParams = (filters: TransactionFilterState) => ({
 
 export default function DashboardPage() {
   const [analyticsPeriod, setAnalyticsPeriod] = useState<AnalyticsPeriod>('7d');
+  const [reportOpen, setReportOpen] = useState(false);
   const [orderSearch, setOrderSearch] = useState('');
   const [orderStatus, setOrderStatus] = useState<OrderStatusFilter>('all');
   const [selectedOrder, setSelectedOrder] = useState<PaymentLog | null>(null);
@@ -260,22 +262,6 @@ export default function DashboardPage() {
   const getCreditX = (index: number) => creditPadding.left + (creditData.length <= 1 ? creditPlotWidth / 2 : (creditPlotWidth / (creditData.length - 1)) * index);
   const getCreditY = (value: number) => creditPadding.top + creditPlotHeight - (value / creditYMax) * creditPlotHeight;
 
-  const downloadReport = async () => {
-    try {
-      const blob = await api.exportMerchantAnalytics({ format: 'csv' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `merchant-analytics-${new Date().toISOString().slice(0, 10)}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to download report');
-    }
-  };
-
   if (quotaLoading || statsLoading || usageLoading || subLoading) {
     return <DashboardSkeleton />;
   }
@@ -297,15 +283,16 @@ export default function DashboardPage() {
           </p>
         </div>
         <button
-          onClick={downloadReport}
+          onClick={() => setReportOpen(true)}
           className="flex shrink-0 items-center gap-2 text-sm font-semibold transition-all hover:opacity-80 px-4 py-2.5"
           style={{ background: 'var(--navy)', color: '#fff' }}
         >
-          Download Report
+          ดาวน์โหลดรายงาน
           <ArrowUpRight className="w-3.5 h-3.5" />
         </button>
       </div>
 
+      <ReportExportDialog open={reportOpen} onClose={() => setReportOpen(false)} initialPeriod={analyticsPeriod} startDate={appliedTransactionFilters.startDate} endDate={appliedTransactionFilters.endDate} />
       {quota?.data?.is_blocked && (
         <div className="flex items-center gap-3 px-4 py-3" style={{ background: '#FEF2F2', border: '1px solid #FECACA' }}>
           <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />

@@ -34,7 +34,7 @@ type MerchantRepository interface {
 	CancelSubscription(merchantID uuid.UUID, reason string) error
 	CreatePaymentLog(payment *models.PaymentLog) error
 	CreateCreditLot(lot *models.CreditLot) error
-	ConsumeCreditFIFO(merchantID uuid.UUID) error
+	ConsumeCreditFIFO(merchantID, verificationID uuid.UUID) error
 	ListPaymentLogs(status string, startDate *time.Time, endDate *time.Time, limit, offset int) ([]models.PaymentLog, int, error)
 	FindPaymentLogByID(id uuid.UUID) (*models.PaymentLog, error)
 	ListPaymentLogsByMerchant(merchantID uuid.UUID, limit int) ([]models.PaymentLog, error)
@@ -472,6 +472,12 @@ func (r *merchantRepository) CreatePaymentLog(payment *models.PaymentLog) error 
 		payment.PaidAt,
 	).Scan(&payment.ID, &payment.CreatedAt)
 	if err == sql.ErrNoRows {
+		if err := tx.QueryRow(`SELECT id, created_at FROM payment_logs
+			WHERE merchant_id = $1 AND gateway = $2::payment_gateway AND gateway_reference_id = $3
+			AND status = 'success'`,
+			payment.MerchantID, payment.Gateway, payment.GatewayReferenceID).Scan(&payment.ID, &payment.CreatedAt); err != nil {
+			return err
+		}
 		return tx.Commit()
 	}
 	if err != nil {
@@ -485,6 +491,24 @@ func (r *merchantRepository) CreateCreditLot(lot *models.CreditLot) error {
 	if lot.CreditsRemaining == 0 {
 		lot.CreditsRemaining = lot.CreditsTotal
 	}
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if lot.PaymentLogID != nil {
+		if _, err := tx.Exec(`SELECT pg_advisory_xact_lock(hashtext($1))`, "credit_lot:"+lot.PaymentLogID.String()); err != nil {
+			return err
+		}
+		err := tx.QueryRow(`SELECT id, created_at, updated_at FROM credit_lots WHERE payment_log_id = $1`,
+			*lot.PaymentLogID).Scan(&lot.ID, &lot.CreatedAt, &lot.UpdatedAt)
+		if err == nil {
+			return tx.Commit()
+		}
+		if err != sql.ErrNoRows {
+			return err
+		}
+	}
 
 	query := `
 		INSERT INTO credit_lots (
@@ -495,7 +519,7 @@ func (r *merchantRepository) CreateCreditLot(lot *models.CreditLot) error {
 		RETURNING id, created_at, updated_at
 	`
 
-	return r.db.QueryRow(
+	if err := tx.QueryRow(
 		query,
 		lot.MerchantID,
 		lot.SubscriptionID,
@@ -505,11 +529,14 @@ func (r *merchantRepository) CreateCreditLot(lot *models.CreditLot) error {
 		lot.CreditsRemaining,
 		lot.StartedAt,
 		lot.ExpiresAt,
-	).Scan(&lot.ID, &lot.CreatedAt, &lot.UpdatedAt)
+	).Scan(&lot.ID, &lot.CreatedAt, &lot.UpdatedAt); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // ConsumeCreditFIFO consumes one scan credit from the oldest unexpired lot.
-func (r *merchantRepository) ConsumeCreditFIFO(merchantID uuid.UUID) error {
+func (r *merchantRepository) ConsumeCreditFIFO(merchantID, verificationID uuid.UUID) error {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return err
@@ -523,7 +550,7 @@ func (r *merchantRepository) ConsumeCreditFIFO(merchantID uuid.UUID) error {
 		WHERE merchant_id = $1
 		  AND credits_remaining > 0
 		  AND expires_at > CURRENT_TIMESTAMP
-		ORDER BY expires_at ASC, started_at ASC, created_at ASC
+		ORDER BY started_at ASC, created_at ASC, id ASC
 		FOR UPDATE SKIP LOCKED
 		LIMIT 1
 	`, merchantID).Scan(&lotID)
@@ -533,6 +560,10 @@ func (r *merchantRepository) ConsumeCreditFIFO(merchantID uuid.UUID) error {
 			return countErr
 		}
 		if lotCount == 0 {
+			if _, err := tx.Exec(`INSERT INTO credit_usage_events (merchant_id, verification_id, credits_used)
+				VALUES ($1, $2, 1)`, merchantID, verificationID); err != nil {
+				return err
+			}
 			return tx.Commit()
 		}
 		return ErrNoAvailableCredits
@@ -541,12 +572,19 @@ func (r *merchantRepository) ConsumeCreditFIFO(merchantID uuid.UUID) error {
 		return err
 	}
 
-	if _, err := tx.Exec(`
+	var balance int
+	if err := tx.QueryRow(`
 		UPDATE credit_lots
 		SET credits_remaining = credits_remaining - 1,
 		    updated_at = CURRENT_TIMESTAMP
 		WHERE id = $1
-	`, lotID); err != nil {
+		RETURNING credits_remaining
+	`, lotID).Scan(&balance); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`INSERT INTO credit_usage_events
+		(merchant_id, verification_id, credit_lot_id, credits_used, lot_balance_after)
+		VALUES ($1, $2, $3, 1, $4)`, merchantID, verificationID, lotID, balance); err != nil {
 		return err
 	}
 

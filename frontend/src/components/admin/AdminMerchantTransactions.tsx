@@ -314,11 +314,11 @@ export function AdminMerchantTransactions({ merchantId }: Props) {
           <p className="p-5 text-sm" style={{ color: 'var(--text-muted)' }}>No slip attempts yet.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table className="w-full min-w-[980px] text-left text-sm">
               <thead style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-subtle)' }}>
                 <tr>
-                  {['สถานะ', 'ยอดเงิน', 'ต้นทาง - ปลายทาง', 'เครดิตแพ็กเกจ', 'วันที่', 'ดำเนินการ'].map((header) => (
-                    <th key={header} className="px-4 py-3 font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+                  {['สถานะ', 'ยอดเงิน', 'ต้นทาง - ปลายทาง', 'เครดิตแพ็กเกจ', 'วันที่', 'ดำเนินการ'].map((header, index) => (
+                    <th key={header} className={`px-4 py-3 font-mono text-[9px] uppercase tracking-widest ${index === 5 ? 'w-44 text-right' : ''}`} style={{ color: 'var(--text-muted)' }}>
                       {header}
                     </th>
                   ))}
@@ -332,9 +332,9 @@ export function AdminMerchantTransactions({ merchantId }: Props) {
                   return (
                   <tr key={slip.id} style={{ borderBottom: '1px solid var(--border)' }}>
                     <td className="px-4 py-3">
-                      <span className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-black uppercase" style={{ background: slip.status === 'verified' ? '#DCFCE7' : slip.status === 'failed' ? '#FEE2E2' : '#FEF3C7', color: slip.status === 'verified' ? '#047857' : slip.status === 'failed' ? '#DC2626' : '#D97706' }}>
-                        <span className="h-1.5 w-1.5 rounded-full" style={{ background: slip.status === 'verified' ? '#10B981' : slip.status === 'failed' ? '#EF4444' : '#F59E0B' }} />
-                        {displayStatus}
+                      <span className="inline-flex items-center gap-2 whitespace-nowrap rounded-full px-3 py-1 text-xs font-bold" style={{ background: slip.status === 'verified' ? '#DCFCE7' : isDuplicate ? '#FEF3C7' : slip.status === 'failed' ? '#FEE2E2' : '#FEF3C7', color: slip.status === 'verified' ? '#047857' : isDuplicate ? '#B45309' : slip.status === 'failed' ? '#DC2626' : '#D97706' }}>
+                        <span className="h-1.5 w-1.5 rounded-full" style={{ background: slip.status === 'verified' ? '#10B981' : isDuplicate ? '#F59E0B' : slip.status === 'failed' ? '#EF4444' : '#F59E0B' }} />
+                        {displayStatus === 'duplicate' ? 'สลิปซ้ำ' : displayStatus === 'verified' ? 'สำเร็จ' : displayStatus === 'failed' ? 'ไม่สำเร็จ' : displayStatus === 'pending' ? 'รอตรวจสอบ' : 'กำลังตรวจสอบ'}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-base font-black" style={{ color: 'var(--navy)' }}>{transaction ? formatAmount(transaction.amount) : '-'}</td>
@@ -346,22 +346,17 @@ export function AdminMerchantTransactions({ merchantId }: Props) {
                     </td>
                     <td className="px-4 py-3 font-black" style={{ color: 'var(--navy)' }}>1</td>
                     <td className="px-4 py-3 font-mono text-xs" style={{ color: 'var(--text-muted)' }}>{formatDate(slip.created_at)}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex justify-end gap-2">
+                    <td className="w-44 px-4 py-3 text-right">
+                      <div className="flex justify-end">
                         <button
                           type="button"
                           onClick={() => setSelectedItem(item)}
-                          className="inline-flex items-center gap-2 px-3 py-2 text-sm font-bold"
-                          style={{ border: '1px solid var(--border)', color: 'var(--navy)', background: '#fff' }}
+                          className="inline-flex h-9 w-36 items-center justify-center gap-2 whitespace-nowrap bg-white px-3 text-sm font-bold transition-colors hover:bg-slate-50"
+                          style={{ border: '1px solid var(--border)', color: 'var(--navy)' }}
                         >
                           <Eye className="h-4 w-4" />
                           ดูรายละเอียด
                         </button>
-                        {isDuplicate && (
-                          <span className="inline-flex items-center px-3 py-2 text-xs font-bold" style={{ border: '1px solid #F59E0B', color: '#D97706' }}>
-                            Duplicate
-                          </span>
-                        )}
                       </div>
                     </td>
                   </tr>

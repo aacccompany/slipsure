@@ -93,7 +93,8 @@ func (s *SlipVerificationService) UploadAndVerify(ctx context.Context, merchantI
 			alertBefore = nil
 		}
 	}
-	if err := s.incrementVerificationUsage(subscription, merchantID); err != nil {
+	verificationID := uuid.New()
+	if err := s.incrementVerificationUsage(subscription, merchantID, verificationID); err != nil {
 		return nil, fmt.Errorf("failed to record quota usage: %w", err)
 	}
 	if s.quotaAlerts != nil && alertBefore != nil {
@@ -106,7 +107,7 @@ func (s *SlipVerificationService) UploadAndVerify(ctx context.Context, merchantI
 
 	// Create slip record
 	slip := &models.Slip{
-		ID:         uuid.New(),
+		ID:         verificationID,
 		MerchantID: merchantID,
 		Status:     models.SlipStatusPending,
 		CreatedAt:  time.Now(),
@@ -229,9 +230,9 @@ func (s *SlipVerificationService) verifySlipAsync(slip *models.Slip) {
 	}
 }
 
-func (s *SlipVerificationService) incrementVerificationUsage(subscription *models.Subscription, merchantID uuid.UUID) error {
+func (s *SlipVerificationService) incrementVerificationUsage(subscription *models.Subscription, merchantID, verificationID uuid.UUID) error {
 	periodStart, _ := models.QuotaPeriodFor(subscription.StartedAt, time.Now())
-	if err := s.merchantRepo.ConsumeCreditFIFO(merchantID); err != nil {
+	if err := s.merchantRepo.ConsumeCreditFIFO(merchantID, verificationID); err != nil {
 		return err
 	}
 	return s.usageRepo.IncrementUsage(merchantID, periodStart.Year(), int(periodStart.Month()))

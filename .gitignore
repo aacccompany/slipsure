@@ -10,3 +10,6 @@ docker-compose.yml
 .github
 docker-compose.deploy.yml
 go-build
+admin_export.md
+export.md
+backend/ADMIN_REPORT_MAPPING.md
