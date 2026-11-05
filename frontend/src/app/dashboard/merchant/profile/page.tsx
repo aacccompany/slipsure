@@ -20,7 +20,7 @@ import type { MerchantProfile } from '@/types/api';
 import { PageSkeleton } from '@/components/ui/Skeleton';
 
 const inputClass = 'w-full px-4 py-3 text-sm transition-all focus:outline-none';
-const inputStyle = { border: '1px solid var(--border)', color: 'var(--navy)', background: '#fff' };
+const inputStyle = { border: '1px solid var(--border)', color: 'var(--ink)', background: 'var(--bg-card)' };
 
 export default function MerchantProfileDetailPage() {
   const router = useRouter();

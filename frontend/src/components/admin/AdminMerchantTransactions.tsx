@@ -30,7 +30,7 @@ function DetailLine({ label, value }: { label: string; value?: string | number |
   return (
     <div className="flex items-start justify-between gap-4 border-b border-zinc-100 py-2 text-sm">
       <span style={{ color: 'var(--text-muted)' }}>{label}</span>
-      <span className="max-w-[240px] break-words text-right font-semibold" style={{ color: 'var(--navy)' }}>
+      <span className="max-w-[240px] break-words text-right font-semibold" style={{ color: 'var(--ink)' }}>
         {value === undefined || value === null || value === '' ? '-' : String(value)}
       </span>
     </div>
@@ -56,7 +56,7 @@ export function TransactionDetailModal({
             <p className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
               Transaction detail
             </p>
-            <h2 className="text-xl font-bold" style={{ color: 'var(--navy)' }}>
+            <h2 className="text-xl font-bold" style={{ color: 'var(--ink)' }}>
               {transaction.reference_no || transaction.id}
             </h2>
           </div>
@@ -73,7 +73,7 @@ export function TransactionDetailModal({
         <div className="max-h-[calc(90vh-81px)] overflow-y-auto p-6">
           <div className="grid gap-6 lg:grid-cols-2">
             <section className="rounded-lg border border-zinc-200 p-4">
-              <h3 className="mb-3 text-sm font-bold" style={{ color: 'var(--navy)' }}>HaveSLIP Result</h3>
+              <h3 className="mb-3 text-sm font-bold" style={{ color: 'var(--ink)' }}>HaveSLIP Result</h3>
               <DetailLine label="Provider" value={transaction.provider || 'haveslip'} />
               <DetailLine label="Verification UUID" value={transaction.provider_verification_id} />
               <DetailLine label="Provider status" value={transaction.provider_status} />
@@ -84,7 +84,7 @@ export function TransactionDetailModal({
             </section>
 
             <section className="rounded-lg border border-zinc-200 p-4">
-              <h3 className="mb-3 text-sm font-bold" style={{ color: 'var(--navy)' }}>Transaction Data</h3>
+              <h3 className="mb-3 text-sm font-bold" style={{ color: 'var(--ink)' }}>Transaction Data</h3>
               <DetailLine label="Amount" value={formatAmount(transaction.amount)} />
               <DetailLine label="SlipSure plan credits" value={1} />
               <DetailLine label="Status" value={transaction.status} />
@@ -94,14 +94,14 @@ export function TransactionDetailModal({
             </section>
 
             <section className="rounded-lg border border-zinc-200 p-4">
-              <h3 className="mb-3 text-sm font-bold" style={{ color: 'var(--navy)' }}>Sender</h3>
+              <h3 className="mb-3 text-sm font-bold" style={{ color: 'var(--ink)' }}>Sender</h3>
               <DetailLine label="Name" value={transaction.sender_name} />
               <DetailLine label="Bank" value={transaction.sender_bank} />
               <DetailLine label="Account" value={transaction.sender_account} />
             </section>
 
             <section className="rounded-lg border border-zinc-200 p-4">
-              <h3 className="mb-3 text-sm font-bold" style={{ color: 'var(--navy)' }}>Receiver</h3>
+              <h3 className="mb-3 text-sm font-bold" style={{ color: 'var(--ink)' }}>Receiver</h3>
               <DetailLine label="Name" value={transaction.receiver_name} />
               <DetailLine label="Bank" value={transaction.receiver_bank} />
               <DetailLine label="Account" value={transaction.receiver_account} />
@@ -112,7 +112,7 @@ export function TransactionDetailModal({
             <section className="mt-6 rounded-lg border border-zinc-200 p-4">
               <div className="mb-3 flex items-center gap-2">
                 <Code2 className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />
-                <h3 className="text-sm font-bold" style={{ color: 'var(--navy)' }}>Raw HaveSLIP Response</h3>
+                <h3 className="text-sm font-bold" style={{ color: 'var(--ink)' }}>Raw HaveSLIP Response</h3>
               </div>
               <pre className="max-h-80 overflow-auto rounded-md bg-zinc-950 p-4 text-xs text-zinc-100">
                 {rawResponse}
@@ -132,7 +132,7 @@ export function RejectedSlipDetailModal({ slip, onClose }: { slip: Slip; onClose
         <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-4">
           <div>
             <p className="font-mono text-[10px] uppercase" style={{ color: 'var(--text-muted)' }}>Slip detail</p>
-            <h2 className="break-all text-lg font-bold" style={{ color: 'var(--navy)' }}>{slip.id}</h2>
+            <h2 className="break-all text-lg font-bold" style={{ color: 'var(--ink)' }}>{slip.id}</h2>
           </div>
           <button type="button" onClick={onClose} aria-label="Close slip detail" className="rounded-md border border-zinc-200 p-2">
             <X className="h-4 w-4" />
@@ -195,13 +195,13 @@ export function AdminMerchantTransactions({ merchantId }: Props) {
       <section className="bg-white p-5" style={{ border: '1px solid var(--border)' }}>
         <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
           <div>
-            <h2 className="text-sm font-black" style={{ color: 'var(--navy)' }}>ตัวกรองประวัติ</h2>
+            <h2 className="text-sm font-black" style={{ color: 'var(--ink)' }}>ตัวกรองประวัติ</h2>
             <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
               กรองจากสถานะ วันที่ และคำค้นหา เพื่อค้นหารายการที่ต้องการ
             </p>
           </div>
           {pagination && (
-            <span className="text-sm font-bold" style={{ color: 'var(--navy)' }}>
+            <span className="text-sm font-bold" style={{ color: 'var(--ink)' }}>
               รวม {pagination.total} รายการ (โหลดมาแล้ว {transactions.length} รายการ)
             </span>
           )}
@@ -209,7 +209,7 @@ export function AdminMerchantTransactions({ merchantId }: Props) {
 
         <div className="grid gap-3 lg:grid-cols-3">
           <label className="block">
-            <span className="text-xs font-bold" style={{ color: 'var(--navy)' }}>สถานะ</span>
+            <span className="text-xs font-bold" style={{ color: 'var(--ink)' }}>สถานะ</span>
             <select
               value={status}
               onChange={(event) => {
@@ -217,7 +217,7 @@ export function AdminMerchantTransactions({ merchantId }: Props) {
                 setPage(1);
               }}
               className="mt-1 h-10 w-full px-3 text-sm outline-none"
-              style={{ border: '1px solid var(--border)', color: 'var(--navy)', background: '#fff' }}
+              style={{ border: '1px solid var(--border)', color: 'var(--ink)', background: 'var(--bg-card)' }}
             >
               <option value="">ทั้งหมด</option>
               <option value="verified">สำเร็จ</option>
@@ -228,7 +228,7 @@ export function AdminMerchantTransactions({ merchantId }: Props) {
             </select>
           </label>
           <label className="block">
-            <span className="text-xs font-bold" style={{ color: 'var(--navy)' }}>วันที่เริ่ม</span>
+            <span className="text-xs font-bold" style={{ color: 'var(--ink)' }}>วันที่เริ่ม</span>
             <input
               type="date"
               value={startDate}
@@ -237,11 +237,11 @@ export function AdminMerchantTransactions({ merchantId }: Props) {
                 setPage(1);
               }}
               className="mt-1 h-10 w-full px-3 text-sm outline-none"
-              style={{ border: '1px solid var(--border)', color: 'var(--navy)' }}
+              style={{ border: '1px solid var(--border)', color: 'var(--ink)' }}
             />
           </label>
           <label className="block">
-            <span className="text-xs font-bold" style={{ color: 'var(--navy)' }}>วันที่สิ้นสุด</span>
+            <span className="text-xs font-bold" style={{ color: 'var(--ink)' }}>วันที่สิ้นสุด</span>
             <input
               type="date"
               value={endDate}
@@ -250,15 +250,15 @@ export function AdminMerchantTransactions({ merchantId }: Props) {
                 setPage(1);
               }}
               className="mt-1 h-10 w-full px-3 text-sm outline-none"
-              style={{ border: '1px solid var(--border)', color: 'var(--navy)' }}
+              style={{ border: '1px solid var(--border)', color: 'var(--ink)' }}
             />
           </label>
         </div>
 
         <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <label className="block lg:w-[420px]">
-            <span className="text-xs font-bold" style={{ color: 'var(--navy)' }}>คำค้นหา (UUID / ผู้รับ / ธนาคาร)</span>
-            <div className="mt-1 flex h-10 items-center gap-2 px-3" style={{ border: '1px solid var(--border)', background: '#fff' }}>
+            <span className="text-xs font-bold" style={{ color: 'var(--ink)' }}>คำค้นหา (UUID / ผู้รับ / ธนาคาร)</span>
+            <div className="mt-1 flex h-10 items-center gap-2 px-3" style={{ border: '1px solid var(--border)', background: 'var(--bg-card)' }}>
               <Search className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} />
               <input
                 value={search}
@@ -270,7 +270,7 @@ export function AdminMerchantTransactions({ merchantId }: Props) {
                   if (event.key === 'Enter') refreshTransactions();
                 }}
                 className="h-full min-w-0 flex-1 bg-transparent text-sm outline-none"
-                style={{ color: 'var(--navy)' }}
+                style={{ color: 'var(--ink)' }}
                 placeholder="เช่น 1234-uuid หรือ ชื่อร้าน"
               />
             </div>
@@ -279,7 +279,7 @@ export function AdminMerchantTransactions({ merchantId }: Props) {
             <button
               type="button"
               className="px-4 py-2 text-sm font-bold"
-              style={{ border: '1px solid var(--border)', color: 'var(--navy)', background: '#fff' }}
+              style={{ border: '1px solid var(--border)', color: 'var(--ink)', background: 'var(--bg-card)' }}
               onClick={resetFilters}
             >
               ล้างตัวกรอง
@@ -299,7 +299,7 @@ export function AdminMerchantTransactions({ merchantId }: Props) {
 
       <section className="bg-white" style={{ border: '1px solid var(--border)' }}>
         <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
-          <h2 className="text-sm font-bold" style={{ color: 'var(--navy)' }}>Slip History</h2>
+          <h2 className="text-sm font-bold" style={{ color: 'var(--ink)' }}>Slip History</h2>
           {pagination && (
             <span className="font-mono text-[10px]" style={{ color: 'var(--text-muted)' }}>
               Page {pagination.page} / {Math.max(1, pagination.total_pages)} · {pagination.total} total
@@ -337,22 +337,22 @@ export function AdminMerchantTransactions({ merchantId }: Props) {
                         {displayStatus === 'duplicate' ? 'สลิปซ้ำ' : displayStatus === 'verified' ? 'สำเร็จ' : displayStatus === 'failed' ? 'ไม่สำเร็จ' : displayStatus === 'pending' ? 'รอตรวจสอบ' : 'กำลังตรวจสอบ'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-base font-black" style={{ color: 'var(--navy)' }}>{transaction ? formatAmount(transaction.amount) : '-'}</td>
+                    <td className="px-4 py-3 text-base font-black" style={{ color: 'var(--ink)' }}>{transaction ? formatAmount(transaction.amount) : '-'}</td>
                     <td className="px-4 py-3">
-                      <p className="max-w-[340px] truncate font-bold" style={{ color: 'var(--navy)' }}>
+                      <p className="max-w-[340px] truncate font-bold" style={{ color: 'var(--ink)' }}>
                         {transaction ? `${transaction.sender_name || transaction.sender_bank || '-'} → ${transaction.receiver_name || transaction.receiver_bank || '-'}` : slip.fail_reason?.replaceAll('_', ' ') || '-'}
                       </p>
                       <p className="font-mono text-[10px]" style={{ color: 'var(--text-muted)' }}>{transaction?.reference_no || slip.id}</p>
                     </td>
-                    <td className="px-4 py-3 font-black" style={{ color: 'var(--navy)' }}>1</td>
+                    <td className="px-4 py-3 font-black" style={{ color: 'var(--ink)' }}>1</td>
                     <td className="px-4 py-3 font-mono text-xs" style={{ color: 'var(--text-muted)' }}>{formatDate(slip.created_at)}</td>
                     <td className="w-44 px-4 py-3 text-right">
                       <div className="flex justify-end">
                         <button
                           type="button"
                           onClick={() => setSelectedItem(item)}
-                          className="inline-flex h-9 w-36 items-center justify-center gap-2 whitespace-nowrap bg-white px-3 text-sm font-bold transition-colors hover:bg-slate-50"
-                          style={{ border: '1px solid var(--border)', color: 'var(--navy)' }}
+                          className="inline-flex h-9 w-36 items-center justify-center gap-2 whitespace-nowrap px-3 text-sm font-bold transition-colors"
+                          style={{ border: '1px solid var(--border)', color: 'var(--ink)', background: 'var(--bg-card)' }}
                         >
                           <Eye className="h-4 w-4" />
                           ดูรายละเอียด

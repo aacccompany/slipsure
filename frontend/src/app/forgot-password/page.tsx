@@ -39,7 +39,7 @@ export default function ForgotPasswordPage() {
         </Link>
 
         <div className="mb-8">
-          <h1 className="font-display text-4xl font-semibold mb-1" style={{ color: 'var(--navy)' }}>
+          <h1 className="font-display text-4xl font-semibold mb-1" style={{ color: 'var(--ink)' }}>
             Reset Password
           </h1>
           <div className="flex items-center gap-2">
@@ -60,7 +60,7 @@ export default function ForgotPasswordPage() {
                 </div>
                 <p className="font-mono text-[11px] text-center uppercase tracking-widest leading-relaxed" style={{ color: 'var(--text-muted)' }}>
                   Reset code sent to<br />
-                  <span className="font-bold" style={{ color: 'var(--navy)' }}>{email}</span>
+                  <span className="font-bold" style={{ color: 'var(--ink)' }}>{email}</span>
                 </p>
               </div>
               <Link href={`/reset-password?email=${encodeURIComponent(email)}`}
@@ -82,13 +82,13 @@ export default function ForgotPasswordPage() {
                   type="email" value={email} onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@company.com" required
                   className="w-full px-4 py-3 border text-sm transition-colors placeholder:opacity-40 focus:outline-none"
-                  style={{ borderColor: 'var(--border)', color: 'var(--navy)' }}
+                  style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
                   onFocus={(e) => (e.target.style.borderColor = 'var(--gold)')}
                   onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
                 />
               </div>
               {error && (
-                <div className="flex items-center gap-2 px-4 py-3" style={{ background: '#FEF2F2', border: '1px solid #FECACA' }}>
+                <div className="flex items-center gap-2 px-4 py-3" style={{ background: 'var(--err-pale)', border: '1px solid #FECACA' }}>
                   <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-500" />
                   <p className="text-xs text-rose-600">{error}</p>
                 </div>

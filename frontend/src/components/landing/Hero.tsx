@@ -29,7 +29,7 @@ function ScannerSlip() {
       <div className="bob relative">
         <div
           className="relative overflow-hidden rounded-[2rem] bg-white"
-          style={{ boxShadow: '0 30px 60px -24px rgba(0,24,71,0.35), 0 0 0 1px rgba(0,24,71,0.06)' }}
+          style={{ boxShadow: '0 30px 60px -24px rgba(0,24,71,0.35), 0 0 0 1px var(--ring)' }}
         >
           {/* header */}
           <div className="flex items-center justify-between px-6 py-4" style={{ background: 'var(--navy)' }}>
@@ -58,7 +58,7 @@ function ScannerSlip() {
               </span>
             </div>
 
-            <p className="font-display text-[clamp(1.9rem,9vw,2.6rem)] font-extrabold leading-none whitespace-nowrap" style={{ color: 'var(--navy)' }}>
+            <p className="font-display text-[clamp(1.9rem,9vw,2.6rem)] font-extrabold leading-none whitespace-nowrap" style={{ color: 'var(--ink)' }}>
               ฿ 2,500.00
             </p>
             <p className="mt-2 text-sm" style={{ color: 'var(--text-muted)' }}>
@@ -69,7 +69,7 @@ function ScannerSlip() {
               {rows.map(([k, v]) => (
                 <div key={k} className="flex items-center justify-between gap-4 text-xs">
                   <span style={{ color: 'var(--text-muted)' }}>{k}</span>
-                  <span className="font-mono font-medium" style={{ color: 'var(--navy)' }}>
+                  <span className="font-mono font-medium" style={{ color: 'var(--ink)' }}>
                     {v}
                   </span>
                 </div>
@@ -90,14 +90,14 @@ function ScannerSlip() {
             <div
               aria-hidden
               className="slip-stamp-real pointer-events-none absolute bottom-4 right-5 rounded-2xl border-[3px] px-4 py-2 text-base font-extrabold opacity-0"
-              style={{ borderColor: 'var(--blue)', color: 'var(--blue)', background: 'rgba(255,255,255,0.7)' }}
+              style={{ borderColor: 'var(--blue)', color: 'var(--blue)', background: 'var(--nav-bg)' }}
             >
               สลิปจริง ✓
             </div>
             <div
               aria-hidden
               className="slip-stamp-fake pointer-events-none absolute bottom-4 right-5 rounded-2xl border-[3px] px-4 py-2 text-base font-extrabold opacity-0"
-              style={{ borderColor: 'var(--fake)', color: 'var(--fake)', background: 'rgba(255,255,255,0.7)' }}
+              style={{ borderColor: 'var(--fake)', color: 'var(--fake)', background: 'var(--nav-bg)' }}
             >
               สลิปปลอม ✕
             </div>
@@ -109,9 +109,9 @@ function ScannerSlip() {
       <div
         className="bob-slow absolute -top-7 -left-3 hidden items-center gap-2 rounded-full bg-white py-2 pl-2 pr-4 text-xs font-bold sm:flex md:-left-8"
         style={{
-          color: 'var(--navy)',
+          color: 'var(--ink)',
           ['--r' as string]: '-4deg',
-          boxShadow: '0 14px 30px -14px rgba(0,24,71,0.35), 0 0 0 1px rgba(0,24,71,0.06)',
+          boxShadow: '0 14px 30px -14px rgba(0,24,71,0.35), 0 0 0 1px var(--ring)',
         }}
       >
         <span className="flex h-7 w-7 items-center justify-center rounded-full" style={{ background: '#06C755', color: '#fff' }}>
@@ -128,7 +128,7 @@ function ScannerSlip() {
           boxShadow: '0 14px 30px -14px rgba(0,24,71,0.5)',
         }}
       >
-        <span className="flex h-7 w-7 items-center justify-center rounded-full" style={{ background: 'var(--cyan)', color: 'var(--navy)' }}>
+        <span className="flex h-7 w-7 items-center justify-center rounded-full" style={{ background: 'var(--cyan)', color: 'var(--on-cyan)' }}>
           <Zap className="h-4 w-4" />
         </span>
         ตรวจใน &lt; 1 วินาที
@@ -157,7 +157,7 @@ export const Hero = () => {
         <div>
           <span
             className="pop-in mb-7 inline-flex items-center gap-2.5 rounded-full bg-white py-2 pl-3 pr-5 text-sm font-semibold"
-            style={{ color: 'var(--navy)', boxShadow: '0 0 0 1px rgba(0,24,71,0.08)' }}
+            style={{ color: 'var(--ink)', boxShadow: '0 0 0 1px var(--ring)' }}
           >
             <span className="relative flex h-2.5 w-2.5">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60" style={{ background: 'var(--blue)' }} />
@@ -166,7 +166,7 @@ export const Hero = () => {
             ตรวจกับธนาคารจริง ไม่ใช่ OCR
           </span>
 
-          <h1 className="pop-in font-display font-extrabold" style={{ color: 'var(--navy)', animationDelay: '0.08s' }}>
+          <h1 className="pop-in font-display font-extrabold" style={{ color: 'var(--ink)', animationDelay: '0.08s' }}>
             <span className="block text-[2.4rem] leading-[1.2] sm:text-6xl lg:text-[clamp(3.5rem,5.6vw,4.5rem)]">หยุด</span>
             <span className="relative mt-1 inline-block">
               <span
@@ -213,7 +213,7 @@ export const Hero = () => {
               เริ่มใช้งานฟรี
               <span
                 className="flex h-11 w-11 items-center justify-center rounded-full transition-transform group-hover:rotate-45"
-                style={{ background: 'var(--cyan)', color: 'var(--navy)' }}
+                style={{ background: 'var(--cyan)', color: 'var(--on-cyan)' }}
               >
                 <ArrowUpRight className="h-5 w-5" />
               </span>
@@ -221,7 +221,7 @@ export const Hero = () => {
             <Link
               href="/pricing"
               className="inline-flex items-center rounded-full bg-white px-7 py-4 text-base font-bold transition-colors hover:bg-[var(--blue-pale)]"
-              style={{ color: 'var(--navy)', boxShadow: '0 0 0 1.5px rgba(0,24,71,0.12)' }}
+              style={{ color: 'var(--ink)', boxShadow: '0 0 0 1.5px var(--ring)' }}
             >
               ดูแผนราคา
             </Link>
@@ -232,7 +232,7 @@ export const Hero = () => {
               <span
                 key={t}
                 className="rounded-full px-4 py-1.5 text-sm font-medium"
-                style={{ background: 'rgba(255,255,255,0.75)', color: 'var(--text-muted)', boxShadow: '0 0 0 1px rgba(0,24,71,0.06)' }}
+                style={{ background: 'var(--nav-bg)', color: 'var(--text-muted)', boxShadow: '0 0 0 1px var(--ring)' }}
               >
                 {t}
               </span>

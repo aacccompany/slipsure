@@ -78,9 +78,9 @@ function getPlanQuota(plan?: string) {
 }
 
 function getQuotaTone(percent: number) {
-  if (percent >= 100) return { text: '#DC2626', bar: '#DC2626', bg: '#FEE2E2', label: 'Blocked' };
-  if (percent >= 80) return { text: '#D97706', bar: '#F59E0B', bg: '#FEF3C7', label: 'Near quota' };
-  return { text: '#047857', bar: '#10B981', bg: '#DCFCE7', label: 'Healthy' };
+  if (percent >= 100) return { text: 'var(--err-ink)', bar: '#DC2626', bg: 'var(--err-pale)', label: 'Blocked' };
+  if (percent >= 80) return { text: 'var(--warn-ink)', bar: '#F59E0B', bg: 'var(--warn-pale)', label: 'Near quota' };
+  return { text: 'var(--ok-ink)', bar: '#10B981', bg: 'var(--ok-pale)', label: 'Healthy' };
 }
 
 function formatMoneyCompact(value?: number) {
@@ -92,10 +92,10 @@ function formatMoneyCompact(value?: number) {
 
 function paymentStatusTone(status?: string) {
   const normalized = (status || '').toLowerCase();
-  if (normalized === 'success' || normalized === 'paid') return { bg: '#DCFCE7', text: '#047857', label: 'Success' };
-  if (normalized === 'pending') return { bg: '#FEF3C7', text: '#D97706', label: 'Pending' };
+  if (normalized === 'success' || normalized === 'paid') return { bg: 'var(--ok-pale)', text: 'var(--ok-ink)', label: 'Success' };
+  if (normalized === 'pending') return { bg: 'var(--warn-pale)', text: 'var(--warn-ink)', label: 'Pending' };
   if (normalized === 'refunded') return { bg: '#EDE9FE', text: '#6D28D9', label: 'Refunded' };
-  return { bg: '#FEE2E2', text: '#DC2626', label: status || 'Failed' };
+  return { bg: 'var(--err-pale)', text: 'var(--err-ink)', label: status || 'Failed' };
 }
 
 function BillingMetricCard({
@@ -114,10 +114,10 @@ function BillingMetricCard({
   progress: number;
 }) {
   const colors = {
-    blue: { accent: 'var(--blue)', soft: '#EFF6FF' },
-    green: { accent: '#059669', soft: '#ECFDF5' },
+    blue: { accent: 'var(--blue)', soft: 'var(--bg-subtle)' },
+    green: { accent: '#059669', soft: 'var(--ok-pale)' },
     purple: { accent: '#7C3AED', soft: '#F3E8FF' },
-    red: { accent: '#DC2626', soft: '#FEF2F2' },
+    red: { accent: '#DC2626', soft: 'var(--err-pale)' },
   }[tone];
 
   return (
@@ -143,7 +143,7 @@ function DetailRow({ label, value }: { label: string; value?: ReactNode }) {
   return (
     <div className="flex items-start justify-between gap-4 border-b py-2 last:border-b-0" style={{ borderColor: 'var(--border)' }}>
       <span className="text-sm" style={{ color: 'var(--text-muted)' }}>{label}</span>
-      <span className="max-w-[60%] break-words text-right text-sm font-semibold" style={{ color: 'var(--navy)' }}>{value || '-'}</span>
+      <span className="max-w-[60%] break-words text-right text-sm font-semibold" style={{ color: 'var(--ink)' }}>{value || '-'}</span>
     </div>
   );
 }
@@ -167,8 +167,8 @@ function StripePaymentDetailModal({
       <div className="max-h-[88vh] w-full max-w-4xl overflow-y-auto bg-white shadow-2xl">
         <div className="sticky top-0 z-10 flex items-start justify-between gap-4 bg-white p-6" style={{ borderBottom: '1px solid var(--border)' }}>
           <div>
-            <p className="font-mono text-[10px] uppercase tracking-widest" style={{ color: '#047857' }}>Stripe Checkout</p>
-            <h3 className="mt-1 text-xl font-black" style={{ color: 'var(--navy)' }}>รายละเอียดการชำระเงิน</h3>
+            <p className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--ok-ink)' }}>Stripe Checkout</p>
+            <h3 className="mt-1 text-xl font-black" style={{ color: 'var(--ink)' }}>รายละเอียดการชำระเงิน</h3>
             <p className="mt-1 font-mono text-xs" style={{ color: 'var(--text-muted)' }}>{payment?.gateway_reference_id || payment?.id}</p>
           </div>
           <button
@@ -195,20 +195,20 @@ function StripePaymentDetailModal({
               ].map(([label, value]) => (
                 <div key={label} className="p-4 md:border-r md:last:border-r-0" style={{ borderColor: 'var(--border)' }}>
                   <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{label}</p>
-                  <p className="mt-2 text-lg font-black" style={{ color: 'var(--navy)' }}>{value}</p>
+                  <p className="mt-2 text-lg font-black" style={{ color: 'var(--ink)' }}>{value}</p>
                 </div>
               ))}
             </div>
 
             {!stripe ? (
-              <div className="p-4 text-sm" style={{ background: '#FEF3C7', color: '#92400E' }}>
+              <div className="p-4 text-sm" style={{ background: 'var(--warn-pale)', color: '#92400E' }}>
                 Stripe API detail is not available for this row. Showing local payment log only.
               </div>
             ) : null}
 
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
               <section className="border p-4" style={{ borderColor: 'var(--border)' }}>
-                <h4 className="mb-3 font-bold" style={{ color: 'var(--navy)' }}>Local Payment Log</h4>
+                <h4 className="mb-3 font-bold" style={{ color: 'var(--ink)' }}>Local Payment Log</h4>
                 <DetailRow label="Merchant" value={payment.merchant_name} />
                 <DetailRow label="Merchant ID" value={<span className="font-mono text-xs">{payment.merchant_id}</span>} />
                 <DetailRow label="Payment ID" value={<span className="font-mono text-xs">{payment.id}</span>} />
@@ -219,7 +219,7 @@ function StripePaymentDetailModal({
               </section>
 
               <section className="border p-4" style={{ borderColor: 'var(--border)' }}>
-                <h4 className="mb-3 font-bold" style={{ color: 'var(--navy)' }}>Stripe Data</h4>
+                <h4 className="mb-3 font-bold" style={{ color: 'var(--ink)' }}>Stripe Data</h4>
                 <DetailRow label="Checkout session" value={<span className="font-mono text-xs">{stripe?.session_id || payment.gateway_reference_id}</span>} />
                 <DetailRow label="Session status" value={stripe?.status} />
                 <DetailRow label="Payment status" value={stripe?.payment_status} />
@@ -233,7 +233,7 @@ function StripePaymentDetailModal({
             </div>
 
             <section className="border p-4" style={{ borderColor: 'var(--border)' }}>
-              <h4 className="mb-3 font-bold" style={{ color: 'var(--navy)' }}>รายการใน Checkout</h4>
+              <h4 className="mb-3 font-bold" style={{ color: 'var(--ink)' }}>รายการใน Checkout</h4>
               {lineItems.length === 0 ? (
                 <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No Stripe line items returned.</p>
               ) : (
@@ -241,10 +241,10 @@ function StripePaymentDetailModal({
                   {lineItems.map((item, index) => (
                     <div key={`${item.price_id}-${index}`} className="flex items-start justify-between gap-4 border p-3" style={{ borderColor: 'var(--border)' }}>
                       <div>
-                        <p className="font-bold" style={{ color: 'var(--navy)' }}>{item.quantity} × {item.description || item.price_id || 'Stripe item'}</p>
+                        <p className="font-bold" style={{ color: 'var(--ink)' }}>{item.quantity} × {item.description || item.price_id || 'Stripe item'}</p>
                         <p className="mt-1 font-mono text-xs" style={{ color: 'var(--text-muted)' }}>{item.price_id || '-'}</p>
                       </div>
-                      <p className="font-bold" style={{ color: 'var(--navy)' }}>{formatMoney(item.amount_total)}</p>
+                      <p className="font-bold" style={{ color: 'var(--ink)' }}>{formatMoney(item.amount_total)}</p>
                     </div>
                   ))}
                 </div>
@@ -253,12 +253,12 @@ function StripePaymentDetailModal({
 
             {metadata.length > 0 ? (
               <section className="border p-4" style={{ borderColor: 'var(--border)' }}>
-                <h4 className="mb-3 font-bold" style={{ color: 'var(--navy)' }}>Stripe Metadata</h4>
+                <h4 className="mb-3 font-bold" style={{ color: 'var(--ink)' }}>Stripe Metadata</h4>
                 <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
                   {metadata.map(([key, value]) => (
                     <div key={key} className="p-3" style={{ background: 'var(--bg-subtle)' }}>
                       <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{key}</p>
-                      <p className="mt-1 break-words text-sm font-bold" style={{ color: 'var(--navy)' }}>{value}</p>
+                      <p className="mt-1 break-words text-sm font-bold" style={{ color: 'var(--ink)' }}>{value}</p>
                     </div>
                   ))}
                 </div>
@@ -267,17 +267,17 @@ function StripePaymentDetailModal({
 
             <div className="flex flex-wrap gap-3">
               {stripe?.dashboard_url ? (
-                <a href={stripe.dashboard_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 border px-4 py-2 text-sm font-bold" style={{ borderColor: 'var(--border)', color: 'var(--navy)' }}>
+                <a href={stripe.dashboard_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 border px-4 py-2 text-sm font-bold" style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}>
                   <Eye className="h-4 w-4" /> เปิดใน Stripe
                 </a>
               ) : null}
               {stripe?.payment_intent_dashboard_url ? (
-                <a href={stripe.payment_intent_dashboard_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 border px-4 py-2 text-sm font-bold" style={{ borderColor: 'var(--border)', color: 'var(--navy)' }}>
+                <a href={stripe.payment_intent_dashboard_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 border px-4 py-2 text-sm font-bold" style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}>
                   <CreditCard className="h-4 w-4" /> Payment Intent
                 </a>
               ) : null}
               {stripe?.customer_dashboard_url ? (
-                <a href={stripe.customer_dashboard_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 border px-4 py-2 text-sm font-bold" style={{ borderColor: 'var(--border)', color: 'var(--navy)' }}>
+                <a href={stripe.customer_dashboard_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 border px-4 py-2 text-sm font-bold" style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}>
                   <Store className="h-4 w-4" /> Customer
                 </a>
               ) : null}
@@ -334,7 +334,7 @@ function BillingWorkspace({
             <p className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
               Finance & Ledger / Stripe Billing Engine
             </p>
-            <h2 className="mt-2 text-2xl font-black tracking-tight" style={{ color: 'var(--navy)' }}>
+            <h2 className="mt-2 text-2xl font-black tracking-tight" style={{ color: 'var(--ink)' }}>
               Payment Logs & Subscription Billing
             </h2>
             <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
@@ -342,10 +342,10 @@ function BillingWorkspace({
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <span className="px-3 py-2 text-xs font-bold" style={{ background: '#ECFDF5', color: '#047857' }}>
+            <span className="px-3 py-2 text-xs font-bold" style={{ background: 'var(--ok-pale)', color: 'var(--ok-ink)' }}>
               Stripe Connected
             </span>
-            <span className="px-3 py-2 text-xs font-bold" style={{ background: '#EFF6FF', color: 'var(--blue)' }}>
+            <span className="px-3 py-2 text-xs font-bold" style={{ background: 'var(--bg-subtle)', color: 'var(--blue)' }}>
               {payments.length.toLocaleString()} Loaded Payments
             </span>
           </div>
@@ -391,7 +391,7 @@ function BillingWorkspace({
         <section className="bg-white p-5" style={{ border: '1px solid var(--border)' }}>
           <div className="mb-4 flex items-start justify-between gap-4">
             <div>
-              <h3 className="font-bold" style={{ color: 'var(--navy)' }}>Subscription Tier Fleet & Plan Registry</h3>
+              <h3 className="font-bold" style={{ color: 'var(--ink)' }}>Subscription Tier Fleet & Plan Registry</h3>
               <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Active plans from /v1/plans and Stripe catalog pricing.</p>
             </div>
             <span className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
@@ -406,7 +406,7 @@ function BillingWorkspace({
               return (
                 <div key={plan.id} className="grid gap-3 border-b pb-3 last:border-b-0 last:pb-0 md:grid-cols-[160px_1fr_120px]" style={{ borderColor: 'var(--border)' }}>
                   <div>
-                    <p className="font-bold" style={{ color: 'var(--navy)' }}>{plan.name}</p>
+                    <p className="font-bold" style={{ color: 'var(--ink)' }}>{plan.name}</p>
                     <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{plan.quota_per_month.toLocaleString()} slips / month</p>
                   </div>
                   <div className="self-center">
@@ -416,7 +416,7 @@ function BillingWorkspace({
                     <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>{plan.description}</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold" style={{ color: 'var(--navy)' }}>{formatMoney(plan.price_monthly)}/mo</p>
+                    <p className="font-bold" style={{ color: 'var(--ink)' }}>{formatMoney(plan.price_monthly)}/mo</p>
                     <p className="text-xs" style={{ color: 'var(--text-muted)' }}>monthly only</p>
                   </div>
                 </div>
@@ -428,7 +428,7 @@ function BillingWorkspace({
         <section className="bg-white p-5" style={{ border: '1px solid var(--border)' }}>
           <div className="mb-4 flex items-start justify-between gap-4">
             <div>
-              <h3 className="font-bold" style={{ color: 'var(--navy)' }}>Revenue By Plan</h3>
+              <h3 className="font-bold" style={{ color: 'var(--ink)' }}>Revenue By Plan</h3>
               <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Monthly revenue analytics from admin API.</p>
             </div>
             <span className="font-bold" style={{ color: 'var(--blue)' }}>{formatMoney(revenue?.mrr ?? 0)}</span>
@@ -439,7 +439,7 @@ function BillingWorkspace({
             ) : revenueByPlan.map((item) => (
               <div key={item.plan}>
                 <div className="mb-1 flex items-center justify-between text-sm">
-                  <span className="font-semibold" style={{ color: 'var(--navy)' }}>{item.plan}</span>
+                  <span className="font-semibold" style={{ color: 'var(--ink)' }}>{item.plan}</span>
                   <span style={{ color: 'var(--text-muted)' }}>{formatMoney(item.revenue)}</span>
                 </div>
                 <div className="h-2 w-full overflow-hidden" style={{ background: 'var(--border)' }}>
@@ -451,11 +451,11 @@ function BillingWorkspace({
           <div className="mt-5 grid grid-cols-2 gap-3">
             <div className="p-3" style={{ background: 'var(--bg-subtle)' }}>
               <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Renewal</p>
-              <p className="mt-1 font-bold" style={{ color: 'var(--navy)' }}>{formatPercent(revenue?.renewal_rate ?? 0)}</p>
+              <p className="mt-1 font-bold" style={{ color: 'var(--ink)' }}>{formatPercent(revenue?.renewal_rate ?? 0)}</p>
             </div>
             <div className="p-3" style={{ background: 'var(--bg-subtle)' }}>
               <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Churn</p>
-              <p className="mt-1 font-bold" style={{ color: revenue?.churn_rate ? '#DC2626' : 'var(--navy)' }}>{formatPercent(revenue?.churn_rate ?? 0)}</p>
+              <p className="mt-1 font-bold" style={{ color: revenue?.churn_rate ? '#DC2626' : 'var(--ink)' }}>{formatPercent(revenue?.churn_rate ?? 0)}</p>
             </div>
           </div>
         </section>
@@ -464,7 +464,7 @@ function BillingWorkspace({
       <section className="bg-white" style={{ border: '1px solid var(--border)' }}>
         <div className="flex items-center justify-between p-5" style={{ borderBottom: '1px solid var(--border)' }}>
           <div>
-            <h3 className="font-bold" style={{ color: 'var(--navy)' }}>Payment Ledger</h3>
+            <h3 className="font-bold" style={{ color: 'var(--ink)' }}>Payment Ledger</h3>
             <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Stripe checkout sessions and billing payment logs.</p>
           </div>
           <span className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
@@ -494,13 +494,13 @@ function BillingWorkspace({
                 return (
                   <tr key={payment.id} style={{ borderBottom: '1px solid var(--border)' }}>
                     <td className="px-4 py-3">
-                      <Link href={`/admin/merchants/${payment.merchant_id}`} className="font-bold hover:opacity-70" style={{ color: 'var(--navy)' }}>
+                      <Link href={`/admin/merchants/${payment.merchant_id}`} className="font-bold hover:opacity-70" style={{ color: 'var(--ink)' }}>
                         {payment.merchant_name || payment.merchant_id}
                       </Link>
                       <p className="font-mono text-[10px]" style={{ color: 'var(--text-muted)' }}>{payment.merchant_id}</p>
                     </td>
-                    <td className="px-4 py-3 font-semibold" style={{ color: 'var(--navy)' }}>{formatMoney(payment.amount)}</td>
-                    <td className="px-4 py-3 capitalize" style={{ color: 'var(--navy)' }}>{payment.gateway}</td>
+                    <td className="px-4 py-3 font-semibold" style={{ color: 'var(--ink)' }}>{formatMoney(payment.amount)}</td>
+                    <td className="px-4 py-3 capitalize" style={{ color: 'var(--ink)' }}>{payment.gateway}</td>
                     <td className="px-4 py-3 font-mono text-xs" style={{ color: 'var(--text-muted)' }}>{payment.gateway_reference_id || '-'}</td>
                     <td className="px-4 py-3">
                       <span className="px-2 py-1 text-xs font-bold" style={{ background: tone.bg, color: tone.text }}>
@@ -513,7 +513,7 @@ function BillingWorkspace({
                         type="button"
                         onClick={() => setSelectedPaymentID(payment.id)}
                         className="inline-flex items-center gap-2 border px-3 py-2 text-xs font-bold"
-                        style={{ borderColor: 'var(--border)', color: 'var(--navy)', background: '#fff' }}
+                        style={{ borderColor: 'var(--border)', color: 'var(--ink)', background: 'var(--bg-card)' }}
                       >
                         <Eye className="h-3.5 w-3.5" />
                         ดูรายละเอียด
@@ -584,7 +584,7 @@ function SlipOutcomeChart({ dashboard }: { dashboard?: AdminAnalyticsDashboard }
               <span className="h-2 w-2" style={{ background: 'var(--blue)' }} />
               <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Verified</span>
             </div>
-            <span className="font-bold" style={{ color: 'var(--navy)' }}>
+            <span className="font-bold" style={{ color: 'var(--ink)' }}>
               {verified.toLocaleString()} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>({verifiedPercent.toFixed(1)}%)</span>
             </span>
           </div>
@@ -593,7 +593,7 @@ function SlipOutcomeChart({ dashboard }: { dashboard?: AdminAnalyticsDashboard }
               <span className="h-2 w-2" style={{ background: '#EF4444' }} />
               <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Failed</span>
             </div>
-            <span className="font-bold" style={{ color: 'var(--navy)' }}>
+            <span className="font-bold" style={{ color: 'var(--ink)' }}>
               {failed.toLocaleString()} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>({failedPercent.toFixed(1)}%)</span>
             </span>
           </div>
@@ -640,7 +640,7 @@ function BankApiStatusWidget({ status, isLoading }: { status?: AdminBankStatus; 
                   className="h-2 w-2 rounded-full"
                   style={{ background: bank.status === 'operational' ? '#10B981' : '#EF4444' }}
                 />
-                <span className="text-sm font-semibold" style={{ color: 'var(--navy)' }}>{bank.bank_name}</span>
+                <span className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>{bank.bank_name}</span>
               </div>
               <span className="font-mono text-xs" style={{ color: 'var(--text-muted)' }}>{bank.response_time_ms}ms</span>
             </div>
@@ -705,20 +705,20 @@ function AdminAnalyticsOverview({
               <span>Core Infrastructure</span>
               <span style={{ color: 'var(--blue)' }}>/ Live Operational Telemetry</span>
             </div>
-            <h2 className="text-2xl font-black tracking-tight" style={{ color: 'var(--navy)' }}>
+            <h2 className="text-2xl font-black tracking-tight" style={{ color: 'var(--ink)' }}>
               Platform Operations & Analytics
             </h2>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="inline-flex items-center gap-2 rounded-full px-3.5 py-2 font-semibold" style={{ background: '#ECFDF5', color: '#047857' }}>
+            <span className="inline-flex items-center gap-2 rounded-full px-3.5 py-2 font-semibold" style={{ background: 'var(--ok-pale)', color: 'var(--ok-ink)' }}>
               <CheckCircle2 className="h-3.5 w-3.5" />
               HaveSLIP Gateway: {isGatewayHealthy ? `${gatewayLatency}ms latency` : 'Needs attention'}
             </span>
-            <span className="inline-flex items-center gap-2 rounded-full px-3.5 py-2 font-semibold" style={{ background: 'var(--bg-subtle)', color: 'var(--navy)' }}>
+            <span className="inline-flex items-center gap-2 rounded-full px-3.5 py-2 font-semibold" style={{ background: 'var(--bg-subtle)', color: 'var(--ink)' }}>
               <Bot className="h-3.5 w-3.5" />
               LINE Webhooks: {dashboard?.connected_bots ?? 0}
             </span>
-            <span className="inline-flex items-center gap-2 rounded-full px-3.5 py-2 font-semibold" style={{ background: '#FEF2F2', color: '#B91C1C' }}>
+            <span className="inline-flex items-center gap-2 rounded-full px-3.5 py-2 font-semibold" style={{ background: 'var(--err-pale)', color: 'var(--err-ink)' }}>
               <AlertTriangle className="h-3.5 w-3.5" />
               Rejections: {todayRejected.toLocaleString()}
             </span>
@@ -787,7 +787,7 @@ function AdminAnalyticsOverview({
             <p className="mb-1 text-[13px] font-medium" style={{ color: 'var(--text-muted)' }}>
               {metric.label}
             </p>
-            <p className="text-3xl font-extrabold tracking-tight" style={{ color: 'var(--navy)', letterSpacing: '-0.02em' }}>{metric.value}</p>
+            <p className="text-3xl font-extrabold tracking-tight" style={{ color: 'var(--ink)', letterSpacing: '-0.02em' }}>{metric.value}</p>
             <p className="mt-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>{metric.sub}</p>
           </section>
         ))}
@@ -797,11 +797,11 @@ function AdminAnalyticsOverview({
         <section className="min-w-0 bg-white p-5 xl:col-span-7" style={{ border: '1px solid var(--border)' }}>
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
-              <h3 className="text-sm font-bold" style={{ color: 'var(--navy)' }}>Slip Velocity & Verification Health</h3>
+              <h3 className="text-sm font-bold" style={{ color: 'var(--ink)' }}>Slip Velocity & Verification Health</h3>
               <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Merchant scan activity from the current platform data</p>
             </div>
             <div className="flex items-center gap-4 font-mono text-[9px] uppercase tracking-widest">
-              <span className="inline-flex items-center gap-1.5" style={{ color: '#059669' }}><span className="h-2 w-2 rounded-full" style={{ background: '#059669' }} />Verified</span>
+              <span className="inline-flex items-center gap-1.5" style={{ color: 'var(--ok-ink)' }}><span className="h-2 w-2 rounded-full" style={{ background: '#059669' }} />Verified</span>
               <span className="inline-flex items-center gap-1.5" style={{ color: '#EF4444' }}><span className="h-2 w-2 rounded-full" style={{ background: '#EF4444' }} />Rejected</span>
             </div>
           </div>
@@ -845,7 +845,7 @@ function AdminAnalyticsOverview({
               </div>
             ) : rootCauses.map((cause) => (
               <div key={cause.label} className="p-3" style={{ background: 'var(--bg-subtle)' }}>
-                <p className="text-lg font-black" style={{ color: 'var(--navy)' }}>{cause.percent.toFixed(0)}%</p>
+                <p className="text-lg font-black" style={{ color: 'var(--ink)' }}>{cause.percent.toFixed(0)}%</p>
                 <p className="truncate font-mono text-[9px] uppercase tracking-widest" style={{ color: cause.color }}>{cause.label}</p>
                 <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>{cause.value.toLocaleString()} slips</p>
               </div>
@@ -856,7 +856,7 @@ function AdminAnalyticsOverview({
         <section className="min-w-0 bg-white p-5 xl:col-span-5" style={{ border: '1px solid var(--border)' }}>
           <div className="mb-5 flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-bold" style={{ color: 'var(--navy)' }}>Merchant Subscriptions & MRR</h3>
+              <h3 className="text-sm font-bold" style={{ color: 'var(--ink)' }}>Merchant Subscriptions & MRR</h3>
               <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Active billable tiers and recurring quota plans</p>
             </div>
             <span className="px-2 py-1 font-mono text-[9px] uppercase tracking-widest" style={{ background: 'var(--bg-subtle)', color: 'var(--blue)' }}>
@@ -876,7 +876,7 @@ function AdminAnalyticsOverview({
             ) : revenue?.revenue_by_plan.map((item) => (
               <div key={item.plan}>
                 <div className="mb-1 flex items-center justify-between">
-                  <span className="text-xs font-semibold" style={{ color: 'var(--navy)' }}>{item.plan}</span>
+                  <span className="text-xs font-semibold" style={{ color: 'var(--ink)' }}>{item.plan}</span>
                   <span className="font-mono text-[10px]" style={{ color: 'var(--text-muted)' }}>{formatMoney(item.revenue)}</span>
                 </div>
                 <div className="h-2 overflow-hidden rounded-full" style={{ background: 'var(--border)' }}>
@@ -888,11 +888,11 @@ function AdminAnalyticsOverview({
           <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
             <div className="p-3" style={{ background: 'var(--bg-subtle)' }}>
               <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Growth</p>
-              <p className="font-bold" style={{ color: 'var(--navy)' }}>{formatPercent(revenue?.growth_percent)}</p>
+              <p className="font-bold" style={{ color: 'var(--ink)' }}>{formatPercent(revenue?.growth_percent)}</p>
             </div>
             <div className="p-3" style={{ background: 'var(--bg-subtle)' }}>
               <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Renewal</p>
-              <p className="font-bold" style={{ color: 'var(--navy)' }}>{formatPercent(revenue?.renewal_rate)}</p>
+              <p className="font-bold" style={{ color: 'var(--ink)' }}>{formatPercent(revenue?.renewal_rate)}</p>
             </div>
           </div>
         </section>
@@ -902,7 +902,7 @@ function AdminAnalyticsOverview({
         <section className="min-w-0 bg-white xl:col-span-8" style={{ border: '1px solid var(--border)' }}>
           <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
             <div>
-              <h3 className="text-sm font-bold" style={{ color: 'var(--navy)' }}>Live Verification Stream</h3>
+              <h3 className="text-sm font-bold" style={{ color: 'var(--ink)' }}>Live Verification Stream</h3>
               <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Latest merchant activity summary from HaveSLIP and LINE webhook usage</p>
             </div>
             <span className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
@@ -931,18 +931,18 @@ function AdminAnalyticsOverview({
                   <tr key={item.transaction_id !== '00000000-0000-0000-0000-000000000000' ? item.transaction_id : item.slip_id} style={{ borderBottom: '1px solid var(--border)' }}>
                     <td className="px-4 py-3 font-mono" style={{ color: 'var(--text-muted)' }}>{formatDate(item.created_at)}</td>
                     <td className="px-4 py-3">
-                      <Link href={`/admin/merchants/${item.merchant_id}`} className="font-semibold hover:opacity-70" style={{ color: 'var(--navy)' }}>
+                      <Link href={`/admin/merchants/${item.merchant_id}`} className="font-semibold hover:opacity-70" style={{ color: 'var(--ink)' }}>
                         {item.merchant_name || item.merchant_id}
                       </Link>
                       <p className="font-mono text-[9px]" style={{ color: 'var(--text-muted)' }}>{item.merchant_id.slice(0, 8)}-token</p>
                     </td>
                     <td className="px-4 py-3">
-                      <p className="font-mono" style={{ color: 'var(--navy)' }}>SLIP-{item.slip_id.slice(0, 6).toUpperCase()}</p>
+                      <p className="font-mono" style={{ color: 'var(--ink)' }}>SLIP-{item.slip_id.slice(0, 6).toUpperCase()}</p>
                       <p className="font-mono text-[9px]" style={{ color: 'var(--text-muted)' }}>
                         {[item.sender_bank, item.receiver_bank].filter(Boolean).join(' -> ') || item.provider || 'Provider rail'}
                       </p>
                     </td>
-                    <td className="px-4 py-3 font-mono font-bold" style={{ color: 'var(--navy)' }}>{formatMoney(item.amount)}</td>
+                    <td className="px-4 py-3 font-mono font-bold" style={{ color: 'var(--ink)' }}>{formatMoney(item.amount)}</td>
                     <td className="px-4 py-3" style={{ color: 'var(--text-muted)' }}>
                       <p className="font-mono">{item.provider_verification_id || '-'}</p>
                       <p className="font-mono text-[9px]">
@@ -979,7 +979,7 @@ function AdminAnalyticsOverview({
 
         <section className="min-w-0 bg-white p-5 xl:col-span-4" style={{ border: '1px solid var(--border)' }}>
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-sm font-bold" style={{ color: 'var(--navy)' }}>Bank & HaveSLIP Status</h3>
+            <h3 className="text-sm font-bold" style={{ color: 'var(--ink)' }}>Bank & HaveSLIP Status</h3>
             {bankStatusLoading ? <Loader2 className="h-4 w-4 animate-spin" style={{ color: 'var(--blue)' }} /> : null}
           </div>
           <div className="space-y-3">
@@ -988,7 +988,7 @@ function AdminAnalyticsOverview({
             ) : bankItems.map((bank) => (
               <div key={bank.bank_code} className="flex items-center justify-between pb-3 last:pb-0" style={{ borderBottom: '1px solid var(--border)' }}>
                 <div>
-                  <p className="text-sm font-semibold" style={{ color: 'var(--navy)' }}>{bank.bank_name}</p>
+                  <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>{bank.bank_name}</p>
                   <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{bank.validation_source}</p>
                 </div>
                 <div className="text-right">
@@ -1192,7 +1192,7 @@ function AdminBackofficeContent() {
             {meta.crumb}
           </p>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h1 className="font-bold tracking-tight" style={{ fontSize: '1.4rem', color: 'var(--navy)', letterSpacing: '-0.02em' }}>
+            <h1 className="font-bold tracking-tight" style={{ fontSize: '1.4rem', color: 'var(--ink)', letterSpacing: '-0.02em' }}>
               {meta.title}
             </h1>
             {tab === 'analytics' && <button type="button" onClick={() => setReportOpen(true)} className="inline-flex items-center gap-2 bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">
@@ -1217,9 +1217,9 @@ function AdminBackofficeContent() {
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
             {[
               { label: 'Total Merchants', value: merchantsPagination?.total ?? 0, sub: `${activeMerchantCount} active on this page`, icon: Store, color: 'var(--blue)' },
-              { label: 'Near Quota', value: nearQuotaCount, sub: '80-99% quota usage', icon: Activity, color: '#D97706' },
-              { label: 'Blocked / Exceeded', value: blockedMerchantCount, sub: '100%+ quota used', icon: AlertTriangle, color: '#DC2626' },
-              { label: 'LINE Webhooks Active', value: lineConnectedCount, sub: `${merchants.length - lineConnectedCount} missing setup`, icon: Bot, color: '#047857' },
+              { label: 'Near Quota', value: nearQuotaCount, sub: '80-99% quota usage', icon: Activity, color: 'var(--warn-ink)' },
+              { label: 'Blocked / Exceeded', value: blockedMerchantCount, sub: '100%+ quota used', icon: AlertTriangle, color: 'var(--err-ink)' },
+              { label: 'LINE Webhooks Active', value: lineConnectedCount, sub: `${merchants.length - lineConnectedCount} missing setup`, icon: Bot, color: 'var(--ok-ink)' },
             ].map((item) => (
               <section key={item.label} className="bg-white p-5" style={{ border: '1px solid var(--border)' }}>
                 <span
@@ -1229,7 +1229,7 @@ function AdminBackofficeContent() {
                   <item.icon className="h-5 w-5" style={{ color: item.color }} />
                 </span>
                 <p className="mb-1 text-[13px] font-medium" style={{ color: 'var(--text-muted)' }}>{item.label}</p>
-                <p className="text-3xl font-extrabold tracking-tight" style={{ color: 'var(--navy)', letterSpacing: '-0.02em' }}>{item.value.toLocaleString()}</p>
+                <p className="text-3xl font-extrabold tracking-tight" style={{ color: 'var(--ink)', letterSpacing: '-0.02em' }}>{item.value.toLocaleString()}</p>
                 <p className="mt-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>{item.sub}</p>
               </section>
             ))}
@@ -1252,7 +1252,7 @@ function AdminBackofficeContent() {
                     }
                     placeholder={tab === 'users' ? 'Search name, email, merchant...' : 'Filter merchant name, owner, email...'}
                     className="w-full bg-transparent outline-none placeholder:opacity-60"
-                    style={{ color: 'var(--navy)' }}
+                    style={{ color: 'var(--ink)' }}
                   />
                 </label>
               ) : null}
@@ -1261,7 +1261,7 @@ function AdminBackofficeContent() {
                   value={userStatus}
                   onChange={(event) => setUserStatus(event.target.value)}
                   className="min-h-11 px-3 text-sm outline-none lg:w-48"
-                  style={{ border: '1px solid var(--border)', color: 'var(--navy)', background: 'var(--bg-subtle)' }}
+                  style={{ border: '1px solid var(--border)', color: 'var(--ink)', background: 'var(--bg-subtle)' }}
                 >
                   <option value="">All status</option>
                   <option value="active">Active</option>
@@ -1277,7 +1277,7 @@ function AdminBackofficeContent() {
                   value={billingStatus}
                   onChange={(event) => setBillingStatus(event.target.value)}
                   className="min-h-11 px-3 text-sm outline-none lg:w-48"
-                  style={{ border: '1px solid var(--border)', color: 'var(--navy)', background: 'var(--bg-subtle)' }}
+                  style={{ border: '1px solid var(--border)', color: 'var(--ink)', background: 'var(--bg-subtle)' }}
                 >
                   <option value="">All statuses</option>
                   <option value="success">Success</option>
@@ -1293,7 +1293,7 @@ function AdminBackofficeContent() {
                   onChange={(event) => setStartDate(event.target.value)}
                   max={endDate || undefined}
                   className="min-h-11 px-3 text-sm outline-none"
-                  style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border)', color: 'var(--navy)' }}
+                  style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border)', color: 'var(--ink)' }}
                 />
                 <span className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>to</span>
                 <input
@@ -1302,7 +1302,7 @@ function AdminBackofficeContent() {
                   onChange={(event) => setEndDate(event.target.value)}
                   min={startDate || undefined}
                   className="min-h-11 px-3 text-sm outline-none"
-                  style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border)', color: 'var(--navy)' }}
+                  style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border)', color: 'var(--ink)' }}
                 />
                 {startDate || endDate ? (
                   <button
@@ -1334,24 +1334,24 @@ function AdminBackofficeContent() {
           <section className="bg-white p-5" style={{ border: '1px solid var(--border)' }}>
             <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
               <div>
-                <h2 className="text-sm font-black" style={{ color: 'var(--navy)' }}>ตัวกรองประวัติ</h2>
+                <h2 className="text-sm font-black" style={{ color: 'var(--ink)' }}>ตัวกรองประวัติ</h2>
                 <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
                   กรองจากสถานะ วันที่ และคำค้นหา เพื่อค้นหารายการที่ต้องการ
                 </p>
               </div>
-              <span className="text-sm font-bold" style={{ color: 'var(--navy)' }}>
+              <span className="text-sm font-bold" style={{ color: 'var(--ink)' }}>
                 รวม {transactionsPagination?.total ?? 0} รายการ (โหลดมาแล้ว {transactions.length} รายการ)
               </span>
             </div>
 
             <div className="grid gap-3 lg:grid-cols-4">
               <label className="block">
-                <span className="text-xs font-bold" style={{ color: 'var(--navy)' }}>สถานะ</span>
+                <span className="text-xs font-bold" style={{ color: 'var(--ink)' }}>สถานะ</span>
                 <select
                   value={transactionStatus}
                   onChange={(event) => setTransactionStatus(event.target.value)}
                   className="mt-1 h-10 w-full px-3 text-sm outline-none"
-                  style={{ border: '1px solid var(--border)', color: 'var(--navy)', background: '#fff' }}
+                  style={{ border: '1px solid var(--border)', color: 'var(--ink)', background: 'var(--bg-card)' }}
                 >
                   <option value="">ทั้งหมด</option>
                   <option value="verified">สำเร็จ</option>
@@ -1362,10 +1362,10 @@ function AdminBackofficeContent() {
                 </select>
               </label>
               <label className="block">
-                <span className="text-xs font-bold" style={{ color: 'var(--navy)' }}>ช่องทาง</span>
+                <span className="text-xs font-bold" style={{ color: 'var(--ink)' }}>ช่องทาง</span>
                 <select
                   className="mt-1 h-10 w-full px-3 text-sm outline-none"
-                  style={{ border: '1px solid var(--border)', color: 'var(--navy)', background: '#fff' }}
+                  style={{ border: '1px solid var(--border)', color: 'var(--ink)', background: 'var(--bg-card)' }}
                   defaultValue=""
                 >
                   <option value="">ทั้งหมด</option>
@@ -1374,33 +1374,33 @@ function AdminBackofficeContent() {
                 </select>
               </label>
               <label className="block">
-                <span className="text-xs font-bold" style={{ color: 'var(--navy)' }}>วันที่เริ่ม</span>
+                <span className="text-xs font-bold" style={{ color: 'var(--ink)' }}>วันที่เริ่ม</span>
                 <input
                   type="date"
                   value={startDate}
                   onChange={(event) => setStartDate(event.target.value)}
                   max={endDate || undefined}
                   className="mt-1 h-10 w-full px-3 text-sm outline-none"
-                  style={{ border: '1px solid var(--border)', color: 'var(--navy)' }}
+                  style={{ border: '1px solid var(--border)', color: 'var(--ink)' }}
                 />
               </label>
               <label className="block">
-                <span className="text-xs font-bold" style={{ color: 'var(--navy)' }}>วันที่สิ้นสุด</span>
+                <span className="text-xs font-bold" style={{ color: 'var(--ink)' }}>วันที่สิ้นสุด</span>
                 <input
                   type="date"
                   value={endDate}
                   onChange={(event) => setEndDate(event.target.value)}
                   min={startDate || undefined}
                   className="mt-1 h-10 w-full px-3 text-sm outline-none"
-                  style={{ border: '1px solid var(--border)', color: 'var(--navy)' }}
+                  style={{ border: '1px solid var(--border)', color: 'var(--ink)' }}
                 />
               </label>
             </div>
 
             <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
               <label className="block lg:w-[420px]">
-                <span className="text-xs font-bold" style={{ color: 'var(--navy)' }}>คำค้นหา (UUID / ผู้รับ / ธนาคาร)</span>
-                <div className="mt-1 flex h-10 items-center gap-2 px-3" style={{ border: '1px solid var(--border)', background: '#fff' }}>
+                <span className="text-xs font-bold" style={{ color: 'var(--ink)' }}>คำค้นหา (UUID / ผู้รับ / ธนาคาร)</span>
+                <div className="mt-1 flex h-10 items-center gap-2 px-3" style={{ border: '1px solid var(--border)', background: 'var(--bg-card)' }}>
                   <Search className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} />
                   <input
                     value={transactionSearch}
@@ -1409,7 +1409,7 @@ function AdminBackofficeContent() {
                       if (event.key === 'Enter') transactionsQuery.refetch();
                     }}
                     className="h-full min-w-0 flex-1 bg-transparent text-sm outline-none"
-                    style={{ color: 'var(--navy)' }}
+                    style={{ color: 'var(--ink)' }}
                     placeholder="เช่น 1234-uuid หรือ ชื่อร้าน"
                   />
                 </div>
@@ -1418,7 +1418,7 @@ function AdminBackofficeContent() {
                 <button
                   type="button"
                   className="px-4 py-2 text-sm font-bold"
-                  style={{ border: '1px solid var(--border)', color: 'var(--navy)', background: '#fff' }}
+                  style={{ border: '1px solid var(--border)', color: 'var(--ink)', background: 'var(--bg-card)' }}
                   onClick={() => {
                     setTransactionStatus('');
                     setTransactionSearch('');
@@ -1492,23 +1492,23 @@ function AdminBackofficeContent() {
                               {isDuplicate ? 'สลิปซ้ำ' : slip.status === 'verified' ? 'สำเร็จ' : slip.status === 'failed' ? 'ไม่สำเร็จ' : slip.status === 'pending' ? 'รอตรวจสอบ' : 'กำลังตรวจสอบ'}
                             </span>
                           </div>
-                          <p className="text-base font-black" style={{ color: 'var(--navy)' }}>{transaction ? `฿${transaction.amount.toLocaleString('en-US')}` : '-'}</p>
+                          <p className="text-base font-black" style={{ color: 'var(--ink)' }}>{transaction ? `฿${transaction.amount.toLocaleString('en-US')}` : '-'}</p>
                           <div className="min-w-0">
-                            <p className="truncate font-bold" style={{ color: 'var(--navy)' }}>
+                            <p className="truncate font-bold" style={{ color: 'var(--ink)' }}>
                               {transaction ? `${transaction.sender_name || transaction.sender_bank || '-'} → ${transaction.receiver_name || transaction.receiver_bank || '-'}` : slip.fail_reason?.replaceAll('_', ' ') || 'No transaction recorded'}
                             </p>
                             <p className="truncate font-mono text-[10px]" style={{ color: 'var(--text-muted)' }}>
                               {transaction?.reference_no || slip.id}
                             </p>
                           </div>
-                          <p className="font-black" style={{ color: 'var(--navy)' }}>1</p>
+                          <p className="font-black" style={{ color: 'var(--ink)' }}>1</p>
                           <p className="font-mono text-xs" style={{ color: 'var(--text-muted)' }}>{formatDate(slip.created_at)}</p>
                           <div className="flex justify-end">
                             <button
                               type="button"
                               onClick={() => setSelectedSlip(item)}
-                              className="inline-flex h-9 w-36 items-center justify-center gap-2 whitespace-nowrap bg-white px-3 text-sm font-bold transition-colors hover:bg-slate-50"
-                              style={{ border: '1px solid var(--border)', color: 'var(--navy)' }}
+                              className="inline-flex h-9 w-36 items-center justify-center gap-2 whitespace-nowrap px-3 text-sm font-bold transition-colors"
+                              style={{ border: '1px solid var(--border)', color: 'var(--ink)', background: 'var(--bg-card)' }}
                             >
                               <Eye className="h-4 w-4" />
                               ดูรายละเอียด
@@ -1585,9 +1585,9 @@ function AdminBackofficeContent() {
             <>
               <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4" style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-subtle)' }}>
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-sm font-bold" style={{ color: 'var(--navy)' }}>Merchants Directory</h2>
+                  <h2 className="text-sm font-bold" style={{ color: 'var(--ink)' }}>Merchants Directory</h2>
                   {merchantSearch.trim() ? (
-                    <span className="px-2 py-1 text-xs font-semibold" style={{ background: 'white', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+                    <span className="px-2 py-1 text-xs font-semibold" style={{ background: 'var(--bg-card)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
                       Filtered: {merchantSearch.trim()}
                     </span>
                   ) : null}
@@ -1637,7 +1637,7 @@ function AdminBackofficeContent() {
                           </div>
                           <div>
                             <div className="flex flex-wrap items-center gap-2">
-                              <Link href={`/admin/merchants/${merchant.id}`} className="font-bold hover:opacity-70" style={{ color: 'var(--navy)' }}>
+                              <Link href={`/admin/merchants/${merchant.id}`} className="font-bold hover:opacity-70" style={{ color: 'var(--ink)' }}>
                                 {merchant.shop_name}
                               </Link>
                               <span className="px-1.5 py-0.5 text-[10px] font-bold uppercase" style={{ background: merchant.is_active ? '#DCFCE7' : '#FEE2E2', color: merchant.is_active ? '#047857' : '#DC2626' }}>
@@ -1660,7 +1660,7 @@ function AdminBackofficeContent() {
                       </td>
                       <td className="min-w-[220px] px-4 py-4">
                         <div className="mb-1 flex items-center justify-between text-xs">
-                          <span className="font-semibold" style={{ color: 'var(--navy)' }}>
+                          <span className="font-semibold" style={{ color: 'var(--ink)' }}>
                             {merchant.total_scans.toLocaleString()} / {quota > 0 ? quota.toLocaleString() : '-'} slips
                           </span>
                           <span className="font-bold" style={{ color: quotaTone.text }}>{formatPercent(quotaPercent)}</span>
@@ -1684,7 +1684,7 @@ function AdminBackofficeContent() {
                         <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Auto LINE reply {merchant.line_connected ? 'on' : 'off'}</p>
                       </td>
                       <td className="min-w-[170px] px-4 py-4">
-                        <p className="font-semibold" style={{ color: 'var(--navy)' }}>{merchant.total_transactions.toLocaleString()} transactions</p>
+                        <p className="font-semibold" style={{ color: 'var(--ink)' }}>{merchant.total_transactions.toLocaleString()} transactions</p>
                         <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{merchant.total_scans.toLocaleString()} slip scans</p>
                         <p className="text-[11px] font-semibold" style={{ color: merchant.total_transactions > 0 ? '#047857' : 'var(--text-muted)' }}>
                           {merchant.total_transactions > 0 ? 'Activity recorded' : 'No activity yet'}
@@ -1752,7 +1752,7 @@ function AdminBackofficeContent() {
                   ) : users.map((item) => (
                     <tr key={item.id} style={{ borderBottom: '1px solid var(--border)' }}>
                       <td className="px-4 py-3">
-                        <p className="font-bold" style={{ color: 'var(--navy)' }}>{item.name}</p>
+                        <p className="font-bold" style={{ color: 'var(--ink)' }}>{item.name}</p>
                         <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{item.email}</p>
                       </td>
                       <td className="px-4 py-3">
@@ -1763,7 +1763,7 @@ function AdminBackofficeContent() {
                           {item.is_active ? 'Active' : 'Blocked'}
                         </span>
                       </td>
-                      <td className="px-4 py-3 capitalize" style={{ color: 'var(--navy)' }}>{item.role}</td>
+                      <td className="px-4 py-3 capitalize" style={{ color: 'var(--ink)' }}>{item.role}</td>
                       <td className="px-4 py-3">
                         {item.merchant_id ? (
                           <Link href={`/admin/merchants/${item.merchant_id}`} className="font-medium hover:underline" style={{ color: 'var(--blue)' }}>
@@ -1773,8 +1773,8 @@ function AdminBackofficeContent() {
                           <span style={{ color: 'var(--text-muted)' }}>No merchant</span>
                         )}
                       </td>
-                      <td className="px-4 py-3" style={{ color: 'var(--navy)' }}>{item.line_linked ? 'Linked' : 'Not linked'}</td>
-                      <td className="px-4 py-3" style={{ color: 'var(--navy)' }}>{item.email_verified ? 'Verified' : 'Unverified'}</td>
+                      <td className="px-4 py-3" style={{ color: 'var(--ink)' }}>{item.line_linked ? 'Linked' : 'Not linked'}</td>
+                      <td className="px-4 py-3" style={{ color: 'var(--ink)' }}>{item.email_verified ? 'Verified' : 'Unverified'}</td>
                       <td className="px-4 py-3" style={{ color: 'var(--text-muted)' }}>{formatDate(item.created_at)}</td>
                       <td className="px-4 py-3 text-right">
                         <button
@@ -1785,7 +1785,7 @@ function AdminBackofficeContent() {
                           style={{
                             border: item.is_active ? '1px solid #FCA5A5' : '1px solid #86EFAC',
                             color: item.is_active ? '#DC2626' : '#047857',
-                            background: '#fff',
+                            background: 'var(--bg-card)',
                           }}
                         >
                           {item.is_active ? <Ban className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}

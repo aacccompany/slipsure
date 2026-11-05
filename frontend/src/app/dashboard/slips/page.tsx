@@ -66,13 +66,13 @@ function yearRange(value: string) {
 function statusStyle(status: SlipStatus) {
   switch (status) {
     case 'verified':
-      return { bg: '#ECFDF5', text: '#047857', dot: '#10B981' };
+      return { bg: 'var(--ok-pale)', text: 'var(--ok-ink)', dot: '#10B981' };
     case 'failed':
-      return { bg: '#FEF2F2', text: '#B91C1C', dot: '#EF4444' };
+      return { bg: 'var(--err-pale)', text: 'var(--err-ink)', dot: '#EF4444' };
     case 'processing':
-      return { bg: '#EFF6FF', text: '#1D4ED8', dot: '#2563EB' };
+      return { bg: 'var(--bg-subtle)', text: '#1D4ED8', dot: '#2563EB' };
     default:
-      return { bg: '#F8FAFC', text: '#64748B', dot: '#94A3B8' };
+      return { bg: 'var(--bg)', text: '#64748B', dot: '#94A3B8' };
   }
 }
 
@@ -108,7 +108,7 @@ function DetailLine({ label, value }: { label: string; value?: string | number |
   return (
     <div className="flex items-start justify-between gap-4 border-b border-zinc-100 py-2 text-sm">
       <span style={{ color: 'var(--text-muted)' }}>{label}</span>
-      <span className="text-right font-semibold" style={{ color: 'var(--navy)' }}>
+      <span className="text-right font-semibold" style={{ color: 'var(--ink)' }}>
         {value === undefined || value === null || value === '' ? '-' : String(value)}
       </span>
     </div>
@@ -134,7 +134,7 @@ function TransactionDetailModal({
             <p className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
               Transaction detail
             </p>
-            <h2 className="text-xl font-bold" style={{ color: 'var(--navy)' }}>
+            <h2 className="text-xl font-bold" style={{ color: 'var(--ink)' }}>
               {transaction.reference_no || transaction.id}
             </h2>
           </div>
@@ -150,7 +150,7 @@ function TransactionDetailModal({
         <div className="max-h-[calc(90vh-81px)] overflow-y-auto p-6">
           <div className="grid gap-6 lg:grid-cols-2">
             <section className="rounded-lg border border-zinc-200 p-4">
-              <h3 className="mb-3 text-sm font-bold" style={{ color: 'var(--navy)' }}>HaveSLIP Result</h3>
+              <h3 className="mb-3 text-sm font-bold" style={{ color: 'var(--ink)' }}>HaveSLIP Result</h3>
               <DetailLine label="Provider" value={transaction.provider || 'haveslip'} />
               <DetailLine label="Verification UUID" value={transaction.provider_verification_id} />
               <DetailLine label="Provider status" value={transaction.provider_status} />
@@ -161,7 +161,7 @@ function TransactionDetailModal({
             </section>
 
             <section className="rounded-lg border border-zinc-200 p-4">
-              <h3 className="mb-3 text-sm font-bold" style={{ color: 'var(--navy)' }}>Transaction Data</h3>
+              <h3 className="mb-3 text-sm font-bold" style={{ color: 'var(--ink)' }}>Transaction Data</h3>
               <DetailLine label="Amount" value={formatAmount(transaction.amount)} />
               <DetailLine label="Status" value={STATUS_LABEL[transaction.status]} />
               <DetailLine label="Transaction date" value={formatTime(transaction.transfer_at || transaction.transaction_time || transaction.created_at)} />
@@ -170,14 +170,14 @@ function TransactionDetailModal({
             </section>
 
             <section className="rounded-lg border border-zinc-200 p-4">
-              <h3 className="mb-3 text-sm font-bold" style={{ color: 'var(--navy)' }}>Sender</h3>
+              <h3 className="mb-3 text-sm font-bold" style={{ color: 'var(--ink)' }}>Sender</h3>
               <DetailLine label="Name" value={transaction.sender_name} />
               <DetailLine label="Bank" value={transaction.sender_bank} />
               <DetailLine label="Account" value={transaction.sender_account} />
             </section>
 
             <section className="rounded-lg border border-zinc-200 p-4">
-              <h3 className="mb-3 text-sm font-bold" style={{ color: 'var(--navy)' }}>Receiver</h3>
+              <h3 className="mb-3 text-sm font-bold" style={{ color: 'var(--ink)' }}>Receiver</h3>
               <DetailLine label="Name" value={transaction.receiver_name} />
               <DetailLine label="Bank" value={transaction.receiver_bank} />
               <DetailLine label="Account" value={transaction.receiver_account} />
@@ -188,7 +188,7 @@ function TransactionDetailModal({
             <section className="mt-6 rounded-lg border border-zinc-200 p-4">
               <div className="mb-3 flex items-center gap-2">
                 <Code2 className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />
-                <h3 className="text-sm font-bold" style={{ color: 'var(--navy)' }}>Raw HaveSLIP Response</h3>
+                <h3 className="text-sm font-bold" style={{ color: 'var(--ink)' }}>Raw HaveSLIP Response</h3>
               </div>
               <pre className="max-h-80 overflow-auto rounded-md bg-zinc-950 p-4 text-xs text-zinc-100">
                 {rawResponse}
@@ -208,7 +208,7 @@ function RejectedSlipDetailModal({ slip, onClose }: { slip: Slip; onClose: () =>
         <div className="flex items-start justify-between gap-4 border-b border-zinc-200 px-6 py-4">
           <div className="min-w-0">
             <p className="font-mono text-[10px] uppercase" style={{ color: 'var(--text-muted)' }}>Slip detail</p>
-            <h2 className="break-all text-lg font-bold" style={{ color: 'var(--navy)' }}>{slip.id}</h2>
+            <h2 className="break-all text-lg font-bold" style={{ color: 'var(--ink)' }}>{slip.id}</h2>
           </div>
           <button type="button" onClick={onClose} aria-label="Close slip detail" className="rounded-md border border-zinc-200 p-2">
             <X className="h-4 w-4" />
@@ -260,14 +260,14 @@ function TransactionRow({
         </span>
       </div>
 
-      <p className="font-bold" style={{ color: 'var(--navy)' }}>
+      <p className="font-bold" style={{ color: 'var(--ink)' }}>
         {transaction ? formatAmount(transaction.amount) : '-'}
       </p>
 
       <div className="min-w-0">
         {transaction ? (
           <>
-            <p className="truncate text-sm font-semibold" style={{ color: 'var(--navy)' }}>
+            <p className="truncate text-sm font-semibold" style={{ color: 'var(--ink)' }}>
               {partyLabel(transaction.sender_name, transaction.sender_bank, transaction.sender_account)}
               <span className="mx-2 text-xs font-normal" style={{ color: 'var(--text-muted)' }}>→</span>
               {partyLabel(transaction.receiver_name, transaction.receiver_bank, transaction.receiver_account)}
@@ -278,7 +278,7 @@ function TransactionRow({
           </>
         ) : (
           <>
-            <p className="truncate text-sm font-semibold" style={{ color: 'var(--navy)' }}>
+            <p className="truncate text-sm font-semibold" style={{ color: 'var(--ink)' }}>
               {slip.fail_reason ? FAIL_LABEL[slip.fail_reason] ?? slip.fail_reason : 'No transaction data'}
             </p>
             <p className="mt-0.5 truncate font-mono text-[10px]" style={{ color: 'var(--text-muted)' }}>
@@ -288,7 +288,7 @@ function TransactionRow({
         )}
       </div>
 
-      <p className="hidden text-center font-bold md:block" style={{ color: 'var(--navy)' }}>
+      <p className="hidden text-center font-bold md:block" style={{ color: 'var(--ink)' }}>
         1
       </p>
 
@@ -302,7 +302,7 @@ function TransactionRow({
           onClick={() => onView(item)}
           disabled={isDetailLoading}
           className="inline-flex items-center gap-2 rounded-md border border-zinc-200 px-3 py-2 text-xs font-bold transition-colors hover:border-zinc-900 disabled:cursor-wait disabled:opacity-60"
-          style={{ color: 'var(--navy)' }}
+          style={{ color: 'var(--ink)' }}
         >
           {isDetailLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
           ดูรายละเอียด
@@ -460,7 +460,7 @@ export default function SlipsPage() {
           <p className="mb-1 font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
             / Slip history
           </p>
-          <h1 className="text-3xl font-bold tracking-tight" style={{ color: 'var(--navy)' }}>
+          <h1 className="text-3xl font-bold tracking-tight" style={{ color: 'var(--ink)' }}>
             Slip History
           </h1>
         </div>
@@ -505,7 +505,7 @@ export default function SlipsPage() {
           <MessageSquare className="h-5 w-5 text-emerald-600" />
         </div>
         <div>
-          <p className="text-sm font-semibold" style={{ color: 'var(--navy)' }}>
+          <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
             Verification now runs through your merchant LINE bot.
           </p>
           <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
@@ -524,20 +524,20 @@ export default function SlipsPage() {
       >
         <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
           <div>
-            <h2 className="text-sm font-bold" style={{ color: 'var(--navy)' }}>
+            <h2 className="text-sm font-bold" style={{ color: 'var(--ink)' }}>
               ตัวกรองประวัติ
             </h2>
             <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
               กรองจากสถานะ วันที่ และคำค้นหา เพื่อค้นหารายการที่ต้องการ
             </p>
           </div>
-          <p className="text-xs font-semibold" style={{ color: 'var(--navy)' }}>
+          <p className="text-xs font-semibold" style={{ color: 'var(--ink)' }}>
             รวม {pagination?.total.toLocaleString() ?? 0} รายการ (โหลดมาแล้ว {transactions.length.toLocaleString()} รายการ)
           </p>
         </div>
 
         <div className="grid gap-3 lg:grid-cols-4">
-          <label className="space-y-1 text-xs font-bold" style={{ color: 'var(--navy)' }}>
+          <label className="space-y-1 text-xs font-bold" style={{ color: 'var(--ink)' }}>
             สถานะ
             <select
               value={filters.status}
@@ -553,7 +553,7 @@ export default function SlipsPage() {
             </select>
           </label>
 
-          <label className="space-y-1 text-xs font-bold" style={{ color: 'var(--navy)' }}>
+          <label className="space-y-1 text-xs font-bold" style={{ color: 'var(--ink)' }}>
             ช่องทาง
             <select
               value={filters.channel}
@@ -565,7 +565,7 @@ export default function SlipsPage() {
             </select>
           </label>
 
-          <label className="space-y-1 text-xs font-bold" style={{ color: 'var(--navy)' }}>
+          <label className="space-y-1 text-xs font-bold" style={{ color: 'var(--ink)' }}>
             ช่วงเวลา
             <select
               value={dateMode}
@@ -584,7 +584,7 @@ export default function SlipsPage() {
 
           {dateMode === 'month' && (
             <div className="grid min-w-0 grid-cols-2 gap-2">
-              <label className="min-w-0 space-y-1 text-xs font-bold" style={{ color: 'var(--navy)' }}>
+              <label className="min-w-0 space-y-1 text-xs font-bold" style={{ color: 'var(--ink)' }}>
                 ปี
                 <select
                   value={selectedMonth.slice(0, 4)}
@@ -594,7 +594,7 @@ export default function SlipsPage() {
                   {yearOptions.map((year) => <option key={year} value={year}>{year}</option>)}
                 </select>
               </label>
-              <label className="min-w-0 space-y-1 text-xs font-bold" style={{ color: 'var(--navy)' }}>
+              <label className="min-w-0 space-y-1 text-xs font-bold" style={{ color: 'var(--ink)' }}>
                 เดือน
                 <select
                   value={selectedMonth.slice(5)}
@@ -610,7 +610,7 @@ export default function SlipsPage() {
           )}
 
           {dateMode === 'year' && (
-            <label className="space-y-1 text-xs font-bold" style={{ color: 'var(--navy)' }}>
+            <label className="space-y-1 text-xs font-bold" style={{ color: 'var(--ink)' }}>
               ปี
               <select
                 value={selectedYear}
@@ -629,7 +629,7 @@ export default function SlipsPage() {
 
           {dateMode === 'custom' && (
             <div className="grid gap-3 sm:grid-cols-2 lg:col-span-2">
-              <label className="space-y-1 text-xs font-bold" style={{ color: 'var(--navy)' }}>
+              <label className="space-y-1 text-xs font-bold" style={{ color: 'var(--ink)' }}>
                 วันที่เริ่ม
                 <input
                   type="date"
@@ -639,7 +639,7 @@ export default function SlipsPage() {
                   className="h-10 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm font-medium outline-none transition-colors focus:border-blue-500"
                 />
               </label>
-              <label className="space-y-1 text-xs font-bold" style={{ color: 'var(--navy)' }}>
+              <label className="space-y-1 text-xs font-bold" style={{ color: 'var(--ink)' }}>
                 วันที่สิ้นสุด
                 <input
                   type="date"
@@ -654,7 +654,7 @@ export default function SlipsPage() {
         </div>
 
         <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(260px,1fr)_auto] lg:items-end">
-          <label className="max-w-md space-y-1 text-xs font-bold" style={{ color: 'var(--navy)' }}>
+          <label className="max-w-md space-y-1 text-xs font-bold" style={{ color: 'var(--ink)' }}>
             คำค้นหา (UUID / ผู้รับ / ธนาคาร)
             <span className="relative block">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
@@ -672,7 +672,7 @@ export default function SlipsPage() {
               type="button"
               onClick={clearFilters}
               className="h-10 rounded-md border border-zinc-200 bg-white px-4 text-sm font-bold transition-colors hover:border-zinc-900"
-              style={{ color: 'var(--navy)' }}
+              style={{ color: 'var(--ink)' }}
             >
               ล้างตัวกรอง
             </button>
@@ -722,7 +722,7 @@ export default function SlipsPage() {
             <div className="flex h-12 w-12 items-center justify-center" style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border)' }}>
               <ImageIcon className="h-5 w-5" style={{ color: 'var(--text-muted)' }} />
             </div>
-            <p className="text-sm font-semibold" style={{ color: 'var(--navy)' }}>
+            <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
               {hasActiveFilters ? 'No matching slips' : 'No slips yet'}
             </p>
             <p className="max-w-sm text-sm" style={{ color: 'var(--text-muted)' }}>

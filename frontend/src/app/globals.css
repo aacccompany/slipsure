@@ -47,7 +47,77 @@
   /* Semantic colour for "fake slip" states on the public site */
   --fake:         #EF4444;
   --fake-pale:    #FEE2E2;
+
+  /* Text-on-surface ink (navy in light mode, near-white in dark) vs --navy,
+     which stays a dark brand SURFACE in both themes. --on-cyan is always dark. */
+  --ink:          #001847;
+  --on-cyan:      #001847;
+
+  /* Status tints + their text colours */
+  --ok-pale:      #ECFDF5;
+  --ok-ink:       #047857;
+  --err-pale:     #FEF2F2;
+  --err-ink:      #DC2626;
+  --warn-pale:    #FEF3C7;
+  --warn-ink:     #B45309;
+
+  --nav-bg:       rgba(255, 255, 255, 0.8);
+  --nav-bg-solid: rgba(255, 255, 255, 0.92);
+  --overlay:      rgba(15, 23, 42, 0.45);
+  --ring:         rgba(0, 24, 71, 0.07);
+  color-scheme: light;
 }
+
+/* ── Dark theme ─────────────────────────────────────────────
+   Toggled with <html data-theme="dark"> (see ThemeToggle + the inline
+   script in layout.tsx). Brand blue/cyan stay; surfaces, ink and the pale
+   tints flip. --navy stays a dark surface (sidebar, footer, hero cards). */
+:root[data-theme="dark"] {
+  --navy:         #0A2358;
+  --navy-light:   #123277;
+  --blue:         #3B82F6;
+  --blue-light:   #60A5FA;
+  --blue-pale:    rgba(59, 130, 246, 0.16);
+  --cyan-pale:    rgba(0, 212, 255, 0.12);
+
+  --bg:           #060E22;
+  --bg-card:      #0D1A38;
+  --bg-subtle:    #12224A;
+
+  --text:         #E6EDFB;
+  --text-muted:   #93A3C4;
+
+  --border:       #1E3160;
+  --border-strong:#2E4580;
+
+  --gold:         #3B82F6;
+  --gold-light:   #60A5FA;
+  --gold-pale:    rgba(59, 130, 246, 0.16);
+  --gold-shimmer-start: #3B82F6;
+
+  --fake:         #F87171;
+  --fake-pale:    rgba(239, 68, 68, 0.16);
+
+  --ink:          #EAF0FF;
+
+  --ok-pale:      rgba(16, 185, 129, 0.16);
+  --ok-ink:       #34D399;
+  --err-pale:     rgba(239, 68, 68, 0.16);
+  --err-ink:      #F87171;
+  --warn-pale:    rgba(245, 158, 11, 0.16);
+  --warn-ink:     #FBBF24;
+
+  --nav-bg:       rgba(13, 26, 56, 0.78);
+  --nav-bg-solid: rgba(13, 26, 56, 0.94);
+  --overlay:      rgba(2, 6, 18, 0.7);
+  --ring:         rgba(150, 180, 255, 0.14);
+  color-scheme: dark;
+}
+
+/* logo: one image per theme */
+.logo-dark { display: none; }
+:root[data-theme="dark"] .logo-light { display: none; }
+:root[data-theme="dark"] .logo-dark { display: inline-block; }
 
 /* ── Responsive scale ──────────────────────────────────────
    Tailwind sizes are rem-based, so nudging the root font size scales
@@ -348,3 +418,60 @@ html { scroll-behavior: smooth; }
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--blue); }
+
+/* ── Dark theme: utility + component overrides ───────────────
+   Unlayered, so they beat Tailwind utilities. Most colours already flow
+   from the CSS variables above; this maps the hard-coded Tailwind
+   neutrals/tints that the pages still use. */
+:root[data-theme="dark"] {
+  .soft-ui {
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 28px -14px rgba(0, 0, 0, 0.6);
+    --shadow-card-hover: 0 2px 4px rgba(0, 0, 0, 0.35), 0 16px 36px -14px rgba(59, 130, 246, 0.35);
+  }
+
+  .skeleton { background: rgba(160, 190, 255, 0.09); }
+  .skeleton::after { background: linear-gradient(90deg, transparent, rgba(160, 190, 255, 0.12), transparent); }
+
+  /* surfaces */
+  .bg-white { background-color: var(--bg-card); }
+  .bg-white\/70, .bg-white\/80, .bg-white\/90 { background-color: var(--nav-bg); }
+  .bg-slate-50, .bg-zinc-50, .bg-zinc-100, .bg-slate-100,
+  .hover\:bg-slate-50:hover, .hover\:bg-zinc-50:hover, .hover\:bg-zinc-100:hover, .hover\:bg-slate-100:hover { background-color: var(--bg-subtle); }
+  .bg-blue-50, .bg-sky-50, .bg-blue-100 { background-color: var(--blue-pale); }
+  .hover\:bg-blue-50:hover { background-color: var(--blue-pale); }
+  .bg-emerald-50 { background-color: var(--ok-pale); }
+  .bg-rose-50, .bg-red-50, .hover\:bg-rose-50:hover, .hover\:bg-red-100:hover { background-color: var(--err-pale); }
+  .bg-amber-50 { background-color: var(--warn-pale); }
+
+  /* borders */
+  .border-zinc-100, .border-zinc-200, .border-sky-100, .border-blue-100, .border-blue-200 { border-color: var(--border); }
+  .border-zinc-300 { border-color: var(--border-strong); }
+  .hover\:border-zinc-900:hover { border-color: var(--ink); }
+  .border-emerald-200, .ring-emerald-200 { border-color: rgba(16, 185, 129, 0.35); --tw-ring-color: rgba(16, 185, 129, 0.35); }
+  .border-rose-200, .border-red-200, .border-red-300, .hover\:border-rose-200:hover { border-color: rgba(239, 68, 68, 0.4); }
+  .border-amber-200, .ring-amber-200 { border-color: rgba(245, 158, 11, 0.4); --tw-ring-color: rgba(245, 158, 11, 0.4); }
+  .focus\:border-blue-500:focus, .focus\:border-blue-300:focus { border-color: var(--blue); }
+
+  /* text */
+  .text-zinc-950, .text-zinc-900, .text-zinc-100, .hover\:text-zinc-900:hover, .hover\:text-zinc-950:hover { color: var(--ink); }
+  .text-zinc-700 { color: var(--text); }
+  .text-zinc-600, .text-zinc-500 { color: var(--text-muted); }
+  .text-zinc-400, .placeholder\:text-zinc-400::placeholder { color: #6B7FA6; }
+  .text-blue-700, .text-blue-800, .text-blue-900, .text-blue-950,
+  .hover\:text-blue-700:hover, .hover\:text-blue-800:hover { color: var(--blue-light); }
+  .text-emerald-500, .text-emerald-600, .text-emerald-700 { color: var(--ok-ink); }
+  .text-rose-400, .text-rose-500, .text-rose-600, .text-rose-700, .text-red-700, .text-red-800, .hover\:text-rose-700:hover { color: var(--err-ink); }
+  .text-amber-600, .text-amber-700 { color: var(--warn-ink); }
+
+  /* the zinc-900 "solid ink" buttons keep a light label */
+  .bg-zinc-950, .bg-zinc-900 { color: #fff; }
+
+  input, select, textarea { color: var(--text); }
+  input::placeholder, textarea::placeholder { color: #6B7FA6; }
+  .soft-ui ::selection { background: rgba(59, 130, 246, 0.4); }
+}
+
+/* smooth cross-fade only while the user is toggling (class set by ThemeToggle) */
+html.theme-fade, html.theme-fade *, html.theme-fade *::before, html.theme-fade *::after {
+  transition: background-color .25s ease, border-color .25s ease, color .25s ease, fill .25s ease !important;
+}

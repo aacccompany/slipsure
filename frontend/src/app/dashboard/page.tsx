@@ -200,10 +200,10 @@ export default function DashboardPage() {
     return status;
   };
   const orderStatusColor = (status: string) => {
-    if (status === 'success') return { background: '#D1FAE5', color: '#059669' };
-    if (status === 'pending') return { background: '#FEF3C7', color: '#B45309' };
-    if (status === 'failed') return { background: '#FEE2E2', color: '#DC2626' };
-    return { background: '#E5E7EB', color: '#475569' };
+    if (status === 'success') return { background: 'var(--ok-pale)', color: 'var(--ok-ink)' };
+    if (status === 'pending') return { background: 'var(--warn-pale)', color: 'var(--warn-ink)' };
+    if (status === 'failed') return { background: 'var(--err-pale)', color: 'var(--err-ink)' };
+    return { background: 'var(--border)', color: '#475569' };
   };
   const orderNumber = (id: string, createdAt: string) => {
     const date = new Date(createdAt);
@@ -230,10 +230,10 @@ export default function DashboardPage() {
     setAppliedTransactionFilters(EMPTY_TRANSACTION_FILTERS);
   };
   const transactionStatusColor = (status: SlipStatus) => {
-    if (status === 'verified') return { background: '#D1FAE5', color: '#059669' };
-    if (status === 'failed') return { background: '#FEE2E2', color: '#DC2626' };
+    if (status === 'verified') return { background: 'var(--ok-pale)', color: 'var(--ok-ink)' };
+    if (status === 'failed') return { background: 'var(--err-pale)', color: 'var(--err-ink)' };
     if (status === 'processing') return { background: '#DBEAFE', color: '#1D4ED8' };
-    return { background: '#E5E7EB', color: '#475569' };
+    return { background: 'var(--border)', color: '#475569' };
   };
   const transactionStatusLabel = (status: SlipStatus) => {
     if (status === 'verified') return 'สำเร็จ';
@@ -275,7 +275,7 @@ export default function DashboardPage() {
     <div className="p-6 space-y-6" style={{ background: 'var(--bg)' }}>
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="font-extrabold tracking-tight" style={{ fontSize: '1.75rem', color: 'var(--navy)', letterSpacing: '-0.02em' }}>
+          <h1 className="font-extrabold tracking-tight" style={{ fontSize: '1.75rem', color: 'var(--ink)', letterSpacing: '-0.02em' }}>
             ภาพรวม
           </h1>
           <p className="mt-0.5 text-sm" style={{ color: 'var(--text-muted)' }}>
@@ -294,7 +294,7 @@ export default function DashboardPage() {
 
       <ReportExportDialog open={reportOpen} onClose={() => setReportOpen(false)} initialPeriod={analyticsPeriod} startDate={appliedTransactionFilters.startDate} endDate={appliedTransactionFilters.endDate} />
       {quota?.data?.is_blocked && (
-        <div className="flex items-center gap-3 px-4 py-3" style={{ background: '#FEF2F2', border: '1px solid #FECACA' }}>
+        <div className="flex items-center gap-3 px-4 py-3" style={{ background: 'var(--err-pale)', border: '1px solid #FECACA' }}>
           <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
           <p className="text-sm text-rose-700">
             โควต้าหมดแล้ว{' '}
@@ -343,7 +343,7 @@ export default function DashboardPage() {
               <div className="flex h-10 w-10 items-center justify-center rounded-lg" style={{ background: 'var(--blue-pale)' }}>
                 <BarChart3 className="h-5 w-5" style={{ color: 'var(--blue)' }} />
               </div>
-              <h2 className="text-xl font-bold" style={{ color: 'var(--navy)' }}>
+              <h2 className="text-xl font-bold" style={{ color: 'var(--ink)' }}>
                 วิเคราะห์ข้อมูล
               </h2>
             </div>
@@ -351,7 +351,7 @@ export default function DashboardPage() {
               type="button"
               onClick={() => refetchUsage()}
               className="flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-semibold transition-all hover:bg-slate-50 disabled:opacity-60"
-              style={{ borderColor: 'var(--border)', color: 'var(--navy)' }}
+              style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
               disabled={usageFetching}
             >
               <RefreshCw className={`h-4 w-4 ${usageFetching ? 'animate-spin' : ''}`} />
@@ -372,8 +372,8 @@ export default function DashboardPage() {
                 className="rounded-md border px-4 py-2 text-sm font-semibold transition-all hover:bg-slate-50"
                 style={{
                   borderColor: analyticsPeriod === option.value ? '#9BC1E6' : 'var(--border)',
-                  background: analyticsPeriod === option.value ? '#EAF4FF' : '#fff',
-                  color: 'var(--navy)',
+                  background: analyticsPeriod === option.value ? 'var(--bg-subtle)' : 'var(--bg-card)',
+                  color: 'var(--ink)',
                 }}
               >
                 {option.label}
@@ -381,7 +381,7 @@ export default function DashboardPage() {
             ))}
             <div
               className="flex min-w-0 flex-1 items-center gap-3 rounded-md border px-4 py-2 text-sm"
-              style={{ borderColor: 'var(--border)', color: 'var(--navy)' }}
+              style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
             >
               <Calendar className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} />
               <span className="truncate">{dateRangeLabel}</span>
@@ -392,7 +392,7 @@ export default function DashboardPage() {
         <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
           <div className="rounded-lg bg-white p-6" style={{ border: '1px solid var(--border)' }}>
             <div className="mb-4 flex items-center justify-between">
-              <p className="text-sm font-semibold" style={{ color: 'var(--navy)' }}>
+              <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
                 แนวโน้มการตรวจสอบ
               </p>
               <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{periodLabel}</span>
@@ -408,11 +408,11 @@ export default function DashboardPage() {
             ) : (
             <div className="relative" onMouseLeave={() => setChartTooltip(null)}>
               <div className="mb-1 flex justify-center gap-4 text-sm">
-                <span className="flex items-center gap-2" style={{ color: 'var(--navy)' }}>
+                <span className="flex items-center gap-2" style={{ color: 'var(--ink)' }}>
                   <span className="h-4 w-4 rounded-full border-2" style={{ borderColor: '#10B981' }} />
                   สำเร็จ
                 </span>
-                <span className="flex items-center gap-2" style={{ color: 'var(--navy)' }}>
+                <span className="flex items-center gap-2" style={{ color: 'var(--ink)' }}>
                   <span className="h-4 w-4 rounded-full border-2" style={{ borderColor: '#FF3B3F' }} />
                   ล้มเหลว
                 </span>
@@ -425,7 +425,7 @@ export default function DashboardPage() {
                     left: `${chartTooltip.left}%`,
                     top: `${chartTooltip.top}%`,
                     borderColor: 'var(--border)',
-                    color: 'var(--navy)',
+                    color: 'var(--ink)',
                   }}
                 >
                   <p className="mb-1 font-semibold">{formatShortDate(chartTooltip.date)}</p>
@@ -526,7 +526,7 @@ export default function DashboardPage() {
 
           <div className="rounded-lg bg-white p-6" style={{ border: '1px solid var(--border)' }}>
             <div className="mb-5 flex items-center justify-between">
-              <p className="text-sm font-semibold" style={{ color: 'var(--navy)' }}>
+              <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
                 วิธีการชำระเงิน
               </p>
               <Info className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />
@@ -564,7 +564,7 @@ export default function DashboardPage() {
               <div className="mt-2 flex items-center gap-2 text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
                 <span className="h-3 w-3 rounded-full" style={{ background: hasStripePayments ? '#5B8FF9' : '#CBD5E1' }} />
                 {hasStripePayments ? 'Stripe' : 'Free tier'}
-                <span style={{ color: 'var(--navy)' }}>{stripePaymentCount.toLocaleString()}</span>
+                <span style={{ color: 'var(--ink)' }}>{stripePaymentCount.toLocaleString()}</span>
               </div>
               <div className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
                 {hasStripePayments
@@ -578,10 +578,10 @@ export default function DashboardPage() {
 
         <div className="rounded-lg bg-white p-6" style={{ border: '1px solid var(--border)' }}>
           <div className="mb-4 flex items-center justify-between">
-            <p className="text-sm font-semibold" style={{ color: 'var(--navy)' }}>
+            <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
               วิเคราะห์ค่าใช้จ่าย
             </p>
-            <p className="text-sm font-semibold" style={{ color: 'var(--navy)' }}>
+            <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
               รวมทั้งสิ้น <span className="mx-1 font-bold">{totalCredits.toLocaleString()}</span> เครดิต
             </p>
           </div>
@@ -688,7 +688,7 @@ export default function DashboardPage() {
         <div className="rounded-lg bg-white p-6" style={{ border: '1px solid var(--border)' }}>
           <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
             <div>
-              <p className="text-sm font-bold" style={{ color: 'var(--navy)' }}>
+              <p className="text-sm font-bold" style={{ color: 'var(--ink)' }}>
                 ตัวกรองประวัติ
               </p>
               <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
@@ -696,7 +696,7 @@ export default function DashboardPage() {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <p className="text-xs font-semibold" style={{ color: 'var(--navy)' }}>
+              <p className="text-xs font-semibold" style={{ color: 'var(--ink)' }}>
                 รวม {transactionPagination?.total.toLocaleString() ?? 0} รายการ
               </p>
               <Link
@@ -718,13 +718,13 @@ export default function DashboardPage() {
             }}
           >
             <div className="grid gap-3 lg:grid-cols-4">
-              <label className="space-y-1 text-xs font-bold" style={{ color: 'var(--navy)' }}>
+              <label className="space-y-1 text-xs font-bold" style={{ color: 'var(--ink)' }}>
                 สถานะ
                 <select
                   value={transactionFilters.status}
                   onChange={(event) => updateTransactionFilters({ ...transactionFilters, status: event.target.value as TransactionFilterState['status'] })}
                   className="h-10 w-full rounded-md border bg-white px-3 text-sm font-medium outline-none transition-all focus:border-blue-300"
-                  style={{ borderColor: 'var(--border)', color: 'var(--navy)' }}
+                  style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
                 >
                   {transactionStatusOptions.map((option) => (
                     <option key={option.value || 'all'} value={option.value}>{option.label}</option>
@@ -732,44 +732,44 @@ export default function DashboardPage() {
                 </select>
               </label>
 
-              <label className="space-y-1 text-xs font-bold" style={{ color: 'var(--navy)' }}>
+              <label className="space-y-1 text-xs font-bold" style={{ color: 'var(--ink)' }}>
                 ช่องทาง
                 <select
                   value={transactionFilters.channel}
                   onChange={(event) => updateTransactionFilters({ ...transactionFilters, channel: event.target.value as TransactionFilterState['channel'] })}
                   className="h-10 w-full rounded-md border bg-white px-3 text-sm font-medium outline-none transition-all focus:border-blue-300"
-                  style={{ borderColor: 'var(--border)', color: 'var(--navy)' }}
+                  style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
                 >
                   <option value="">ทั้งหมด</option>
                   <option value="line">LINE bot</option>
                 </select>
               </label>
 
-              <label className="space-y-1 text-xs font-bold" style={{ color: 'var(--navy)' }}>
+              <label className="space-y-1 text-xs font-bold" style={{ color: 'var(--ink)' }}>
                 วันที่เริ่ม
                 <input
                   type="date"
                   value={transactionFilters.startDate}
                   onChange={(event) => updateTransactionFilters({ ...transactionFilters, startDate: event.target.value })}
                   className="h-10 w-full rounded-md border bg-white px-3 text-sm font-medium outline-none transition-all focus:border-blue-300"
-                  style={{ borderColor: 'var(--border)', color: 'var(--navy)' }}
+                  style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
                 />
               </label>
 
-              <label className="space-y-1 text-xs font-bold" style={{ color: 'var(--navy)' }}>
+              <label className="space-y-1 text-xs font-bold" style={{ color: 'var(--ink)' }}>
                 วันที่สิ้นสุด
                 <input
                   type="date"
                   value={transactionFilters.endDate}
                   onChange={(event) => updateTransactionFilters({ ...transactionFilters, endDate: event.target.value })}
                   className="h-10 w-full rounded-md border bg-white px-3 text-sm font-medium outline-none transition-all focus:border-blue-300"
-                  style={{ borderColor: 'var(--border)', color: 'var(--navy)' }}
+                  style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
                 />
               </label>
             </div>
 
             <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(260px,1fr)_auto] lg:items-end">
-              <label className="max-w-md space-y-1 text-xs font-bold" style={{ color: 'var(--navy)' }}>
+              <label className="max-w-md space-y-1 text-xs font-bold" style={{ color: 'var(--ink)' }}>
                 คำค้นหา (UUID / ผู้รับ / ธนาคาร)
                 <span className="relative block">
                   <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
@@ -778,7 +778,7 @@ export default function DashboardPage() {
                     onChange={(event) => updateTransactionFilters({ ...transactionFilters, search: event.target.value }, false)}
                     placeholder="เช่น 1234-uuid หรือ ชื่อร้าน"
                     className="h-10 w-full rounded-md border bg-white pl-10 pr-3 text-sm outline-none transition-all placeholder:text-zinc-400 focus:border-blue-300"
-                    style={{ borderColor: 'var(--border)', color: 'var(--navy)' }}
+                    style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
                   />
                 </span>
               </label>
@@ -788,7 +788,7 @@ export default function DashboardPage() {
                   type="button"
                   onClick={clearTransactionFilters}
                   className="h-10 rounded-md border bg-white px-4 text-sm font-bold transition-all hover:bg-slate-50"
-                  style={{ borderColor: 'var(--border)', color: 'var(--navy)' }}
+                  style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
                 >
                   ล้างตัวกรอง
                 </button>
@@ -806,7 +806,7 @@ export default function DashboardPage() {
 
           <div className="overflow-hidden rounded-lg border" style={{ borderColor: 'var(--border)' }}>
             <div className="hidden grid-cols-[0.8fr_0.8fr_1.6fr_0.7fr_0.8fr_0.8fr] gap-4 px-5 py-3 text-xs font-semibold md:grid"
-              style={{ background: '#EEF6FF', color: 'var(--text-muted)' }}>
+              style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)' }}>
               <span>สถานะ</span>
               <span>ยอดเงิน</span>
               <span>ต้นทาง → ปลายทาง</span>
@@ -826,7 +826,7 @@ export default function DashboardPage() {
                 <div
                   key={slip.id}
                   className="grid gap-3 border-t px-5 py-4 text-sm md:grid-cols-[0.8fr_0.8fr_1.6fr_0.7fr_0.8fr_0.8fr] md:items-center"
-                  style={{ borderColor: 'var(--border)', color: 'var(--navy)' }}
+                  style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
                 >
                   <span>
                     <span className="rounded-full px-3 py-1 text-xs font-bold" style={transactionStatusColor(slip.status)}>
@@ -850,7 +850,7 @@ export default function DashboardPage() {
                     <Link
                       href="/dashboard/slips"
                       className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-bold transition-all hover:bg-slate-50"
-                      style={{ borderColor: 'var(--border)', color: 'var(--navy)' }}
+                      style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
                     >
                       <Eye className="h-4 w-4" />
                       ดูรายละเอียด
@@ -868,14 +868,14 @@ export default function DashboardPage() {
 
         <div className="rounded-lg bg-white p-6" style={{ border: '1px solid var(--border)' }}>
           <div className="mb-4 flex items-center gap-3">
-            <p className="text-sm font-bold" style={{ color: 'var(--navy)' }}>
+            <p className="text-sm font-bold" style={{ color: 'var(--ink)' }}>
               คำสั่งซื้อล่าสุด
             </p>
             <div className="h-px flex-1" style={{ background: 'var(--border)' }} />
             <Link
               href="/dashboard/orders"
               className="flex items-center gap-1 text-sm font-semibold transition-opacity hover:opacity-70"
-              style={{ color: 'var(--navy)' }}
+              style={{ color: 'var(--ink)' }}
             >
               ดูทั้งหมด
               <ArrowUpRight className="h-3.5 w-3.5" />
@@ -890,7 +890,7 @@ export default function DashboardPage() {
                 onChange={(event) => setOrderSearch(event.target.value)}
                 placeholder="ค้นหาเลขที่คำสั่งซื้อ..."
                 className="h-10 w-full rounded-md border bg-white pl-9 pr-3 text-sm outline-none transition-all focus:border-blue-300"
-                style={{ borderColor: 'var(--border)', color: 'var(--navy)' }}
+                style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
               />
             </div>
             <div className="flex gap-2">
@@ -902,8 +902,8 @@ export default function DashboardPage() {
                   className="rounded-md border px-4 py-2 text-sm font-semibold transition-all hover:bg-slate-50"
                   style={{
                     borderColor: orderStatus === option.value ? 'var(--navy)' : 'var(--border)',
-                    background: orderStatus === option.value ? 'var(--navy)' : '#fff',
-                    color: orderStatus === option.value ? '#fff' : 'var(--navy)',
+                    background: orderStatus === option.value ? 'var(--navy)' : 'var(--bg-card)',
+                    color: orderStatus === option.value ? '#fff' : 'var(--ink)',
                   }}
                 >
                   {option.label}{option.value === 'all' ? ` (${merchantPayments.length})` : ''}
@@ -914,7 +914,7 @@ export default function DashboardPage() {
 
           <div className="overflow-hidden rounded-lg border" style={{ borderColor: 'var(--border)' }}>
             <div className="grid grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr_1fr_0.8fr] gap-4 px-6 py-3 text-xs font-semibold"
-              style={{ background: '#EEF6FF', color: 'var(--text-muted)' }}>
+              style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)' }}>
               <span>เลขที่คำสั่งซื้อ</span>
               <span>ยอดรวม</span>
               <span>วิธีชำระ</span>
@@ -930,7 +930,7 @@ export default function DashboardPage() {
                 <div
                   key={payment.id}
                   className="grid grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr_1fr_0.8fr] items-center gap-4 border-t px-6 py-5 text-sm"
-                  style={{ borderColor: 'var(--border)', color: 'var(--navy)' }}
+                  style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
                 >
                   <span className="font-mono font-semibold">{orderNumber(payment.id, payment.created_at)}</span>
                   <span className="font-bold">
@@ -953,7 +953,7 @@ export default function DashboardPage() {
                       onClick={() => setSelectedOrder(payment)}
                       title={payment.gateway_reference_id || payment.id}
                       className="flex items-center gap-2 font-semibold"
-                      style={{ color: 'var(--navy)' }}
+                      style={{ color: 'var(--ink)' }}
                     >
                       <Eye className="h-4 w-4" />
                       ดูรายละเอียด
@@ -978,7 +978,7 @@ export default function DashboardPage() {
                 <p className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
                   Order Detail
                 </p>
-                <h2 className="mt-1 text-xl font-black" style={{ color: 'var(--navy)' }}>
+                <h2 className="mt-1 text-xl font-black" style={{ color: 'var(--ink)' }}>
                   {orderNumber(selectedOrder.id, selectedOrder.created_at)}
                 </h2>
               </div>
@@ -1008,7 +1008,7 @@ export default function DashboardPage() {
               ].map(([label, value]) => (
                 <div key={label} className="grid gap-2 rounded-md bg-slate-50 px-4 py-3 text-sm md:grid-cols-[160px_1fr]">
                   <span className="font-bold" style={{ color: 'var(--text-muted)' }}>{label}</span>
-                  <span className="break-all font-semibold" style={{ color: 'var(--navy)' }}>{value}</span>
+                  <span className="break-all font-semibold" style={{ color: 'var(--ink)' }}>{value}</span>
                 </div>
               ))}
             </div>
@@ -1018,7 +1018,7 @@ export default function DashboardPage() {
                 type="button"
                 onClick={() => setSelectedOrder(null)}
                 className="rounded-md border bg-white px-4 py-2 text-sm font-bold transition-colors hover:bg-slate-50"
-                style={{ borderColor: 'var(--border)', color: 'var(--navy)' }}
+                style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
               >
                 ปิด
               </button>

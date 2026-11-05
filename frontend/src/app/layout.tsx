@@ -42,7 +42,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="th" className={`${jakarta.variable} ${anuphan.variable} ${plexMono.variable} ${bricolage.variable}`}>
+    <html lang="th" suppressHydrationWarning className={`${jakarta.variable} ${anuphan.variable} ${plexMono.variable} ${bricolage.variable}`}>
+      <head>
+        {/* set the theme before first paint so there is no light flash */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{var t=localStorage.getItem('flowslip-theme');if(t!=='dark'&&t!=='light')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.dataset.theme=t}catch(e){}",
+          }}
+        />
+      </head>
       <body className="soft-ui antialiased">
         <Providers>
           <Navbar />

@@ -25,10 +25,10 @@ function orderStatusLabel(status: string) {
 }
 
 function orderStatusColor(status: string) {
-  if (status === 'success') return { background: '#D1FAE5', color: '#059669' };
-  if (status === 'pending') return { background: '#FEF3C7', color: '#B45309' };
-  if (status === 'failed') return { background: '#FEE2E2', color: '#DC2626' };
-  return { background: '#E5E7EB', color: '#475569' };
+  if (status === 'success') return { background: 'var(--ok-pale)', color: 'var(--ok-ink)' };
+  if (status === 'pending') return { background: 'var(--warn-pale)', color: 'var(--warn-ink)' };
+  if (status === 'failed') return { background: 'var(--err-pale)', color: 'var(--err-ink)' };
+  return { background: 'var(--border)', color: '#475569' };
 }
 
 function orderNumber(id: string, createdAt: string) {
@@ -112,7 +112,7 @@ export default function OrdersPage() {
             type="button"
             onClick={() => refetch()}
             className="inline-flex h-10 items-center justify-center gap-2 rounded-md border bg-white px-4 text-sm font-bold transition-colors hover:bg-slate-50"
-            style={{ borderColor: 'var(--border)', color: 'var(--navy)' }}
+            style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
           >
             <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
             รีเฟรช
@@ -128,7 +128,7 @@ export default function OrdersPage() {
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="ค้นหาเลขที่คำสั่งซื้อ, Stripe ref, สถานะ..."
                 className="h-11 w-full rounded-md border bg-white pl-9 pr-3 text-sm outline-none transition-all focus:border-blue-300"
-                style={{ borderColor: 'var(--border)', color: 'var(--navy)' }}
+                style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
               />
             </div>
             <div className="flex flex-wrap gap-2">
@@ -140,8 +140,8 @@ export default function OrdersPage() {
                   className="rounded-md border px-4 py-2 text-sm font-semibold transition-all hover:bg-slate-50"
                   style={{
                     borderColor: status === option.value ? 'var(--navy)' : 'var(--border)',
-                    background: status === option.value ? 'var(--navy)' : '#fff',
-                    color: status === option.value ? '#fff' : 'var(--navy)',
+                    background: status === option.value ? 'var(--navy)' : 'var(--bg-card)',
+                    color: status === option.value ? '#fff' : 'var(--ink)',
                   }}
                 >
                   {option.label}{option.value === 'all' ? ` (${payments.length})` : ''}
@@ -151,7 +151,7 @@ export default function OrdersPage() {
           </div>
 
           <div className="mb-3 flex items-center justify-between">
-            <p className="text-sm font-bold" style={{ color: 'var(--navy)' }}>
+            <p className="text-sm font-bold" style={{ color: 'var(--ink)' }}>
               รวม {filteredOrders.length.toLocaleString()} รายการ
             </p>
           </div>
@@ -159,7 +159,7 @@ export default function OrdersPage() {
           <div className="overflow-hidden rounded-lg border" style={{ borderColor: 'var(--border)' }}>
             <div
               className="hidden grid-cols-[1.25fr_0.8fr_0.8fr_0.8fr_1fr_0.75fr] gap-4 px-6 py-3 text-xs font-semibold md:grid"
-              style={{ background: '#EEF6FF', color: 'var(--text-muted)' }}
+              style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)' }}
             >
               <span>เลขที่คำสั่งซื้อ</span>
               <span>ยอดรวม</span>
@@ -177,7 +177,7 @@ export default function OrdersPage() {
                 <div
                   key={payment.id}
                   className="grid gap-3 border-t px-6 py-5 text-sm md:grid-cols-[1.25fr_0.8fr_0.8fr_0.8fr_1fr_0.75fr] md:items-center"
-                  style={{ borderColor: 'var(--border)', color: 'var(--navy)' }}
+                  style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
                 >
                   <span className="font-mono font-semibold">{orderNumber(payment.id, payment.created_at)}</span>
                   <span className="font-bold">{formatMoney(payment)}</span>
@@ -193,7 +193,7 @@ export default function OrdersPage() {
                       type="button"
                       onClick={() => setSelectedOrder(payment)}
                       className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-bold transition-colors hover:bg-slate-50"
-                      style={{ borderColor: 'var(--border)', color: 'var(--navy)' }}
+                      style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
                     >
                       <Eye className="h-4 w-4" />
                       ดูรายละเอียด
@@ -218,7 +218,7 @@ export default function OrdersPage() {
                 <p className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
                   Order Detail
                 </p>
-                <h2 className="mt-1 text-xl font-black" style={{ color: 'var(--navy)' }}>
+                <h2 className="mt-1 text-xl font-black" style={{ color: 'var(--ink)' }}>
                   {orderNumber(selectedOrder.id, selectedOrder.created_at)}
                 </h2>
               </div>
@@ -248,7 +248,7 @@ export default function OrdersPage() {
               ].map(([label, value]) => (
                 <div key={label} className="grid gap-2 rounded-md bg-slate-50 px-4 py-3 text-sm md:grid-cols-[160px_1fr]">
                   <span className="font-bold" style={{ color: 'var(--text-muted)' }}>{label}</span>
-                  <span className="break-all font-semibold" style={{ color: 'var(--navy)' }}>{value}</span>
+                  <span className="break-all font-semibold" style={{ color: 'var(--ink)' }}>{value}</span>
                 </div>
               ))}
             </div>
@@ -258,7 +258,7 @@ export default function OrdersPage() {
                 type="button"
                 onClick={() => setSelectedOrder(null)}
                 className="rounded-md border bg-white px-4 py-2 text-sm font-bold transition-colors hover:bg-slate-50"
-                style={{ borderColor: 'var(--border)', color: 'var(--navy)' }}
+                style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
               >
                 ปิด
               </button>

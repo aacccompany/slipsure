@@ -188,7 +188,7 @@ export default function OnboardingPage() {
         </Link>
 
         <div className="mb-8">
-          <h1 className="font-display text-4xl font-semibold mb-1" style={{ color: 'var(--navy)' }}>
+          <h1 className="font-display text-4xl font-semibold mb-1" style={{ color: 'var(--ink)' }}>
             Account Setup
           </h1>
           <div className="flex items-center gap-2">
@@ -210,14 +210,14 @@ export default function OnboardingPage() {
                 <div className="flex flex-col items-center gap-1.5">
                   <div className="w-9 h-9 flex items-center justify-center border-2 transition-all"
                     style={{
-                      background: isDone ? 'var(--gold)' : isActive ? 'var(--navy)' : '#fff',
+                      background: isDone ? 'var(--gold)' : isActive ? 'var(--navy)' : 'var(--bg-card)',
                       borderColor: isDone ? 'var(--gold)' : isActive ? 'var(--navy)' : 'var(--border)',
-                      color: isDone ? 'var(--navy)' : isActive ? 'var(--gold-pale)' : 'var(--text-muted)',
+                      color: isDone ? 'var(--ink)' : isActive ? 'var(--gold-pale)' : 'var(--text-muted)',
                     }}>
                     {isDone ? <CheckCircle2 className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
                   </div>
                   <span className="font-mono text-[9px] uppercase tracking-widest"
-                    style={{ color: isActive ? 'var(--navy)' : 'var(--text-muted)' }}>
+                    style={{ color: isActive ? 'var(--ink)' : 'var(--text-muted)' }}>
                     {s.label}
                   </span>
                 </div>
@@ -242,7 +242,7 @@ export default function OnboardingPage() {
                   <Store className="w-5 h-5" style={{ color: 'var(--gold)' }} />
                 </div>
                 <div>
-                  <h2 className="font-display text-lg font-semibold" style={{ color: 'var(--navy)' }}>Shop Profile</h2>
+                  <h2 className="font-display text-lg font-semibold" style={{ color: 'var(--ink)' }}>Shop Profile</h2>
                   <p className="font-mono text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Tell us about your business</p>
                 </div>
               </div>
@@ -257,7 +257,7 @@ export default function OnboardingPage() {
                   <label className={labelClass} style={{ color: 'var(--text-muted)' }}>{label}</label>
                   <input type={type} value={value} onChange={(e) => setter(e.target.value)}
                     placeholder={placeholder} required={required} className={inputClass}
-                    style={{ borderColor: 'var(--border)', color: 'var(--navy)' }}
+                    style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
                     onFocus={(e) => (e.target.style.borderColor = 'var(--gold)')}
                     onBlur={(e) => (e.target.style.borderColor = 'var(--border)')} />
                 </div>
@@ -282,7 +282,7 @@ export default function OnboardingPage() {
                   <ImageIcon className="w-5 h-5" style={{ color: 'var(--gold)' }} />
                 </div>
                 <div>
-                  <h2 className="font-display text-lg font-semibold" style={{ color: 'var(--navy)' }}>Shop Logo</h2>
+                  <h2 className="font-display text-lg font-semibold" style={{ color: 'var(--ink)' }}>Shop Logo</h2>
                   <p className="font-mono text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Optional — skip if you want</p>
                 </div>
               </div>
@@ -334,11 +334,11 @@ export default function OnboardingPage() {
             <form onSubmit={handleComplete} className="space-y-5">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 flex items-center justify-center"
-                  style={{ background: '#ECFDF5', border: '1px solid #6EE7B7' }}>
+                  style={{ background: 'var(--ok-pale)', border: '1px solid #6EE7B7' }}>
                   <MessageSquare className="w-5 h-5 text-emerald-600" />
                 </div>
                 <div>
-                  <h2 className="font-display text-lg font-semibold" style={{ color: 'var(--navy)' }}>LINE Bot</h2>
+                  <h2 className="font-display text-lg font-semibold" style={{ color: 'var(--ink)' }}>LINE Bot</h2>
                   <p className="font-mono text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Connect your LINE OA</p>
                 </div>
               </div>
@@ -353,7 +353,7 @@ export default function OnboardingPage() {
                     placeholder="2000000000"
                     required
                     className={inputClass}
-                    style={{ borderColor: 'var(--border)', color: 'var(--navy)' }}
+                    style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
                     onFocus={(e) => (e.target.style.borderColor = 'var(--gold)')}
                     onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
                   />
@@ -368,7 +368,7 @@ export default function OnboardingPage() {
                     placeholder="Channel secret from LINE Developers"
                     required
                     className={inputClass}
-                    style={{ borderColor: 'var(--border)', color: 'var(--navy)' }}
+                    style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
                     onFocus={(e) => (e.target.style.borderColor = 'var(--gold)')}
                     onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
                   />
@@ -383,7 +383,7 @@ export default function OnboardingPage() {
                     placeholder="Channel access token"
                     required
                     className={inputClass}
-                    style={{ borderColor: 'var(--border)', color: 'var(--navy)' }}
+                    style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
                     onFocus={(e) => (e.target.style.borderColor = 'var(--gold)')}
                     onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
                   />
@@ -431,7 +431,7 @@ export default function OnboardingPage() {
 
 function ErrorBox({ message }: { message: string }) {
   return (
-    <div className="flex items-center gap-2 px-4 py-3" style={{ background: '#FEF2F2', border: '1px solid #FECACA' }}>
+    <div className="flex items-center gap-2 px-4 py-3" style={{ background: 'var(--err-pale)', border: '1px solid #FECACA' }}>
       <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-500" />
       <p className="text-xs text-rose-600">{message}</p>
     </div>

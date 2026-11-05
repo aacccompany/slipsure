@@ -20,7 +20,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({ icon: Icon, title, descr
     >
       <Icon className="h-6 w-6" style={{ color: 'var(--blue)' }} />
     </div>
-    <p className="text-base font-bold" style={{ color: 'var(--navy)' }}>{title}</p>
+    <p className="text-base font-bold" style={{ color: 'var(--ink)' }}>{title}</p>
     <p className="mt-1 max-w-xs text-sm" style={{ color: 'var(--text-muted)' }}>{description}</p>
     {action && (
       <Link

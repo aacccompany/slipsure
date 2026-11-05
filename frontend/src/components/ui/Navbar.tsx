@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { usePathname } from 'next/navigation';
 import { Menu, X, ArrowUpRight } from 'lucide-react';
 
@@ -32,15 +33,16 @@ export const Navbar = () => {
       <div
         className="relative mx-auto flex h-14 max-w-5xl items-center justify-between rounded-full pl-6 pr-2 transition-all duration-300"
         style={{
-          background: scrolled ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0.7)',
+          background: scrolled ? 'var(--nav-bg-solid)' : 'var(--nav-bg)',
           backdropFilter: 'blur(14px)',
           boxShadow: scrolled
-            ? '0 10px 30px -12px rgba(0,24,71,0.25), 0 0 0 1px rgba(0,24,71,0.06)'
-            : '0 0 0 1px rgba(0,24,71,0.06)',
+            ? '0 10px 30px -12px rgba(0,24,71,0.25), 0 0 0 1px var(--ring)'
+            : '0 0 0 1px var(--ring)',
         }}
       >
         <Link href="/" className="flex items-center" onClick={() => setIsOpen(false)}>
-          <Image src="/logo.png" alt="Flowslip" width={100} height={28} className="h-6 w-auto" priority />
+          <Image src="/logo.png" alt="Flowslip" width={100} height={28} className="logo-light h-6 w-auto" priority />
+          <Image src="/logo-dark.png" alt="" aria-hidden width={100} height={28} className="logo-dark h-6 w-auto" priority />
         </Link>
 
         {/* Desktop nav */}
@@ -53,7 +55,7 @@ export const Navbar = () => {
                 href={link.href}
                 className="rounded-full px-4 py-2 text-sm font-semibold transition-colors hover:bg-[var(--bg-subtle)]"
                 style={{
-                  color: active ? 'var(--navy)' : 'var(--text-muted)',
+                  color: active ? 'var(--ink)' : 'var(--text-muted)',
                   background: active ? 'var(--bg-subtle)' : undefined,
                 }}
               >
@@ -62,15 +64,17 @@ export const Navbar = () => {
             );
           })}
 
+          <ThemeToggle className="ml-1" />
+
           <Link
             href="/register"
-            className="group ml-2 inline-flex items-center gap-2 rounded-full py-1.5 pl-5 pr-1.5 text-sm font-bold text-white transition-transform hover:scale-[1.03] active:scale-95"
+            className="group ml-1 inline-flex items-center gap-2 rounded-full py-1.5 pl-5 pr-1.5 text-sm font-bold text-white transition-transform hover:scale-[1.03] active:scale-95"
             style={{ background: 'var(--navy)' }}
           >
             เริ่มใช้งาน
             <span
               className="flex h-8 w-8 items-center justify-center rounded-full transition-transform group-hover:rotate-45"
-              style={{ background: 'var(--cyan)', color: 'var(--navy)' }}
+              style={{ background: 'var(--cyan)', color: 'var(--on-cyan)' }}
             >
               <ArrowUpRight className="h-4 w-4" />
             </span>
@@ -79,7 +83,7 @@ export const Navbar = () => {
 
         <button
           className="mr-1 flex h-10 w-10 items-center justify-center rounded-full md:hidden"
-          style={{ color: 'var(--navy)', background: 'var(--bg-subtle)' }}
+          style={{ color: 'var(--ink)', background: 'var(--bg-subtle)' }}
           onClick={() => setIsOpen(!isOpen)}
           aria-label={isOpen ? 'ปิดเมนู' : 'เปิดเมนู'}
         >
@@ -90,8 +94,8 @@ export const Navbar = () => {
       {/* Mobile menu */}
       {isOpen && (
         <div
-          className="pop-in mx-auto mt-2 max-w-5xl rounded-[2rem] bg-white p-3 md:hidden"
-          style={{ boxShadow: '0 20px 40px -16px rgba(0,24,71,0.3), 0 0 0 1px rgba(0,24,71,0.06)' }}
+          className="pop-in mx-auto mt-2 max-w-5xl rounded-[2rem] p-3 md:hidden"
+          style={{ background: 'var(--bg-card)', boxShadow: '0 20px 40px -16px rgba(0,24,71,0.3), 0 0 0 1px var(--ring)' }}
         >
           <div className="flex flex-col gap-1">
             {navLinks.map((link) => (
@@ -101,13 +105,14 @@ export const Navbar = () => {
                 onClick={() => setIsOpen(false)}
                 className="rounded-full px-5 py-3 text-base font-semibold"
                 style={{
-                  color: 'var(--navy)',
+                  color: 'var(--ink)',
                   background: pathname === link.href ? 'var(--bg-subtle)' : undefined,
                 }}
               >
                 {link.name}
               </Link>
             ))}
+            <ThemeToggle variant="inline" />
             <Link
               href="/register"
               onClick={() => setIsOpen(false)}

@@ -24,7 +24,7 @@ export const Marquee = () => {
           <span
             key={i}
             className="mx-2 inline-flex items-center gap-2.5 rounded-full bg-white px-5 py-2.5 text-sm font-bold tracking-wide"
-            style={{ color: 'var(--navy)', boxShadow: '0 0 0 1px rgba(0,24,71,0.07)' }}
+            style={{ color: 'var(--ink)', boxShadow: '0 0 0 1px var(--ring)' }}
           >
             <span className="h-3 w-3 rounded-full" style={{ background: bank.dot }} />
             {bank.name}

@@ -52,7 +52,7 @@ export const Footer = () => {
         <div className="relative mb-12 flex flex-col justify-between gap-12 md:flex-row">
           {/* Brand */}
           <div className="max-w-sm space-y-4">
-            <Link href="/" className="inline-flex items-center rounded-full bg-white px-5 py-1">
+            <Link href="/" className="inline-flex items-center rounded-full px-5 py-1" style={{ background: '#fff' }}>
               <Image src="/logo.png" alt="Flowslip" width={160} height={53} className="-my-2 h-14 w-auto" />
             </Link>
             <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.6)' }}>

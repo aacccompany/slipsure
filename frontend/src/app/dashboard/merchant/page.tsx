@@ -79,7 +79,7 @@ export default function MerchantProfilePage() {
         <p className="font-mono text-[10px] uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>
           / Merchant
         </p>
-        <h1 className="font-bold tracking-tight" style={{ fontSize: '1.4rem', color: 'var(--navy)', letterSpacing: '-0.02em' }}>
+        <h1 className="font-bold tracking-tight" style={{ fontSize: '1.4rem', color: 'var(--ink)', letterSpacing: '-0.02em' }}>
           {profile?.shop_name || 'Merchant'}
         </h1>
       </div>
@@ -110,7 +110,7 @@ export default function MerchantProfilePage() {
                 </div>
               )}
             </div>
-            <h3 className="font-semibold text-sm mb-0.5" style={{ color: 'var(--navy)' }}>{action.title}</h3>
+            <h3 className="font-semibold text-sm mb-0.5" style={{ color: 'var(--ink)' }}>{action.title}</h3>
             <p className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
               {action.sub}
             </p>
@@ -139,7 +139,7 @@ export default function MerchantProfilePage() {
             </div>
             <div>
               <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Shop</p>
-              <h3 className="font-semibold text-sm" style={{ color: 'var(--navy)' }}>{profile?.shop_name || 'Not set'}</h3>
+              <h3 className="font-semibold text-sm" style={{ color: 'var(--ink)' }}>{profile?.shop_name || 'Not set'}</h3>
             </div>
           </div>
           <div className="space-y-2">
@@ -157,7 +157,7 @@ export default function MerchantProfilePage() {
           <Link
             href="/dashboard/merchant/profile"
             className="mt-4 block w-full py-2 text-center text-xs font-semibold transition-all hover:opacity-90"
-            style={{ border: '1px solid var(--border)', color: 'var(--navy)' }}
+            style={{ border: '1px solid var(--border)', color: 'var(--ink)' }}
           >
             Edit Profile
           </Link>
@@ -166,12 +166,12 @@ export default function MerchantProfilePage() {
         {/* Subscription */}
         <div className="bg-white p-6" style={{ border: '1px solid var(--border)' }}>
           <div className="flex items-center gap-3 mb-5">
-            <div className="w-9 h-9 flex items-center justify-center" style={{ background: '#FEF9C3' }}>
+            <div className="w-9 h-9 flex items-center justify-center" style={{ background: 'var(--warn-pale)' }}>
               <CreditCard className="w-4 h-4 text-amber-600" />
             </div>
             <div>
               <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Plan</p>
-              <h3 className="font-semibold text-sm" style={{ color: 'var(--navy)' }}>
+              <h3 className="font-semibold text-sm" style={{ color: 'var(--ink)' }}>
                 {subscription?.plan?.name || 'Free Plan'}
               </h3>
             </div>
@@ -184,14 +184,14 @@ export default function MerchantProfilePage() {
             ].map(([label, value]) => (
               <div key={String(label)} className="flex justify-between text-sm">
                 <span style={{ color: 'var(--text-muted)' }}>{label}</span>
-                <span className="font-medium" style={{ color: 'var(--navy)' }}>{value as string}</span>
+                <span className="font-medium" style={{ color: 'var(--ink)' }}>{value as string}</span>
               </div>
             ))}
           </div>
           <Link
             href="/dashboard/subscription"
             className="mt-4 block w-full py-2 text-center text-xs font-semibold transition-all hover:opacity-90"
-            style={{ border: '1px solid var(--border)', color: 'var(--navy)' }}
+            style={{ border: '1px solid var(--border)', color: 'var(--ink)' }}
           >
             Manage Subscription
           </Link>
@@ -200,12 +200,12 @@ export default function MerchantProfilePage() {
         {/* LINE status */}
         <div className="bg-white p-6" style={{ border: '1px solid var(--border)' }}>
           <div className="flex items-center gap-3 mb-5">
-            <div className="w-9 h-9 flex items-center justify-center" style={{ background: '#DCFCE7' }}>
+            <div className="w-9 h-9 flex items-center justify-center" style={{ background: 'var(--ok-pale)' }}>
               <MessageSquare className="w-4 h-4 text-emerald-600" />
             </div>
             <div>
               <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>LINE</p>
-              <h3 className="font-semibold text-sm" style={{ color: 'var(--navy)' }}>
+              <h3 className="font-semibold text-sm" style={{ color: 'var(--ink)' }}>
                 {lineConfig?.is_configured ? 'Connected' : 'Not Connected'}
               </h3>
             </div>
@@ -227,7 +227,7 @@ export default function MerchantProfilePage() {
           <Link
             href="/dashboard/merchant/line"
             className="mt-4 block w-full py-2 text-center text-xs font-semibold transition-all hover:opacity-90"
-            style={{ border: '1px solid var(--border)', color: 'var(--navy)' }}
+            style={{ border: '1px solid var(--border)', color: 'var(--ink)' }}
           >
             {lineConfig?.is_configured ? 'Configure LINE' : 'Setup LINE'}
           </Link>
@@ -260,7 +260,7 @@ export default function MerchantProfilePage() {
                 <div className="w-7 h-7 flex items-center justify-center" style={{ background: 'var(--bg-subtle)' }}>
                   <item.icon className="w-3.5 h-3.5" style={{ color: 'var(--blue)' }} />
                 </div>
-                <span className="text-sm font-medium" style={{ color: 'var(--navy)' }}>{item.label}</span>
+                <span className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{item.label}</span>
               </div>
               <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" style={{ color: 'var(--text-muted)' }} />
             </Link>

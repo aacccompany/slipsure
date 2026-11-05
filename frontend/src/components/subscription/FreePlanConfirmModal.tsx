@@ -26,7 +26,7 @@ export function FreePlanConfirmModal({
               <Zap className="h-5 w-5" style={{ color: 'var(--blue)' }} />
             </div>
             <div>
-              <h2 className="text-lg font-bold tracking-tight" style={{ color: 'var(--navy)' }}>
+              <h2 className="text-lg font-bold tracking-tight" style={{ color: 'var(--ink)' }}>
                 Activate Free Plan?
               </h2>
               <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
@@ -53,7 +53,7 @@ export function FreePlanConfirmModal({
             'After activation, the Free plan will no longer appear for this account.',
           ].map((item) => (
             <div key={item} className="flex gap-3 text-sm" style={{ color: 'var(--text-muted)' }}>
-              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center" style={{ background: '#ECFDF5', color: '#047857' }}>
+              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center" style={{ background: 'var(--ok-pale)', color: 'var(--ok-ink)' }}>
                 <Check className="h-3.5 w-3.5" />
               </span>
               <span>{item}</span>
@@ -67,7 +67,7 @@ export function FreePlanConfirmModal({
             onClick={onCancel}
             disabled={isLoading}
             className="px-5 py-3 text-sm font-semibold transition-colors disabled:opacity-50"
-            style={{ border: '1px solid var(--border)', color: 'var(--navy)' }}
+            style={{ border: '1px solid var(--border)', color: 'var(--ink)' }}
           >
             Not now
           </button>

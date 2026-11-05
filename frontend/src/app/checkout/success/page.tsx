@@ -24,7 +24,7 @@ function SuccessContent() {
       <div className="thai-pattern fixed inset-0 pointer-events-none" />
 
       {/* Top bar */}
-      <div className="relative" style={{ borderBottom: '1px solid var(--border)', background: '#fff' }}>
+      <div className="relative" style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-card)' }}>
         <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
@@ -54,7 +54,7 @@ function SuccessContent() {
             <p className="font-mono text-[11px] uppercase tracking-widest mb-3" style={{ color: 'var(--gold)' }}>
               / Payment Successful
             </p>
-            <h1 className="font-display text-4xl font-semibold mb-3" style={{ color: 'var(--navy)' }}>
+            <h1 className="font-display text-4xl font-semibold mb-3" style={{ color: 'var(--ink)' }}>
               Payment Confirmed
             </h1>
             <p className="text-sm leading-relaxed mb-10" style={{ color: 'var(--text-muted)' }}>
@@ -73,7 +73,7 @@ function SuccessContent() {
                   <span className="font-mono text-[11px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
                     {label}
                   </span>
-                  <span className="text-sm font-bold" style={{ color: isGold ? 'var(--gold)' : 'var(--navy)' }}>
+                  <span className="text-sm font-bold" style={{ color: isGold ? 'var(--gold)' : 'var(--ink)' }}>
                     {value}
                   </span>
                 </div>
@@ -101,13 +101,13 @@ function SuccessContent() {
             { icon: Shield,  title: 'Configure LINE webhook',  desc: 'Connect your LINE OA to receive and verify slips automatically.' },
           ].map(({ icon: Icon, title, desc }) => (
             <div key={title} className="flex items-start gap-4 p-4"
-              style={{ background: '#fff', border: '1px solid var(--border)' }}>
+              style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
               <div className="w-8 h-8 flex items-center justify-center shrink-0"
                 style={{ background: 'var(--gold-pale)', border: '1px solid var(--border)' }}>
                 <Icon className="w-4 h-4" style={{ color: 'var(--gold)' }} />
               </div>
               <div>
-                <p className="text-sm font-semibold mb-0.5" style={{ color: 'var(--navy)' }}>{title}</p>
+                <p className="text-sm font-semibold mb-0.5" style={{ color: 'var(--ink)' }}>{title}</p>
                 <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{desc}</p>
               </div>
             </div>

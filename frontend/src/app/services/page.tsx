@@ -28,8 +28,8 @@ const services: Service[] = [
     tag: 'E-commerce',
     title: 'ร้านค้าออนไลน์',
     desc: 'ตรวจสอบสลิปอัตโนมัติทุกครั้งที่ลูกค้าชำระเงิน ลดภาระตรวจสอบด้วยมือและป้องกันสลิปปลอมได้ 100%',
-    bg: '#fff',
-    ink: 'var(--navy)',
+    bg: 'var(--bg-card)',
+    ink: 'var(--ink)',
     mute: 'var(--text-muted)',
     bubble: 'var(--blue-pale)',
     bubbleInk: 'var(--blue)',
@@ -46,7 +46,7 @@ const services: Service[] = [
     ink: '#fff',
     mute: 'rgba(255,255,255,0.68)',
     bubble: 'var(--cyan)',
-    bubbleInk: 'var(--navy)',
+    bubbleInk: 'var(--on-cyan)',
     tagInk: 'var(--cyan)',
     tilt: 'md:translate-y-6 md:rotate-1',
   },
@@ -85,11 +85,11 @@ export default function ServicesPage() {
         <div className="pop-in mx-auto mb-16 max-w-3xl text-center md:mb-24">
           <span
             className="mb-6 inline-block rounded-full bg-white px-5 py-2 text-sm font-bold"
-            style={{ color: 'var(--blue)', boxShadow: '0 0 0 1px rgba(0,24,71,0.08)' }}
+            style={{ color: 'var(--blue)', boxShadow: '0 0 0 1px var(--ring)' }}
           >
             บริการของเรา
           </span>
-          <h1 className="font-display text-5xl font-extrabold leading-[1.2] md:text-7xl" style={{ color: 'var(--navy)' }}>
+          <h1 className="font-display text-5xl font-extrabold leading-[1.2] md:text-7xl" style={{ color: 'var(--ink)' }}>
             ใช้งานได้กับ
             <br />
             <span className="relative inline-block" style={{ color: 'var(--blue)' }}>
@@ -113,8 +113,8 @@ export default function ServicesPage() {
               style={{
                 background: s.bg,
                 animationDelay: `${0.1 + i * 0.1}s`,
-                boxShadow: s.bg === '#fff'
-                  ? '0 24px 40px -28px rgba(0,24,71,0.3), 0 0 0 1px rgba(0,24,71,0.07)'
+                boxShadow: s.bg === 'var(--bg-card)'
+                  ? '0 24px 40px -28px rgba(0,24,71,0.3), 0 0 0 1px var(--ring)'
                   : '0 24px 40px -24px rgba(0,24,71,0.45)',
               }}
             >
@@ -171,7 +171,7 @@ export default function ServicesPage() {
                 <Link
                   href="/register"
                   className="group inline-flex items-center gap-3 rounded-full py-2 pl-7 pr-2 text-base font-bold transition-transform hover:scale-[1.03]"
-                  style={{ background: 'var(--cyan)', color: 'var(--navy)' }}
+                  style={{ background: 'var(--cyan)', color: 'var(--on-cyan)' }}
                 >
                   สมัครใช้งานฟรี
                   <span

@@ -53,7 +53,7 @@ function ResetPasswordContent() {
         </Link>
 
         <div className="mb-8">
-          <h1 className="font-display text-4xl font-semibold mb-1" style={{ color: 'var(--navy)' }}>
+          <h1 className="font-display text-4xl font-semibold mb-1" style={{ color: 'var(--ink)' }}>
             New Password
           </h1>
           <div className="flex items-center gap-2">
@@ -89,7 +89,7 @@ function ResetPasswordContent() {
                   <label className="block font-mono text-[10px] uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>Email Address</label>
                   <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@company.com" required className={inputClass}
-                    style={{ borderColor: 'var(--border)', color: 'var(--navy)' }}
+                    style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
                     onFocus={(e) => (e.target.style.borderColor = 'var(--gold)')}
                     onBlur={(e) => (e.target.style.borderColor = 'var(--border)')} />
                 </div>
@@ -100,7 +100,7 @@ function ResetPasswordContent() {
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                   placeholder="000000" maxLength={6} required
                   className={`${inputClass} text-center tracking-[0.5em] font-mono`}
-                  style={{ borderColor: 'var(--border)', color: 'var(--navy)' }}
+                  style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
                   onFocus={(e) => (e.target.style.borderColor = 'var(--gold)')}
                   onBlur={(e) => (e.target.style.borderColor = 'var(--border)')} />
               </div>
@@ -108,7 +108,7 @@ function ResetPasswordContent() {
                 <label className="block font-mono text-[10px] uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>New Password</label>
                 <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="Min. 8 characters" required className={inputClass}
-                  style={{ borderColor: 'var(--border)', color: 'var(--navy)' }}
+                  style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
                   onFocus={(e) => (e.target.style.borderColor = 'var(--gold)')}
                   onBlur={(e) => (e.target.style.borderColor = 'var(--border)')} />
               </div>
@@ -116,12 +116,12 @@ function ResetPasswordContent() {
                 <label className="block font-mono text-[10px] uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>Confirm Password</label>
                 <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="••••••••" required className={inputClass}
-                  style={{ borderColor: 'var(--border)', color: 'var(--navy)' }}
+                  style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
                   onFocus={(e) => (e.target.style.borderColor = 'var(--gold)')}
                   onBlur={(e) => (e.target.style.borderColor = 'var(--border)')} />
               </div>
               {error && (
-                <div className="flex items-center gap-2 px-4 py-3" style={{ background: '#FEF2F2', border: '1px solid #FECACA' }}>
+                <div className="flex items-center gap-2 px-4 py-3" style={{ background: 'var(--err-pale)', border: '1px solid #FECACA' }}>
                   <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-500" />
                   <p className="text-xs text-rose-600">{error}</p>
                 </div>

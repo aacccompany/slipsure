@@ -10,13 +10,13 @@ export default function CancelPage() {
       <div className="thai-pattern fixed inset-0 pointer-events-none" />
 
       {/* Top bar */}
-      <div className="relative" style={{ borderBottom: '1px solid var(--border)', background: '#fff' }}>
+      <div className="relative" style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-card)' }}>
         <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <Link href="/dashboard/subscription"
               className="flex items-center gap-1.5 text-sm transition-colors"
               style={{ color: 'var(--text-muted)' }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--navy)')}
+              onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--ink)')}
               onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}>
               <ArrowLeft className="w-3.5 h-3.5" />
               Back to Plans
@@ -44,14 +44,14 @@ export default function CancelPage() {
           <div className="p-10">
             {/* Icon */}
             <div className="w-14 h-14 flex items-center justify-center mb-8"
-              style={{ background: '#FEF2F2', border: '1px solid #FECACA' }}>
+              style={{ background: 'var(--err-pale)', border: '1px solid #FECACA' }}>
               <span className="text-rose-500" style={{ fontSize: 24 }}>✕</span>
             </div>
 
             <p className="font-mono text-[11px] uppercase tracking-widest mb-3 text-rose-400">
               / Payment Not Completed
             </p>
-            <h1 className="font-display text-4xl font-semibold mb-3" style={{ color: 'var(--navy)' }}>
+            <h1 className="font-display text-4xl font-semibold mb-3" style={{ color: 'var(--ink)' }}>
               Payment Cancelled
             </h1>
             <p className="text-sm leading-relaxed mb-10" style={{ color: 'var(--text-muted)' }}>
@@ -71,7 +71,7 @@ export default function CancelPage() {
                   <span className="font-mono text-[11px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
                     {label}
                   </span>
-                  <span className="text-sm font-medium" style={{ color: 'var(--navy)' }}>{value}</span>
+                  <span className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{value}</span>
                 </div>
               ))}
             </div>
@@ -94,13 +94,13 @@ export default function CancelPage() {
         </div>
 
         {/* Support */}
-        <div className="p-5 flex items-start gap-4" style={{ background: '#fff', border: '1px solid var(--border)' }}>
+        <div className="p-5 flex items-start gap-4" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
           <div className="w-9 h-9 flex items-center justify-center shrink-0"
             style={{ background: 'var(--gold-pale)', border: '1px solid var(--border)' }}>
             <MessageSquare className="w-4 h-4" style={{ color: 'var(--gold)' }} />
           </div>
           <div>
-            <p className="text-sm font-semibold mb-1" style={{ color: 'var(--navy)' }}>Need help?</p>
+            <p className="text-sm font-semibold mb-1" style={{ color: 'var(--ink)' }}>Need help?</p>
             <p className="text-xs leading-relaxed mb-3" style={{ color: 'var(--text-muted)' }}>
               If you experienced issues during checkout or were charged unexpectedly, our support team is ready to help.
             </p>

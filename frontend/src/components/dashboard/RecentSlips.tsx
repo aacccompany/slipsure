@@ -62,7 +62,7 @@ export function RecentSlips() {
                 <div className="min-w-0">
                   {transaction.reference_no ? (
                     <>
-                      <p className="truncate text-sm font-semibold" style={{ color: 'var(--navy)' }}>
+                      <p className="truncate text-sm font-semibold" style={{ color: 'var(--ink)' }}>
                         THB {Number(transaction.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                       </p>
                       <p className="truncate font-mono text-[10px]" style={{ color: 'var(--text-muted)' }}>
@@ -70,7 +70,7 @@ export function RecentSlips() {
                       </p>
                     </>
                   ) : (
-                    <p className="truncate text-sm font-semibold" style={{ color: 'var(--navy)' }}>
+                    <p className="truncate text-sm font-semibold" style={{ color: 'var(--ink)' }}>
                       {transaction.fail_reason ? FAIL_LABEL[transaction.fail_reason] ?? transaction.fail_reason : 'No transaction data'}
                     </p>
                   )}

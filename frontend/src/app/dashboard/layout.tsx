@@ -29,14 +29,14 @@ export default function DashboardLayout({
 
   if (authLoading || !user) {
     return (
-      <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
+      <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center">
         <Loader2 className="w-10 h-10 text-blue-800 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="soft-ui flex min-h-screen bg-[#fafafa]">
+    <div className="soft-ui flex min-h-screen bg-[var(--bg)]">
       <DashboardSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       {sidebarOpen && (
         <div

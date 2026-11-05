@@ -26,9 +26,9 @@ function formatShortDate(value?: string) {
 }
 
 function quotaTone(percent: number) {
-  if (percent >= 100) return { text: '#DC2626', bar: '#DC2626', label: 'Blocked' };
-  if (percent >= 80) return { text: '#D97706', bar: '#F59E0B', label: 'Near quota' };
-  return { text: '#047857', bar: '#10B981', label: 'Healthy' };
+  if (percent >= 100) return { text: 'var(--err-ink)', bar: '#DC2626', label: 'Blocked' };
+  if (percent >= 80) return { text: 'var(--warn-ink)', bar: '#F59E0B', label: 'Near quota' };
+  return { text: 'var(--ok-ink)', bar: '#10B981', label: 'Healthy' };
 }
 
 export default function AdminMerchantDetailPage() {
@@ -129,7 +129,7 @@ export default function AdminMerchantDetailPage() {
             href="/admin?tab=merchants"
             className="mb-3 inline-flex items-center gap-2 text-sm font-medium transition-colors"
             style={{ color: 'var(--text-muted)' }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--navy)')}
+            onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--ink)')}
             onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
           >
             <ArrowLeft className="h-4 w-4" />
@@ -140,7 +140,7 @@ export default function AdminMerchantDetailPage() {
               <p className="font-mono text-[10px] uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>
                 / Merchant Detail
               </p>
-              <h1 className="font-bold tracking-tight" style={{ fontSize: '1.4rem', color: 'var(--navy)', letterSpacing: '-0.02em' }}>
+              <h1 className="font-bold tracking-tight" style={{ fontSize: '1.4rem', color: 'var(--ink)', letterSpacing: '-0.02em' }}>
                 {detail.merchant.shop_name}
               </h1>
               <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
@@ -165,7 +165,7 @@ export default function AdminMerchantDetailPage() {
               </div>
               <div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-2xl font-black tracking-tight" style={{ color: 'var(--navy)' }}>{detail.merchant.shop_name}</h2>
+                  <h2 className="text-2xl font-black tracking-tight" style={{ color: 'var(--ink)' }}>{detail.merchant.shop_name}</h2>
                   <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-bold uppercase" style={{ background: detail.merchant.is_active ? '#DCFCE7' : '#FEE2E2', color: detail.merchant.is_active ? '#047857' : '#DC2626' }}>
                     <ShieldCheck className="h-3 w-3" />
                     {detail.merchant.is_active ? 'Active' : 'Inactive'}
@@ -204,7 +204,7 @@ export default function AdminMerchantDetailPage() {
                 <item.icon className="h-4 w-4 shrink-0" style={{ color: 'var(--blue)' }} />
                 <div className="min-w-0">
                   <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{item.label}</p>
-                  <p className="truncate text-sm font-semibold" style={{ color: 'var(--navy)' }}>{item.value}</p>
+                  <p className="truncate text-sm font-semibold" style={{ color: 'var(--ink)' }}>{item.value}</p>
                 </div>
               </div>
             ))}
@@ -216,7 +216,7 @@ export default function AdminMerchantDetailPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Quota Remaining</p>
-                <p className="mt-1 text-2xl font-black" style={{ color: 'var(--navy)' }}>{usage.remaining.toLocaleString()} / {usage.quota.toLocaleString()}</p>
+                <p className="mt-1 text-2xl font-black" style={{ color: 'var(--ink)' }}>{usage.remaining.toLocaleString()} / {usage.quota.toLocaleString()}</p>
               </div>
               <Activity className="h-6 w-6" style={{ color: quota.text }} />
             </div>
@@ -233,18 +233,18 @@ export default function AdminMerchantDetailPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Billing & Revenue</p>
-                <p className="mt-1 text-2xl font-black" style={{ color: 'var(--navy)' }}>{formatMoney(billing.total_revenue)}</p>
+                <p className="mt-1 text-2xl font-black" style={{ color: 'var(--ink)' }}>{formatMoney(billing.total_revenue)}</p>
               </div>
               <CreditCard className="h-6 w-6" style={{ color: 'var(--blue)' }} />
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
               <div className="p-2" style={{ background: 'var(--bg-subtle)' }}>
                 <p style={{ color: 'var(--text-muted)' }}>Plan</p>
-                <p className="font-bold" style={{ color: 'var(--navy)' }}>{planName}</p>
+                <p className="font-bold" style={{ color: 'var(--ink)' }}>{planName}</p>
               </div>
               <div className="p-2" style={{ background: 'var(--bg-subtle)' }}>
                 <p style={{ color: 'var(--text-muted)' }}>Renews</p>
-                <p className="font-bold" style={{ color: 'var(--navy)' }}>{formatShortDate(renewsAt)}</p>
+                <p className="font-bold" style={{ color: 'var(--ink)' }}>{formatShortDate(renewsAt)}</p>
               </div>
             </div>
           </section>
@@ -253,20 +253,20 @@ export default function AdminMerchantDetailPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Verification Health</p>
-                <p className="mt-1 text-2xl font-black" style={{ color: 'var(--navy)' }}>{usage.total_slips.toLocaleString()} slips</p>
+                <p className="mt-1 text-2xl font-black" style={{ color: 'var(--ink)' }}>{usage.total_slips.toLocaleString()} slips</p>
               </div>
-              <ReceiptText className="h-6 w-6" style={{ color: '#047857' }} />
+              <ReceiptText className="h-6 w-6" style={{ color: 'var(--ok-ink)' }} />
             </div>
             <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
-              <div className="p-2" style={{ background: '#ECFDF5', color: '#047857' }}>
+              <div className="p-2" style={{ background: 'var(--ok-pale)', color: 'var(--ok-ink)' }}>
                 <p className="font-bold">{usage.verified_slips}</p>
                 <p>Verified</p>
               </div>
-              <div className="p-2" style={{ background: '#FEF2F2', color: '#DC2626' }}>
+              <div className="p-2" style={{ background: 'var(--err-pale)', color: 'var(--err-ink)' }}>
                 <p className="font-bold">{usage.failed_slips}</p>
                 <p>Failed</p>
               </div>
-              <div className="p-2" style={{ background: '#FEF3C7', color: '#D97706' }}>
+              <div className="p-2" style={{ background: 'var(--warn-pale)', color: 'var(--warn-ink)' }}>
                 <p className="font-bold">{usage.duplicate_slips}</p>
                 <p>Duplicate</p>
               </div>
@@ -282,7 +282,7 @@ export default function AdminMerchantDetailPage() {
                   <ReceiptText className="h-5 w-5" />
                 </div>
                 <div>
-                  <h2 className="text-base font-black" style={{ color: 'var(--navy)' }}>Quota & Subscription</h2>
+                  <h2 className="text-base font-black" style={{ color: 'var(--ink)' }}>Quota & Subscription</h2>
                   <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Real-time slip allocations and plan lifecycle</p>
                 </div>
               </div>
@@ -295,9 +295,9 @@ export default function AdminMerchantDetailPage() {
               <div className="flex flex-col items-center justify-center rounded-lg p-4" style={{ background: 'var(--bg-subtle)' }}>
                 <div className="relative flex h-28 w-28 items-center justify-center rounded-full" style={{ background: `conic-gradient(${quota.bar} ${remainingPercent * 3.6}deg, #E5E7EB 0deg)` }}>
                   <div className="absolute h-20 w-20 rounded-full bg-white" />
-                  <span className="relative text-2xl font-black" style={{ color: 'var(--navy)' }}>{remainingPercent.toFixed(0)}%</span>
+                  <span className="relative text-2xl font-black" style={{ color: 'var(--ink)' }}>{remainingPercent.toFixed(0)}%</span>
                 </div>
-                <p className="mt-3 text-sm font-bold" style={{ color: 'var(--navy)' }}>{usage.remaining.toLocaleString()} slips remaining</p>
+                <p className="mt-3 text-sm font-bold" style={{ color: 'var(--ink)' }}>{usage.remaining.toLocaleString()} slips remaining</p>
                 <p className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Resets {formatShortDate(usage.next_reset)}</p>
               </div>
 
@@ -324,7 +324,7 @@ export default function AdminMerchantDetailPage() {
                   <Bot className="h-5 w-5" />
                 </div>
                 <div>
-                  <h2 className="text-base font-black" style={{ color: 'var(--navy)' }}>LINE Webhook Integration</h2>
+                  <h2 className="text-base font-black" style={{ color: 'var(--ink)' }}>LINE Webhook Integration</h2>
                   <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Inbound OCR pipe and instant customer replies</p>
                 </div>
               </div>
@@ -339,13 +339,13 @@ export default function AdminMerchantDetailPage() {
                 Target webhook endpoint
               </label>
               <div className="flex min-w-0 items-center gap-2">
-                <code className="min-w-0 flex-1 truncate text-xs font-semibold" style={{ color: 'var(--navy)' }}>
+                <code className="min-w-0 flex-1 truncate text-xs font-semibold" style={{ color: 'var(--ink)' }}>
                   {detail.line_webhook?.webhook_url || (detail.line_webhook?.webhook_reference_id ? `/v1/line/webhook/${detail.line_webhook.webhook_reference_id}` : 'No webhook URL configured')}
                 </code>
                 <button
                   type="button"
                   className="inline-flex shrink-0 items-center gap-1 px-2 py-1 text-xs font-semibold"
-                  style={{ background: '#fff', color: 'var(--blue)', border: '1px solid var(--border)' }}
+                  style={{ background: 'var(--bg-card)', color: 'var(--blue)', border: '1px solid var(--border)' }}
                   onClick={() => {
                     const value = detail.line_webhook?.webhook_url || (detail.line_webhook?.webhook_reference_id ? `/v1/line/webhook/${detail.line_webhook.webhook_reference_id}` : '');
                     if (value) navigator.clipboard.writeText(value);
@@ -360,11 +360,11 @@ export default function AdminMerchantDetailPage() {
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <div className="p-3" style={{ background: 'var(--bg-subtle)' }}>
                 <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>LINE channel ID</p>
-                <p className="mt-1 truncate text-sm font-bold" style={{ color: 'var(--navy)' }}>{detail.line_webhook?.line_channel_id || '-'}</p>
+                <p className="mt-1 truncate text-sm font-bold" style={{ color: 'var(--ink)' }}>{detail.line_webhook?.line_channel_id || '-'}</p>
               </div>
               <div className="p-3" style={{ background: 'var(--bg-subtle)' }}>
                 <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Configured</p>
-                <p className="mt-1 text-sm font-bold" style={{ color: 'var(--navy)' }}>{formatShortDate(detail.line_webhook?.created_at)}</p>
+                <p className="mt-1 text-sm font-bold" style={{ color: 'var(--ink)' }}>{formatShortDate(detail.line_webhook?.created_at)}</p>
               </div>
               <div className="p-3" style={{ background: 'var(--bg-subtle)' }}>
                 <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Auto reply</p>
@@ -372,7 +372,7 @@ export default function AdminMerchantDetailPage() {
               </div>
               <div className="p-3" style={{ background: 'var(--bg-subtle)' }}>
                 <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Last update</p>
-                <p className="mt-1 text-sm font-bold" style={{ color: 'var(--navy)' }}>{formatShortDate(detail.line_webhook?.updated_at)}</p>
+                <p className="mt-1 text-sm font-bold" style={{ color: 'var(--ink)' }}>{formatShortDate(detail.line_webhook?.updated_at)}</p>
               </div>
             </div>
           </section>
@@ -385,7 +385,7 @@ export default function AdminMerchantDetailPage() {
             <div className="w-full max-w-md bg-white p-6 shadow-xl" style={{ border: '1px solid var(--border)' }}>
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <h2 className="text-lg font-black" style={{ color: 'var(--navy)' }}>Adjust Quota</h2>
+                  <h2 className="text-lg font-black" style={{ color: 'var(--ink)' }}>Adjust Quota</h2>
                   <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
                     Add extra monthly slips on top of {detail.merchant.shop_name}'s package quota.
                   </p>
@@ -398,15 +398,15 @@ export default function AdminMerchantDetailPage() {
               <div className="mt-5 grid grid-cols-3 gap-2">
                 <div className="p-3" style={{ background: 'var(--bg-subtle)' }}>
                   <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Package</p>
-                  <p className="mt-1 font-bold" style={{ color: 'var(--navy)' }}>{packageQuota.toLocaleString()}</p>
+                  <p className="mt-1 font-bold" style={{ color: 'var(--ink)' }}>{packageQuota.toLocaleString()}</p>
                 </div>
                 <div className="p-3" style={{ background: 'var(--bg-subtle)' }}>
                   <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Extra</p>
-                  <p className="mt-1 font-bold" style={{ color: 'var(--navy)' }}>{quotaExtra.toLocaleString()}</p>
+                  <p className="mt-1 font-bold" style={{ color: 'var(--ink)' }}>{quotaExtra.toLocaleString()}</p>
                 </div>
                 <div className="p-3" style={{ background: 'var(--bg-subtle)' }}>
                   <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>New Total</p>
-                  <p className="mt-1 font-bold" style={{ color: 'var(--navy)' }}>{(packageQuota + (Number(quotaInput) || 0)).toLocaleString()}</p>
+                  <p className="mt-1 font-bold" style={{ color: 'var(--ink)' }}>{(packageQuota + (Number(quotaInput) || 0)).toLocaleString()}</p>
                 </div>
               </div>
 
@@ -421,7 +421,7 @@ export default function AdminMerchantDetailPage() {
                   value={quotaInput}
                   onChange={(event) => setQuotaInput(event.target.value)}
                   className="mt-2 h-12 w-full px-3 text-lg font-bold outline-none"
-                  style={{ border: '1px solid var(--border)', color: 'var(--navy)' }}
+                  style={{ border: '1px solid var(--border)', color: 'var(--ink)' }}
                   autoFocus
                 />
               </label>
@@ -432,7 +432,7 @@ export default function AdminMerchantDetailPage() {
                     key={preset}
                     type="button"
                     className="px-3 py-2 font-semibold"
-                    style={{ border: '1px solid var(--border)', color: 'var(--navy)', background: quotaInput === String(preset) ? 'var(--bg-subtle)' : '#fff' }}
+                    style={{ border: '1px solid var(--border)', color: 'var(--ink)', background: quotaInput === String(preset) ? 'var(--bg-subtle)' : 'var(--bg-card)' }}
                     onClick={() => setQuotaInput(String(preset))}
                   >
                     {preset.toLocaleString()}
@@ -444,7 +444,7 @@ export default function AdminMerchantDetailPage() {
                 <button
                   type="button"
                   className="px-4 py-2 text-sm font-semibold"
-                  style={{ border: '1px solid var(--border)', color: 'var(--navy)' }}
+                  style={{ border: '1px solid var(--border)', color: 'var(--ink)' }}
                   onClick={() => setQuotaModalOpen(false)}
                   disabled={updateQuotaMutation.isPending}
                 >

@@ -20,7 +20,7 @@ const features: Feature[] = [
     title: 'ดึงข้อมูล QR โดยตรง',
     desc: 'ระบบอ่านค่า EMVCo จาก QR Code ในสลิปโดยตรง ไม่ใช้ OCR ไม่มีการเดา อ่านได้แม้ภาพไม่คมชัด',
     icon: QrCode,
-    tone: { bg: '#fff', ink: 'var(--navy)', sub: 'var(--text-muted)', bubble: 'var(--blue-pale)', bubbleInk: 'var(--blue)', tag: 'var(--blue)' },
+    tone: { bg: 'var(--bg-card)', ink: 'var(--ink)', sub: 'var(--text-muted)', bubble: 'var(--blue-pale)', bubbleInk: 'var(--blue)', tag: 'var(--blue)' },
     span: 'md:col-span-3',
   },
   {
@@ -28,7 +28,7 @@ const features: Feature[] = [
     title: 'ยืนยันผ่านธนาคารจริง',
     desc: 'ส่งข้อมูลตรวจสอบผ่าน Bank Gateway ของจริงทุกครั้ง ผลลัพธ์มาจากธนาคาร ไม่ใช่การวิเคราะห์ภาพ',
     icon: Landmark,
-    tone: { bg: 'var(--navy)', ink: '#fff', sub: 'rgba(255,255,255,0.65)', bubble: 'var(--cyan)', bubbleInk: 'var(--navy)', tag: 'var(--cyan)' },
+    tone: { bg: 'var(--navy)', ink: '#fff', sub: 'rgba(255,255,255,0.65)', bubble: 'var(--cyan)', bubbleInk: 'var(--on-cyan)', tag: 'var(--cyan)' },
     span: 'md:col-span-3',
   },
   {
@@ -55,7 +55,7 @@ export const Features = () => {
             </span>
             <h2
               className="font-display text-4xl font-extrabold leading-[1.2] md:text-6xl"
-              style={{ color: 'var(--navy)' }}
+              style={{ color: 'var(--ink)' }}
             >
               3 อย่างที่ทำให้
               <br />
@@ -72,7 +72,7 @@ export const Features = () => {
               className={`group relative flex min-h-[15rem] flex-col justify-between overflow-hidden rounded-[2.25rem] p-8 transition-transform duration-300 hover:-translate-y-1 md:p-10 ${f.span}`}
               style={{
                 background: f.tone.bg,
-                boxShadow: f.tone.bg === '#fff' ? '0 0 0 1px rgba(0,24,71,0.07)' : undefined,
+                boxShadow: f.tone.bg === '#fff' ? '0 0 0 1px var(--ring)' : undefined,
               }}
             >
               {/* oversized ghost number */}

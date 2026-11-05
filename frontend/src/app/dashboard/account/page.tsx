@@ -96,7 +96,7 @@ export default function AccountPage() {
                 <span
                   className="rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-widest"
                   style={{
-                    background: user.line_linked ? '#ECFDF5' : '#fff',
+                    background: user.line_linked ? '#ECFDF5' : 'var(--bg-card)',
                     color: user.line_linked ? '#059669' : '#64748B',
                     borderColor: user.line_linked ? '#A7F3D0' : '#CBD5E1',
                   }}

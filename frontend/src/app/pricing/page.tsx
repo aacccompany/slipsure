@@ -112,11 +112,11 @@ export default function PricingPage() {
         <div className="pop-in mx-auto mb-12 max-w-3xl text-center">
           <span
             className="mb-6 inline-block rounded-full bg-white px-5 py-2 text-sm font-bold"
-            style={{ color: 'var(--blue)', boxShadow: '0 0 0 1px rgba(0,24,71,0.08)' }}
+            style={{ color: 'var(--blue)', boxShadow: '0 0 0 1px var(--ring)' }}
           >
             แผนราคา
           </span>
-          <h1 className="font-display text-5xl font-extrabold leading-[1.2] md:text-7xl" style={{ color: 'var(--navy)' }}>
+          <h1 className="font-display text-5xl font-extrabold leading-[1.2] md:text-7xl" style={{ color: 'var(--ink)' }}>
             เลือกแผนที่เหมาะกับ
             <br />
             <span className="relative inline-block" style={{ color: 'var(--blue)' }}>
@@ -139,18 +139,18 @@ export default function PricingPage() {
             {visiblePlans.length > 0 && (
               <div
                 className="pop-in mx-auto mb-12 max-w-3xl rounded-[2.25rem] bg-white p-7 md:p-9"
-                style={{ boxShadow: '0 24px 40px -28px rgba(0,24,71,0.3), 0 0 0 1px rgba(0,24,71,0.07)', animationDelay: '0.1s' }}
+                style={{ boxShadow: '0 24px 40px -28px rgba(0,24,71,0.3), 0 0 0 1px var(--ring)', animationDelay: '0.1s' }}
               >
                 <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
                   <div>
                     <p className="mb-1 text-sm font-bold" style={{ color: 'var(--blue)' }}>
                       ตัวช่วยเลือกแผน
                     </p>
-                    <p className="text-lg font-extrabold md:text-xl" style={{ color: 'var(--navy)' }}>
+                    <p className="text-lg font-extrabold md:text-xl" style={{ color: 'var(--ink)' }}>
                       ร้านคุณได้รับสลิปประมาณเดือนละกี่ใบ?
                     </p>
                   </div>
-                  <p className="font-display text-4xl font-extrabold leading-none md:text-5xl" style={{ color: 'var(--navy)' }}>
+                  <p className="font-display text-4xl font-extrabold leading-none md:text-5xl" style={{ color: 'var(--ink)' }}>
                     {slipsPerMonth.toLocaleString()}
                     <span className="ml-1.5 text-base font-bold" style={{ color: 'var(--text-muted)' }}>
                       สลิป
@@ -174,7 +174,7 @@ export default function PricingPage() {
                   className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-[1.5rem] px-5 py-4"
                   style={{ background: 'var(--bg-subtle)' }}
                 >
-                  <p className="flex items-center gap-2 text-sm font-semibold md:text-base" style={{ color: 'var(--navy)' }}>
+                  <p className="flex items-center gap-2 text-sm font-semibold md:text-base" style={{ color: 'var(--ink)' }}>
                     <Sparkles className="h-4 w-4 shrink-0" style={{ color: 'var(--blue)' }} />
                     {exceedsAll
                       ? 'มากกว่าทุกแผน ติดต่อเราเพื่อขอแผน Enterprise'
@@ -209,7 +209,7 @@ export default function PricingPage() {
                     <p className="mb-1 text-sm font-bold" style={{ color: 'var(--blue)' }}>
                       {isRec ? 'ฟรี · เหมาะกับคุณ' : 'ฟรี'}
                     </p>
-                    <p className="font-display text-3xl font-extrabold md:text-4xl" style={{ color: 'var(--navy)' }}>
+                    <p className="font-display text-3xl font-extrabold md:text-4xl" style={{ color: 'var(--ink)' }}>
                       {freePlan.quota_per_month.toLocaleString()} สลิป/เดือน
                     </p>
                     <p className="mt-1 text-sm md:text-base" style={{ color: 'var(--text-muted)' }}>
@@ -249,19 +249,19 @@ export default function PricingPage() {
                     key={plan.id}
                     className="pop-in relative flex flex-col rounded-[2.25rem] transition-all duration-300 hover:-translate-y-1.5"
                     style={{
-                      background: isPopular ? 'var(--navy)' : '#fff',
+                      background: isPopular ? 'var(--navy)' : 'var(--bg-card)',
                       boxShadow: isRec
                         ? '0 0 0 4px var(--cyan), 0 24px 40px -24px rgba(0,24,71,0.4)'
                         : isPopular
                           ? '0 28px 44px -24px rgba(0,24,71,0.55)'
-                          : '0 20px 36px -28px rgba(0,24,71,0.3), 0 0 0 1px rgba(0,24,71,0.07)',
+                          : '0 20px 36px -28px rgba(0,24,71,0.3), 0 0 0 1px var(--ring)',
                       animationDelay: `${0.2 + i * 0.05}s`,
                     }}
                   >
                     {isPopular && (
                       <div
                         className="absolute -top-3.5 left-8 rounded-full px-4 py-1.5 text-xs font-extrabold"
-                        style={{ background: 'var(--cyan)', color: 'var(--navy)' }}
+                        style={{ background: 'var(--cyan)', color: 'var(--on-cyan)' }}
                       >
                         ★ แนะนำ
                       </div>
@@ -291,7 +291,7 @@ export default function PricingPage() {
                         <div className="flex items-baseline gap-1.5">
                           <span
                             className="font-display text-5xl font-extrabold leading-none"
-                            style={{ color: isPopular ? '#fff' : 'var(--navy)' }}
+                            style={{ color: isPopular ? '#fff' : 'var(--ink)' }}
                           >
                             ฿{price.toLocaleString()}
                           </span>
@@ -316,7 +316,7 @@ export default function PricingPage() {
                           <div key={feature} className="flex items-center gap-3">
                             <span
                               className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
-                              style={{ background: isPopular ? 'var(--cyan)' : 'var(--blue-pale)', color: isPopular ? 'var(--navy)' : 'var(--blue)' }}
+                              style={{ background: isPopular ? 'var(--cyan)' : 'var(--blue-pale)', color: isPopular ? 'var(--on-cyan)' : 'var(--blue)' }}
                             >
                               <Check className="h-3 w-3" strokeWidth={3.5} />
                             </span>
@@ -334,7 +334,7 @@ export default function PricingPage() {
                         className="flex w-full items-center justify-center gap-2 rounded-full py-4 text-base font-bold transition-transform hover:scale-[1.02] active:scale-95 disabled:opacity-60"
                         style={{
                           background: isCurrent ? 'var(--border-strong)' : isPopular ? 'var(--cyan)' : 'var(--navy)',
-                          color: isPopular && !isCurrent ? 'var(--navy)' : '#fff',
+                          color: isPopular && !isCurrent ? 'var(--on-cyan)' : '#fff',
                         }}
                       >
                         {checkoutMutation.isPending ? (
@@ -358,7 +358,7 @@ export default function PricingPage() {
           <Link
             href="/login"
             className="font-bold underline decoration-[var(--cyan)] decoration-2 underline-offset-4 transition-colors hover:text-[var(--blue)]"
-            style={{ color: 'var(--navy)' }}
+            style={{ color: 'var(--ink)' }}
           >
             เข้าสู่ระบบเพื่อจัดการบิล
           </Link>

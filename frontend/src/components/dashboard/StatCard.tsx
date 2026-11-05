@@ -26,7 +26,7 @@ export const StatCard: React.FC<StatCardProps> = ({ title, value, change, isPosi
       </p>
       <h3
         className="font-extrabold tracking-tight"
-        style={{ fontSize: '1.75rem', color: 'var(--navy)', lineHeight: 1.1, letterSpacing: '-0.02em' }}
+        style={{ fontSize: '1.75rem', color: 'var(--ink)', lineHeight: 1.1, letterSpacing: '-0.02em' }}
       >
         {value}
       </h3>

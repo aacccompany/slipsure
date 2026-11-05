@@ -13,9 +13,9 @@ interface QuotaHeroProps {
 export const QuotaHero: React.FC<QuotaHeroProps> = ({ limit, used, remaining, resetLabel, isBlocked }) => {
   const percentUsed = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
   const tone = isBlocked || percentUsed >= 100
-    ? { ring: '#F43F5E', soft: '#FFF1F2', text: '#BE123C', note: 'โควต้าหมดแล้ว' }
+    ? { ring: '#F43F5E', soft: 'var(--err-pale)', text: '#BE123C', note: 'โควต้าหมดแล้ว' }
     : percentUsed >= 80
-      ? { ring: '#F59E0B', soft: '#FFFBEB', text: '#B45309', note: 'โควต้าใกล้หมด' }
+      ? { ring: '#F59E0B', soft: 'var(--warn-pale)', text: 'var(--warn-ink)', note: 'โควต้าใกล้หมด' }
       : { ring: 'var(--blue)', soft: 'var(--blue-pale)', text: 'var(--blue)', note: 'ใช้งานได้ตามปกติ' };
 
   const radius = 54;
@@ -45,7 +45,7 @@ export const QuotaHero: React.FC<QuotaHeroProps> = ({ limit, used, remaining, re
           )}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-3xl font-extrabold leading-none" style={{ color: 'var(--navy)', letterSpacing: '-0.02em' }}>
+          <span className="text-3xl font-extrabold leading-none" style={{ color: 'var(--ink)', letterSpacing: '-0.02em' }}>
             {percentUsed}%
           </span>
           <span className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>ใช้ไปแล้ว</span>
@@ -63,7 +63,7 @@ export const QuotaHero: React.FC<QuotaHeroProps> = ({ limit, used, remaining, re
 
         <p className="mt-3 text-sm" style={{ color: 'var(--text-muted)' }}>โควต้าสลิปที่เหลือเดือนนี้</p>
         <p className="mt-0.5 flex flex-wrap items-baseline gap-x-2 gap-y-0">
-          <span className="text-5xl font-extrabold leading-tight" style={{ color: 'var(--navy)', letterSpacing: '-0.03em' }}>
+          <span className="text-5xl font-extrabold leading-tight" style={{ color: 'var(--ink)', letterSpacing: '-0.03em' }}>
             {remaining.toLocaleString()}
           </span>
           <span className="text-base" style={{ color: 'var(--text-muted)' }}>

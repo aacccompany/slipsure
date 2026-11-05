@@ -9,8 +9,8 @@ import { Features } from '@/components/landing/Features';
 
 const stats = [
   { value: '<1 วิ', label: 'เวลาตรวจสอบ', sub: 'ต่อสลิป', bg: 'var(--blue)', ink: '#fff', mute: 'rgba(255,255,255,0.7)', span: 'md:col-span-3' },
-  { value: '8+', label: 'ธนาคารที่รองรับ', sub: 'ทุกธนาคารหลัก', bg: '#fff', ink: 'var(--navy)', mute: 'var(--text-muted)', span: 'md:col-span-3' },
-  { value: '24 ชม.', label: 'ตรวจสลิปซ้ำ', sub: 'ย้อนหลัง', bg: 'var(--cyan)', ink: 'var(--navy)', mute: 'rgba(0,24,71,0.65)', span: 'md:col-span-2' },
+  { value: '8+', label: 'ธนาคารที่รองรับ', sub: 'ทุกธนาคารหลัก', bg: 'var(--bg-card)', ink: 'var(--ink)', mute: 'var(--text-muted)', span: 'md:col-span-3' },
+  { value: '24 ชม.', label: 'ตรวจสลิปซ้ำ', sub: 'ย้อนหลัง', bg: 'var(--cyan)', ink: 'var(--on-cyan)', mute: 'rgba(0,24,71,0.65)', span: 'md:col-span-2' },
   { value: '100%', label: 'Bank API', sub: 'ไม่ใช่การอ่านภาพ', bg: 'var(--navy)', ink: '#fff', mute: 'rgba(255,255,255,0.65)', span: 'md:col-span-4' },
 ];
 
@@ -55,8 +55,8 @@ function FAQItem({ q, a }: { q: string; a: string }) {
     <div
       className="overflow-hidden rounded-[1.75rem] transition-colors"
       style={{
-        background: open ? 'var(--navy)' : '#fff',
-        boxShadow: open ? 'none' : '0 0 0 1px rgba(0,24,71,0.07)',
+        background: open ? 'var(--navy)' : 'var(--bg-card)',
+        boxShadow: open ? 'none' : '0 0 0 1px var(--ring)',
       }}
     >
       <button
@@ -64,14 +64,14 @@ function FAQItem({ q, a }: { q: string; a: string }) {
         aria-expanded={open}
         className="flex w-full items-center justify-between gap-6 px-6 py-5 text-left md:px-8"
       >
-        <span className="text-base font-bold leading-snug md:text-lg" style={{ color: open ? '#fff' : 'var(--navy)' }}>
+        <span className="text-base font-bold leading-snug md:text-lg" style={{ color: open ? '#fff' : 'var(--ink)' }}>
           {q}
         </span>
         <span
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-transform duration-300"
           style={{
             background: open ? 'var(--cyan)' : 'var(--blue-pale)',
-            color: open ? 'var(--navy)' : 'var(--blue)',
+            color: open ? 'var(--on-cyan)' : 'var(--blue)',
             transform: open ? 'rotate(135deg)' : 'rotate(0)',
           }}
         >
@@ -101,7 +101,7 @@ export default function Home() {
               key={s.label}
               data-reveal={i}
               className={`group relative overflow-hidden rounded-[2.25rem] p-8 transition-transform duration-300 hover:-translate-y-1 md:p-10 ${s.span}`}
-              style={{ background: s.bg, boxShadow: s.bg === '#fff' ? '0 0 0 1px rgba(0,24,71,0.07)' : undefined }}
+              style={{ background: s.bg, boxShadow: s.bg === 'var(--bg-card)' ? '0 0 0 1px var(--ring)' : undefined }}
             >
               <div
                 aria-hidden
@@ -132,7 +132,7 @@ export default function Home() {
         <div className="mx-auto max-w-5xl">
           <div data-reveal className="mb-10 text-center md:mb-14">
             <SectionTag>ทำไมต้อง FlowSlip</SectionTag>
-            <h2 className="font-display text-4xl font-extrabold leading-[1.2] md:text-6xl" style={{ color: 'var(--navy)' }}>
+            <h2 className="font-display text-4xl font-extrabold leading-[1.2] md:text-6xl" style={{ color: 'var(--ink)' }}>
               ภาพหลอกตาได้
               <br />
               <span style={{ color: 'var(--blue)' }}>ธนาคารหลอกไม่ได้</span>
@@ -140,7 +140,7 @@ export default function Home() {
           </div>
 
           <div className="grid gap-5 md:grid-cols-2">
-            <div data-reveal="1" className="relative overflow-hidden rounded-[2.5rem] bg-white p-9 md:p-12" style={{ boxShadow: '0 0 0 1px rgba(0,24,71,0.07)' }}>
+            <div data-reveal="1" className="relative overflow-hidden rounded-[2.5rem] bg-white p-9 md:p-12" style={{ boxShadow: '0 0 0 1px var(--ring)' }}>
               <span
                 className="mb-6 inline-flex h-14 w-14 items-center justify-center rounded-2xl"
                 style={{ background: 'var(--fake-pale)', color: 'var(--fake)' }}
@@ -150,7 +150,7 @@ export default function Home() {
               <span className="mb-3 block text-sm font-bold" style={{ color: 'var(--fake)' }}>
                 ไม่ปลอดภัย
               </span>
-              <h3 className="mb-4 text-2xl font-extrabold md:text-3xl" style={{ color: 'var(--navy)' }}>
+              <h3 className="mb-4 text-2xl font-extrabold md:text-3xl" style={{ color: 'var(--ink)' }}>
                 OCR / AI อ่านภาพสลิป
               </h3>
               <p className="text-base leading-relaxed" style={{ color: 'var(--text-muted)' }}>
@@ -166,7 +166,7 @@ export default function Home() {
               />
               <span
                 className="relative mb-6 inline-flex h-14 w-14 items-center justify-center rounded-2xl"
-                style={{ background: 'var(--cyan)', color: 'var(--navy)' }}
+                style={{ background: 'var(--cyan)', color: 'var(--on-cyan)' }}
               >
                 <Check className="h-7 w-7" strokeWidth={3} />
               </span>
@@ -186,7 +186,7 @@ export default function Home() {
                 key={item.title}
                 data-reveal={i}
                 className="rounded-[1.75rem] p-7 transition-colors hover:bg-[var(--blue-pale)]"
-                style={{ background: 'rgba(255,255,255,0.7)', boxShadow: '0 0 0 1px rgba(0,24,71,0.07)' }}
+                style={{ background: 'var(--nav-bg)', boxShadow: '0 0 0 1px var(--ring)' }}
               >
                 <span
                   className="mb-4 flex h-9 w-9 items-center justify-center rounded-full text-sm font-extrabold"
@@ -194,7 +194,7 @@ export default function Home() {
                 >
                   {i + 1}
                 </span>
-                <p className="mb-1.5 text-base font-bold" style={{ color: 'var(--navy)' }}>
+                <p className="mb-1.5 text-base font-bold" style={{ color: 'var(--ink)' }}>
                   {item.title}
                 </p>
                 <p className="text-sm leading-relaxed" style={{ color: 'var(--text-muted)' }}>
@@ -213,7 +213,7 @@ export default function Home() {
           style={{ background: 'var(--blue-pale)' }}
         >
           <div data-reveal className="mb-12 flex flex-wrap items-end justify-between gap-4">
-            <h2 className="font-display text-4xl font-extrabold leading-[1.2] md:text-6xl" style={{ color: 'var(--navy)' }}>
+            <h2 className="font-display text-4xl font-extrabold leading-[1.2] md:text-6xl" style={{ color: 'var(--ink)' }}>
               พร้อมใช้งานใน
               <br />
               <span style={{ color: 'var(--blue)' }}>3 ขั้นตอน</span>
@@ -221,7 +221,7 @@ export default function Home() {
             <Link
               href="/register"
               className="group inline-flex items-center gap-2 rounded-full bg-white py-2 pl-6 pr-2 text-sm font-bold transition-transform hover:scale-[1.03]"
-              style={{ color: 'var(--navy)' }}
+              style={{ color: 'var(--ink)' }}
             >
               สมัครฟรีเลย
               <span
@@ -244,12 +244,12 @@ export default function Home() {
                   className="font-display mb-6 flex h-16 w-16 items-center justify-center rounded-full text-3xl font-extrabold"
                   style={{
                     background: i === 1 ? 'var(--cyan)' : i === 2 ? 'var(--blue)' : 'var(--navy)',
-                    color: i === 1 ? 'var(--navy)' : '#fff',
+                    color: i === 1 ? 'var(--on-cyan)' : '#fff',
                   }}
                 >
                   {step.num}
                 </span>
-                <h3 className="mb-3 text-xl font-extrabold leading-snug" style={{ color: 'var(--navy)' }}>
+                <h3 className="mb-3 text-xl font-extrabold leading-snug" style={{ color: 'var(--ink)' }}>
                   {step.title}
                 </h3>
                 <p className="text-sm leading-relaxed md:text-base" style={{ color: 'var(--text-muted)' }}>
@@ -266,7 +266,7 @@ export default function Home() {
         <div className="mx-auto grid max-w-5xl gap-10 lg:grid-cols-[1fr_2fr] lg:gap-16">
           <div data-reveal className="self-start lg:sticky lg:top-28">
             <SectionTag>FAQ</SectionTag>
-            <h2 className="font-display mb-5 text-4xl font-extrabold leading-[1.2] md:text-5xl" style={{ color: 'var(--navy)' }}>
+            <h2 className="font-display mb-5 text-4xl font-extrabold leading-[1.2] md:text-5xl" style={{ color: 'var(--ink)' }}>
               คำถาม
               <br />
               <span style={{ color: 'var(--blue)' }}>ที่พบบ่อย</span>
@@ -277,7 +277,7 @@ export default function Home() {
             <a
               href="mailto:hello@flowslip.ai"
               className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-bold transition-colors hover:bg-[var(--blue-pale)]"
-              style={{ color: 'var(--navy)', boxShadow: '0 0 0 1.5px rgba(0,24,71,0.12)' }}
+              style={{ color: 'var(--ink)', boxShadow: '0 0 0 1.5px var(--ring)' }}
             >
               ติดต่อเราโดยตรง
               <ArrowUpRight className="h-4 w-4" />
@@ -331,7 +331,7 @@ export default function Home() {
                 <Link
                   href="/register"
                   className="group inline-flex items-center justify-between gap-4 rounded-full py-2 pl-8 pr-2 text-base font-bold transition-transform hover:scale-[1.03]"
-                  style={{ background: 'var(--cyan)', color: 'var(--navy)' }}
+                  style={{ background: 'var(--cyan)', color: 'var(--on-cyan)' }}
                 >
                   สมัครใช้งานฟรี
                   <span

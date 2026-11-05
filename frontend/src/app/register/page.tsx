@@ -17,7 +17,7 @@ function Input({ label, type, value, onChange, placeholder, required = false }: 
       <label className="block font-mono text-[10px] uppercase tracking-widest mb-1.5" style={{ color: 'var(--text-muted)' }}>{label}</label>
       <input type={type} value={value} onChange={onChange} placeholder={placeholder} required={required}
         className="w-full px-4 py-3 border text-sm transition-all focus:outline-none"
-        style={{ borderColor: 'var(--border)', color: 'var(--navy)', background: '#fff' }}
+        style={{ borderColor: 'var(--border)', color: 'var(--ink)', background: 'var(--bg-card)' }}
         onFocus={(e) => (e.target.style.borderColor = 'var(--blue)')}
         onBlur={(e) => (e.target.style.borderColor = 'var(--border)')} />
     </div>
@@ -90,7 +90,7 @@ export default function RegisterPage() {
           </Link>
 
           <div className="mb-8">
-            <h1 className="font-bold mb-1" style={{ fontSize: '1.75rem', color: 'var(--navy)', letterSpacing: '-0.02em' }}>
+            <h1 className="font-bold mb-1" style={{ fontSize: '1.75rem', color: 'var(--ink)', letterSpacing: '-0.02em' }}>
               สมัครสมาชิก
             </h1>
             <p className="text-sm" style={{ color: 'var(--text-muted)' }}>ฟรี 20 สลิป/เดือน ไม่ต้องใช้บัตรเครดิต</p>
@@ -104,7 +104,7 @@ export default function RegisterPage() {
             <Input label="ยืนยันรหัสผ่าน" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="••••••••" required />
 
             {error && (
-              <div className="flex items-center gap-2 px-3 py-2.5" style={{ background: '#FEF2F2', border: '1px solid #FECACA' }}>
+              <div className="flex items-center gap-2 px-3 py-2.5" style={{ background: 'var(--err-pale)', border: '1px solid #FECACA' }}>
                 <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-500" />
                 <p className="text-xs text-rose-600">{error}</p>
               </div>
@@ -125,7 +125,7 @@ export default function RegisterPage() {
 
           <Link href="/login"
             className="block w-full py-3 text-sm font-medium text-center border transition-all hover:opacity-75"
-            style={{ borderColor: 'var(--border)', color: 'var(--navy)' }}>
+            style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}>
             เข้าสู่ระบบ
           </Link>
 

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import {
@@ -152,7 +153,7 @@ export function AdminShell({
       <div className="min-w-0 flex-1">
         <header
           className="h-14 px-6 flex items-center justify-between sticky top-0 z-30"
-          style={{ background: '#fff', borderBottom: '1px solid var(--border)' }}
+          style={{ background: 'var(--bg-card)', borderBottom: '1px solid var(--border)' }}
         >
           <div className="flex items-center gap-3 min-w-0">
             <button
@@ -166,6 +167,7 @@ export function AdminShell({
           </div>
 
           <div className="flex items-center gap-4">
+            <ThemeToggle className="!h-8 !w-8" />
             <div className="h-4 w-px" style={{ background: 'var(--border)' }} />
 
             <div className="flex items-center gap-2.5">
@@ -176,7 +178,7 @@ export function AdminShell({
                 {initials}
               </div>
               <div className="hidden md:block">
-                <p className="text-sm font-semibold leading-none mb-0.5" style={{ color: 'var(--navy)' }}>
+                <p className="text-sm font-semibold leading-none mb-0.5" style={{ color: 'var(--ink)' }}>
                   {user?.name || '—'}
                 </p>
                 <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>

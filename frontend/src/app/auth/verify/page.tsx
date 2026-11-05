@@ -70,7 +70,7 @@ function VerifyEmailContent() {
         </Link>
 
         <div className="mb-8">
-          <h1 className="font-display text-4xl font-semibold mb-1" style={{ color: 'var(--navy)' }}>
+          <h1 className="font-display text-4xl font-semibold mb-1" style={{ color: 'var(--ink)' }}>
             Verify Email
           </h1>
           <div className="flex items-center gap-2">
@@ -94,7 +94,7 @@ function VerifyEmailContent() {
             </div>
             <p className="text-sm text-center leading-relaxed" style={{ color: 'var(--text-muted)' }}>
               We sent a 6-digit code to<br />
-              <span className="font-semibold" style={{ color: 'var(--navy)' }}>{email}</span>
+              <span className="font-semibold" style={{ color: 'var(--ink)' }}>{email}</span>
             </p>
           </div>
 
@@ -108,14 +108,14 @@ function VerifyEmailContent() {
                 onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                 placeholder="000000" maxLength={6} required
                 className="w-full px-4 py-4 border text-center tracking-[0.5em] font-mono text-xl transition-colors focus:outline-none"
-                style={{ borderColor: 'var(--border)', color: 'var(--navy)' }}
+                style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
                 onFocus={(e) => (e.target.style.borderColor = 'var(--gold)')}
                 onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
               />
             </div>
 
             {error && (
-              <div className="flex items-center gap-2 px-4 py-3" style={{ background: '#FEF2F2', border: '1px solid #FECACA' }}>
+              <div className="flex items-center gap-2 px-4 py-3" style={{ background: 'var(--err-pale)', border: '1px solid #FECACA' }}>
                 <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-500" />
                 <p className="text-xs text-rose-600">{error}</p>
               </div>
@@ -139,9 +139,9 @@ function VerifyEmailContent() {
           <div className="pt-2" style={{ borderTop: '1px solid var(--border)' }}>
             <p className="text-xs text-center" style={{ color: 'var(--text-muted)' }}>
               Wrong email?{' '}
-              <Link href="/login" className="font-medium transition-colors" style={{ color: 'var(--navy)' }}
+              <Link href="/login" className="font-medium transition-colors" style={{ color: 'var(--ink)' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--gold)')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--navy)')}>
+                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--ink)')}>
                 Change address
               </Link>
             </p>
