@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"slipsure-backend/database"
+	"slipsure-backend/internal/audit"
 	"slipsure-backend/internal/handlers"
 	"slipsure-backend/internal/repositories"
 	"slipsure-backend/internal/services"
@@ -59,7 +61,23 @@ func main() {
 
 	// Create router
 	router := gin.Default()
+	trustedProxies := strings.TrimSpace(os.Getenv("TRUSTED_PROXIES"))
+	if trustedProxies == "" {
+		if err := router.SetTrustedProxies(nil); err != nil {
+			log.Fatal("Configure trusted proxies: ", err)
+		}
+	} else {
+		proxies := strings.Split(trustedProxies, ",")
+		for i := range proxies {
+			proxies[i] = strings.TrimSpace(proxies[i])
+		}
+		if err := router.SetTrustedProxies(proxies); err != nil {
+			log.Fatal("Invalid TRUSTED_PROXIES: ", err)
+		}
+	}
 	router.Use(middleware.CORSMiddleware())
+	auditStore := audit.NewStore(database.DB)
+	auditHandler := handlers.NewAdminAuditHandler(auditStore)
 
 	// Initialize repositories
 	userRepo := repositories.NewUserRepository(database.DB)
@@ -154,6 +172,7 @@ func main() {
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(authService)
+	authHandler.SetAuditStore(auditStore)
 	// Initialize crypto service for LINE webhook encryption
 	log.Println(" Initializing crypto service for LINE webhook...")
 	cryptoService, err := services.NewCryptoService()
@@ -222,8 +241,13 @@ func main() {
 		v1.POST("/checkout/webhook", merchantHandler.HandleStripeWebhook)
 
 		admin := v1.Group("/admin")
-		admin.Use(middleware.AuthMiddleware(userRepo), middleware.RequireRole("admin"))
+		admin.Use(middleware.AuditDeniedAdminAccess(auditStore), middleware.AuthMiddleware(userRepo),
+			middleware.RequireRole("admin"), middleware.RequireCurrentAdmin(auditStore),
+			middleware.AuditAdminAction(auditStore))
 		{
+			admin.GET("/logs", auditHandler.List)
+			admin.GET("/logs/export", auditHandler.Export)
+			admin.GET("/logs/:id", auditHandler.Detail)
 			admin.POST("/reports/export", adminReportHandler.Export)
 			admin.GET("/payments", merchantHandler.GetAdminPayments)
 			admin.GET("/payments/export", merchantHandler.ExportAdminPayments)

@@ -29,15 +29,15 @@ export function ConfirmModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md bg-white" style={{ border: '1px solid var(--border)' }}>
+      <div role="alertdialog" aria-modal="true" aria-labelledby="confirm-modal-title" aria-describedby="confirm-modal-message" className="w-full max-w-md bg-white" style={{ border: '1px solid var(--border)' }}>
         <div className="flex items-center justify-between p-6" style={{ borderBottom: '1px solid var(--border)' }}>
-          <h3 className="font-bold text-lg" style={{ color: 'var(--ink)' }}>{title}</h3>
+          <h3 id="confirm-modal-title" className="font-bold text-lg" style={{ color: 'var(--ink)' }}>{title}</h3>
           <button onClick={onCancel} disabled={isLoading} style={{ color: 'var(--text-muted)' }} aria-label="Close">
             <X className="w-4 h-4" />
           </button>
         </div>
         <div className="p-6">
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{message}</p>
+          <p id="confirm-modal-message" className="break-words text-sm" style={{ color: 'var(--text-muted)' }}>{message}</p>
         </div>
         <div className="flex gap-3 p-6 pt-0">
           <button

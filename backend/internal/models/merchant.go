@@ -57,6 +57,8 @@ type Subscription struct {
 	Status               SubscriptionStatus `json:"status"`
 	BillingCycle         BillingCycle       `json:"billing_cycle"`
 	QuotaOverride        *int               `json:"quota_override,omitempty"`
+	QuotaExtraExpiresAt  *time.Time         `json:"quota_extra_expires_at,omitempty"`
+	QuotaPeriodEnd       *time.Time         `json:"quota_period_end,omitempty"`
 	StripeSubscriptionID *string            `json:"stripe_subscription_id,omitempty"`
 	StripeCustomerID     *string            `json:"stripe_customer_id,omitempty"`
 	StartedAt            time.Time          `json:"started_at"`
@@ -178,6 +180,9 @@ type AdminMerchantListItem struct {
 	IsActive           bool      `json:"is_active"`
 	SubscriptionStatus string    `json:"subscription_status"`
 	Plan               string    `json:"plan"`
+	QuotaLimit         int       `json:"quota_limit"`
+	QuotaUsed          int       `json:"quota_used"`
+	QuotaRemaining     int       `json:"quota_remaining"`
 	TotalScans         int       `json:"total_scans"`
 	TotalTransactions  int       `json:"total_transactions"`
 	LineConnected      bool      `json:"line_connected"`
@@ -304,14 +309,16 @@ type AdminRevenueAnalytics struct {
 
 // AdminMerchantPerformanceItem summarizes merchant activity for admin analytics.
 type AdminMerchantPerformanceItem struct {
-	MerchantID    uuid.UUID  `json:"merchant_id"`
-	ShopName      string     `json:"shop_name"`
-	Scans         int        `json:"scans"`
-	VerifiedScans int        `json:"verified_scans"`
-	FailedScans   int        `json:"failed_scans"`
-	Quota         int        `json:"quota"`
-	QuotaPercent  float64    `json:"quota_percent"`
-	LastScan      *time.Time `json:"last_scan,omitempty"`
+	MerchantID     uuid.UUID  `json:"merchant_id"`
+	ShopName       string     `json:"shop_name"`
+	Scans          int        `json:"scans"`
+	VerifiedScans  int        `json:"verified_scans"`
+	FailedScans    int        `json:"failed_scans"`
+	Quota          int        `json:"quota"`
+	QuotaUsed      int        `json:"quota_used"`
+	QuotaRemaining int        `json:"quota_remaining"`
+	QuotaPercent   float64    `json:"quota_percent"`
+	LastScan       *time.Time `json:"last_scan,omitempty"`
 }
 
 // AdminMerchantPerformanceAnalytics summarizes merchant usage distribution.

@@ -13,3 +13,7 @@ go-build
 admin_export.md
 export.md
 backend/ADMIN_REPORT_MAPPING.md
+nginx.md
+backend/AGENTS.md
+skills/slipsure-go-backend/SKILL.md
+.env.prd

@@ -11,6 +11,7 @@ import {
   LogOut,
   Menu,
   ReceiptText,
+	ScrollText,
   Store,
   Users,
   X,
@@ -33,6 +34,7 @@ export const adminMenuItems: AdminMenuItem[] = [
   { name: 'รายการสลิป', href: '/admin?tab=transactions', icon: ReceiptText, matchPath: '/admin', matchTab: 'transactions' },
   { name: 'ผู้ใช้งาน', href: '/admin?tab=users', icon: Users, matchPath: '/admin', matchTab: 'users' },
   { name: 'การชำระเงิน', href: '/admin?tab=billing', icon: CreditCard, matchPath: '/admin', matchTab: 'billing' },
+  { name: 'บันทึกผู้ดูแล', href: '/admin/logs', icon: ScrollText, matchPath: '/admin/logs' },
 ];
 
 function isMenuActive(item: AdminMenuItem, pathname: string, activeTab?: string) {

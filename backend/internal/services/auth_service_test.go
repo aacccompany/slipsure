@@ -178,3 +178,34 @@ func TestLoginAllowsUnverifiedEmail(t *testing.T) {
 		t.Fatal("expected access token")
 	}
 }
+
+func TestBlockedPasswordLoginRequiresCorrectPasswordBeforeDisclosure(t *testing.T) {
+	hash, err := utils.HashPassword("correct-password")
+	if err != nil {
+		t.Fatal(err)
+	}
+	userRepo := &fakeUserRepository{user: &models.User{
+		ID: uuid.New(), Email: "blocked@example.com", PasswordHash: hash,
+		Role: models.RoleMerchant, IsActive: false,
+	}}
+	authService := NewAuthServiceWithOTP(userRepo, nil, nil, fakeOTPService{valid: true}, nil)
+
+	if _, err := authService.Login(&models.LoginRequest{Email: userRepo.user.Email, Password: "wrong-password"}); errors.Is(err, ErrAccountBlocked) {
+		t.Fatal("wrong password disclosed that the account is blocked")
+	}
+	if _, err := authService.Login(&models.LoginRequest{Email: userRepo.user.Email, Password: "correct-password"}); !errors.Is(err, ErrAccountBlocked) {
+		t.Fatalf("correct password for blocked account returned %v", err)
+	}
+}
+
+func TestBlockedOTPVerificationCannotIssueToken(t *testing.T) {
+	userRepo := &fakeUserRepository{user: &models.User{
+		ID: uuid.New(), Email: "blocked@example.com", Role: models.RoleMerchant,
+		IsActive: false, EmailVerified: false,
+	}}
+	authService := NewAuthServiceWithOTP(userRepo, nil, nil, fakeOTPService{valid: true}, nil)
+	response, err := authService.VerifyOTP(&models.VerifyOTPRequest{Email: userRepo.user.Email, OTP: "123456"})
+	if !errors.Is(err, ErrAccountBlocked) || response != nil || userRepo.user.EmailVerified {
+		t.Fatalf("blocked OTP issued token or changed user: response=%+v, err=%v", response, err)
+	}
+}

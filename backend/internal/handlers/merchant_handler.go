@@ -1130,7 +1130,7 @@ func (h *MerchantHandler) UpdateAdminUserStatus(c *gin.Context) {
 	}
 
 	var req struct {
-		IsActive bool `json:"is_active"`
+		IsActive *bool `json:"is_active" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -1142,7 +1142,7 @@ func (h *MerchantHandler) UpdateAdminUserStatus(c *gin.Context) {
 		return
 	}
 
-	if err := h.userRepo.UpdateActiveStatus(userID, req.IsActive); err != nil {
+	if err := h.userRepo.UpdateActiveStatus(userID, *req.IsActive); err != nil {
 		log.Printf("Failed to update admin user status for %s: %v", userID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
@@ -1156,7 +1156,7 @@ func (h *MerchantHandler) UpdateAdminUserStatus(c *gin.Context) {
 		"success": true,
 		"data": gin.H{
 			"user_id":   userID,
-			"is_active": req.IsActive,
+			"is_active": *req.IsActive,
 		},
 	})
 }
@@ -1814,8 +1814,9 @@ func (h *MerchantHandler) UpdateAdminMerchantQuota(c *gin.Context) {
 	}
 
 	var req struct {
-		QuotaExtra    *int `json:"quota_extra"`
-		QuotaPerMonth *int `json:"quota_per_month"`
+		QuotaExtra    *int    `json:"quota_extra"`
+		QuotaPerMonth *int    `json:"quota_per_month"`
+		ExpiresAt     *string `json:"expires_at"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -1839,6 +1840,15 @@ func (h *MerchantHandler) UpdateAdminMerchantQuota(c *gin.Context) {
 		})
 		return
 	}
+	var expiresAt *time.Time
+	if req.ExpiresAt != nil {
+		parsed, err := time.Parse(time.RFC3339, *req.ExpiresAt)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "VALIDATION_ERROR", "message": "Invalid expiry timestamp"})
+			return
+		}
+		expiresAt = &parsed
+	}
 
 	if _, err := h.merchantRepo.FindByID(merchantID); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
@@ -1849,12 +1859,27 @@ func (h *MerchantHandler) UpdateAdminMerchantQuota(c *gin.Context) {
 		return
 	}
 
-	if err := h.merchantRepo.UpdateAdminMerchantQuota(merchantID, quotaExtra); err != nil {
+	if err := h.merchantRepo.UpdateAdminMerchantQuota(merchantID, quotaExtra, expiresAt); err != nil {
 		status := http.StatusInternalServerError
 		message := "Failed to update merchant quota"
 		if err.Error() == "subscription not found" {
 			status = http.StatusNotFound
 			message = "Merchant does not have a subscription yet"
+		} else if errors.Is(err, repositories.ErrQuotaAdjustmentExceedsRemaining) {
+			status = http.StatusConflict
+			message = "Cannot remove credits that have already been used"
+		} else if errors.Is(err, repositories.ErrLegacyExtraAlreadyUsed) {
+			status = http.StatusConflict
+			message = "Existing extra credits have already been used; contact support to adjust this quota"
+		} else if errors.Is(err, repositories.ErrInvalidQuotaExpiry) {
+			status = http.StatusBadRequest
+			message = err.Error()
+		} else if errors.Is(err, repositories.ErrQuotaExpiryRequired) {
+			status = http.StatusBadRequest
+			message = err.Error()
+		} else if err.Error() == "subscription expired" {
+			status = http.StatusConflict
+			message = "Merchant subscription has expired"
 		}
 		c.JSON(status, gin.H{
 			"success": false,

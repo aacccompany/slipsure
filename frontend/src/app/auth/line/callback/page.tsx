@@ -52,13 +52,13 @@ function LineCallbackContent() {
       <div className="w-full max-w-sm bg-white border border-zinc-200 rounded-2xl p-8 text-center">
         {error ? (
           <>
-            <h1 className="text-xl font-black text-zinc-900 tracking-tight">LINE Login Failed</h1>
+            <h1 className="text-xl font-black text-zinc-900 tracking-tight">เข้าสู่ระบบด้วย LINE ไม่สำเร็จ</h1>
             <p className="mt-3 text-sm text-zinc-500">{error}</p>
             <a
               href="/login"
               className="mt-6 inline-flex w-full items-center justify-center bg-blue-800 px-4 py-3 text-sm font-medium text-white hover:bg-blue-900 transition-colors"
             >
-              Back to Login
+              กลับไปหน้าเข้าสู่ระบบ
             </a>
           </>
         ) : (

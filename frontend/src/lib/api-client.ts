@@ -37,6 +37,8 @@ import type {
   AdminMerchantPerformanceAnalytics,
   AdminBankStatus,
   AdminPaymentDetail,
+  AdminAuditLog,
+  AdminAuditLogResponse,
   PaymentLog,
   LINEWebhookConfig,
   UpdateLINEWebhookRequest,
@@ -61,6 +63,19 @@ const toQueryString = (params?: Record<string, unknown>) => {
   });
 
   return query.toString();
+};
+
+export type AdminAuditLogFilters = {
+  page?: number;
+  limit?: number;
+  search?: string;
+  category?: string;
+  action?: string;
+  status?: string;
+  admin_id?: string;
+  target_id?: string;
+  start_date?: string;
+  end_date?: string;
 };
 
 class ApiClient {
@@ -543,6 +558,26 @@ class ApiClient {
     return response.blob();
   }
 
+  async getAdminLogs(params?: AdminAuditLogFilters): Promise<ApiResponse<AdminAuditLogResponse>> {
+    const query = toQueryString(params);
+    return this.request(`/v1/admin/logs${query ? `?${query}` : ''}`);
+  }
+
+  async getAdminLog(id: string): Promise<ApiResponse<AdminAuditLog>> {
+    return this.request(`/v1/admin/logs/${id}`);
+  }
+
+  async exportAdminLogs(params?: AdminAuditLogFilters): Promise<Blob> {
+    const query = toQueryString({ ...params, format: 'csv' });
+    const token = this.getAuthHeader();
+    const response = await fetch(`${this.baseURL}/v1/admin/logs/export?${query}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      cache: 'no-store',
+    });
+    if (!response.ok) throw new Error('ส่งออกบันทึกผู้ดูแลไม่สำเร็จ');
+    return response.blob();
+  }
+
   async getAdminUsers(params?: {
     page?: number;
     limit?: number;
@@ -623,11 +658,12 @@ class ApiClient {
 
   async updateAdminMerchantQuota(
     merchantId: string,
-    quotaExtra: number
+    quotaExtra: number,
+    expiresAt?: string
   ): Promise<ApiResponse<{ merchant_id: string; quota_extra: number }>> {
     return this.request(`/v1/admin/merchants/${merchantId}/quota`, {
       method: 'PUT',
-      body: JSON.stringify({ quota_extra: quotaExtra }),
+      body: JSON.stringify({ quota_extra: quotaExtra, expires_at: expiresAt }),
     });
   }
 

@@ -72,11 +72,6 @@ func AuthMiddleware(userRepos ...repositories.UserRepository) gin.HandlerFunc {
 		claims, err := utils.ValidateToken(tokenString)
 		if err != nil {
 			log.Printf("AuthMiddleware: FAIL - Token validation failed for %s: %v", requestPath, err)
-			tokenPreview := tokenString
-			if len(tokenString) > 20 {
-				tokenPreview = tokenString[:20] + "..."
-			}
-			log.Printf(" Auth: Failed token preview: %s", tokenPreview)
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"success": false,
 				"error":   "UNAUTHORIZED",
@@ -115,7 +110,7 @@ func AuthMiddleware(userRepos ...repositories.UserRepository) gin.HandlerFunc {
 				c.JSON(http.StatusForbidden, gin.H{
 					"success": false,
 					"error":   "ACCOUNT_BLOCKED",
-					"message": "This account has been blocked. Please contact support.",
+					"message": "บัญชีนี้ถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบ",
 				})
 				c.Abort()
 				return

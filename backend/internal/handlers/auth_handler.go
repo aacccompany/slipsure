@@ -1,11 +1,15 @@
 package handlers
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
+	"slipsure-backend/internal/audit"
 	"slipsure-backend/internal/models"
 	"slipsure-backend/internal/services"
 
@@ -13,9 +17,30 @@ import (
 	"github.com/google/uuid"
 )
 
+const blockedAccountMessage = "บัญชีนี้ถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบ"
+
 // AuthHandler handles authentication-related HTTP requests
 type AuthHandler struct {
 	authService services.AuthService
+	auditStore  *audit.Store
+}
+
+func (h *AuthHandler) SetAuditStore(store *audit.Store) { h.auditStore = store }
+
+func (h *AuthHandler) recordAdminAuth(c *gin.Context, id *uuid.UUID, email, action, status string) {
+	if h.auditStore == nil {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	entry := audit.Entry{AdminID: id, AdminEmail: email, Action: action, Category: "authentication",
+		Status: status, IPAddress: c.ClientIP(), UserAgent: c.Request.UserAgent()}
+	if len(entry.UserAgent) > 500 {
+		entry.UserAgent = entry.UserAgent[:500]
+	}
+	if err := h.auditStore.Write(ctx, entry); err != nil {
+		log.Printf("Admin authentication audit write failed: %v", err)
+	}
 }
 
 // NewAuthHandler creates a new auth handler instance
@@ -92,6 +117,10 @@ func (h *AuthHandler) VerifyOTP(c *gin.Context) {
 	// Call auth service
 	response, err := h.authService.VerifyOTP(&req)
 	if err != nil {
+		if errors.Is(err, services.ErrAccountBlocked) {
+			c.JSON(http.StatusForbidden, gin.H{"success": false, "error": "ACCOUNT_BLOCKED", "message": blockedAccountMessage})
+			return
+		}
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"success": false,
 			"error":   "OTP_VERIFICATION_FAILED",
@@ -169,12 +198,28 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	// Call auth service
 	response, err := h.authService.Login(&req)
 	if err != nil {
+		if h.auditStore != nil {
+			ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
+			adminID, isAdmin, lookupErr := h.auditStore.AdminByEmail(ctx, req.Email)
+			cancel()
+			if lookupErr == nil && isAdmin {
+				h.recordAdminAuth(c, adminID, req.Email, "ADMIN_LOGIN", "failed")
+			}
+		}
+		if errors.Is(err, services.ErrAccountBlocked) {
+			c.JSON(http.StatusForbidden, gin.H{"success": false, "error": "ACCOUNT_BLOCKED", "message": blockedAccountMessage})
+			return
+		}
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"success": false,
 			"error":   "UNAUTHORIZED",
 			"message": err.Error(),
 		})
 		return
+	}
+	if response.User.Role == models.RoleAdmin {
+		id := response.User.ID
+		h.recordAdminAuth(c, &id, response.User.Email, "ADMIN_LOGIN", "success")
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -202,6 +247,10 @@ func (h *AuthHandler) LineLogin(c *gin.Context) {
 	response, err := h.authService.LineLogin(&req)
 	if err != nil {
 		log.Printf("LINE login error: %v", err)
+		if errors.Is(err, services.ErrAccountBlocked) {
+			c.JSON(http.StatusForbidden, gin.H{"success": false, "error": "ACCOUNT_BLOCKED", "message": blockedAccountMessage})
+			return
+		}
 
 		errorCode := "LINE_LOGIN_FAILED"
 		statusCode := http.StatusUnauthorized
@@ -220,6 +269,10 @@ func (h *AuthHandler) LineLogin(c *gin.Context) {
 			"message": err.Error(),
 		})
 		return
+	}
+	if response.User.Role == models.RoleAdmin {
+		id := response.User.ID
+		h.recordAdminAuth(c, &id, response.User.Email, "ADMIN_LINE_LOGIN", "success")
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -482,12 +535,28 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 
 	// Call auth service
 	if err := h.authService.Logout(userUUID); err != nil {
+		if h.auditStore != nil {
+			ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
+			email, isAdmin, lookupErr := h.auditStore.Actor(ctx, userUUID)
+			cancel()
+			if lookupErr == nil && isAdmin {
+				h.recordAdminAuth(c, &userUUID, email, "ADMIN_LOGOUT", "failed")
+			}
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
 			"error":   "LOGOUT_FAILED",
 			"message": err.Error(),
 		})
 		return
+	}
+	if h.auditStore != nil {
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
+		email, isAdmin, lookupErr := h.auditStore.Actor(ctx, userUUID)
+		cancel()
+		if lookupErr == nil && isAdmin {
+			h.recordAdminAuth(c, &userUUID, email, "ADMIN_LOGOUT", "success")
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{

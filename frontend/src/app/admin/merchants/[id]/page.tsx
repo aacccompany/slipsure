@@ -27,6 +27,18 @@ function formatShortDate(value?: string) {
   });
 }
 
+function formatDateTime(value?: string) {
+  return value ? new Date(value).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' }) : '-';
+}
+
+function toDateTimeLocal(value?: string) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const pad = (part: number) => String(part).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+}
+
 function quotaTone(percent: number) {
   if (percent >= 100) return { text: 'var(--err-ink)', bar: 'var(--err-ink)', label: 'โควต้าเต็ม' };
   if (percent >= 80) return { text: 'var(--warn-ink)', bar: 'var(--warn-ink)', label: 'ใกล้เต็ม' };
@@ -55,6 +67,7 @@ export default function AdminMerchantDetailPage() {
   const { user, isLoading } = useAuth();
   const [quotaModalOpen, setQuotaModalOpen] = useState(false);
   const [quotaInput, setQuotaInput] = useState('');
+  const [quotaExpiryInput, setQuotaExpiryInput] = useState('');
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -74,7 +87,7 @@ export default function AdminMerchantDetailPage() {
   });
 
   const updateQuotaMutation = useMutation({
-    mutationFn: (quotaExtra: number) => api.updateAdminMerchantQuota(merchantId, quotaExtra),
+    mutationFn: ({ quotaExtra, expiresAt }: { quotaExtra: number; expiresAt?: string }) => api.updateAdminMerchantQuota(merchantId, quotaExtra, expiresAt),
     onSuccess: () => {
       toast.success('อัปเดตโควต้าเพิ่มเติมแล้ว');
       setQuotaModalOpen(false);
@@ -121,7 +134,7 @@ export default function AdminMerchantDetailPage() {
   const usage = detail.usage;
   const billing = detail.billing;
   const quotaExtra = detail.subscription?.quota_override ?? 0;
-  const packageQuota = Math.max(0, usage.quota - quotaExtra);
+  const packageQuota = Math.max(0, (detail.subscription?.plan?.quota_per_month ?? usage.quota) - quotaExtra);
   const remainingPercent = usage.quota > 0 ? Math.min(100, Math.max(0, (usage.remaining / usage.quota) * 100)) : 0;
   const quota = quotaTone(usage.quota > 0 ? 100 - remainingPercent : 100);
   const initials = detail.merchant.shop_name.slice(0, 2).toUpperCase();
@@ -130,6 +143,7 @@ export default function AdminMerchantDetailPage() {
   const webhookValue = detail.line_webhook?.webhook_url || (detail.line_webhook?.webhook_reference_id ? `/v1/line/webhook/${detail.line_webhook.webhook_reference_id}` : '');
   const openQuotaModal = () => {
     setQuotaInput(String(quotaExtra));
+    setQuotaExpiryInput('');
     setQuotaModalOpen(true);
   };
   const submitQuota = () => {
@@ -138,7 +152,18 @@ export default function AdminMerchantDetailPage() {
       toast.error('โควต้าเพิ่มเติมต้องเป็นจำนวนเต็มตั้งแต่ 0 ขึ้นไป');
       return;
     }
-    updateQuotaMutation.mutate(nextExtra);
+    if (nextExtra > 0) {
+      const expiry = new Date(quotaExpiryInput);
+      const periodEnd = new Date(detail.subscription?.quota_period_end || '');
+      if (!quotaExpiryInput || Number.isNaN(expiry.getTime()) || expiry <= new Date() ||
+          Number.isNaN(periodEnd.getTime()) || expiry > periodEnd) {
+        toast.error('กรุณาเลือกวันหมดอายุหลังเวลาปัจจุบันและไม่เกินวันรีเซ็ตโควต้า');
+        return;
+      }
+      updateQuotaMutation.mutate({ quotaExtra: nextExtra, expiresAt: expiry.toISOString() });
+      return;
+    }
+    updateQuotaMutation.mutate({ quotaExtra: nextExtra });
   };
 
   return (
@@ -248,6 +273,7 @@ export default function AdminMerchantDetailPage() {
               <Row label="โควต้าต่อเดือน" value={`${usage.quota.toLocaleString()} ใบ`} />
               <Row label="โควต้าจากแพ็กเกจ" value={`${packageQuota.toLocaleString()} ใบ`} />
               <Row label="โควต้าเพิ่มเติม" value={`${quotaExtra.toLocaleString()} ใบ`} />
+              <Row label="หมดอายุโควต้าเพิ่มเติม" value={formatDateTime(detail.subscription?.quota_extra_expires_at)} />
               <Row label="รอบบิล" value={billingCycleLabel(detail.subscription?.billing_cycle)} />
               <Row label="รีเซ็ตโควต้า" value={formatShortDate(usage.next_reset)} />
             </dl>
@@ -335,6 +361,21 @@ export default function AdminMerchantDetailPage() {
                   </button>
                 ))}
               </div>
+
+              <label className="mt-5 block">
+                <span className="text-sm" style={{ color: 'var(--text-muted)' }}>วันและเวลาหมดอายุ{Number(quotaInput) > 0 && ' *'}</span>
+                <input
+                  type="datetime-local"
+                  step={1}
+                  min={toDateTimeLocal(new Date().toISOString())}
+                  max={toDateTimeLocal(detail.subscription?.quota_period_end)}
+                  required={Number(quotaInput) > 0}
+                  value={quotaExpiryInput}
+                  onChange={(event) => setQuotaExpiryInput(event.target.value)}
+                  className="mt-2 h-12 w-full px-4 text-sm outline-none"
+                  style={{ border: '1px solid var(--border)', color: 'var(--ink)', background: 'var(--bg-card)', borderRadius: 8 }}
+                />
+              </label>
 
               <div className="mt-7 flex justify-end gap-2">
                 <button

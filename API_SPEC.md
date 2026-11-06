@@ -823,6 +823,20 @@ EXPIRED_SLIP
 500 Internal Server Error
 ```
 
+## Admin Audit Log
+
+All endpoints require a current, active admin account. Responses are private and must not be cached.
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/v1/admin/logs` | Paginated admin activity (`page`, `limit`, `search`, `category`, `action`, `status`, `admin_id`, `target_id`, `start_date`, `end_date`) |
+| GET | `/v1/admin/logs/:id` | Audit detail with approved before/after fields |
+| GET | `/v1/admin/logs/export?format=csv` | CSV of all rows matching the same filters |
+
+Dates use `YYYY-MM-DD` in Asia/Bangkok; the end date is inclusive. Status is `success` or `failed`. The log records current admin login/logout, denied admin access, admin mutations, selected sensitive detail views, and exports. It does not store passwords, OTPs, API tokens, or raw request bodies. Audit records cannot be edited or deleted through the application.
+
+The audit writer is synchronous but separate from the transaction of the action being audited. If the audit database write fails after an action completes, the action is not rolled back; monitor backend `Admin audit write failed` errors. See `backend/ADMIN_AUDIT_LOG.md` for operations.
+
 ## Deployment Notes
 
 Important env names used by the backend:

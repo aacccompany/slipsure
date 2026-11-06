@@ -12,6 +12,8 @@ import (
 	"github.com/google/uuid"
 )
 
+var ErrAccountBlocked = errors.New("user account is blocked")
+
 // AuthService defines the interface for authentication business logic
 type AuthService interface {
 	Register(req *models.RegisterRequest) (*models.RegisterResponse, error)
@@ -159,15 +161,14 @@ func (s *authService) Login(req *models.LoginRequest) (*models.AuthResponse, err
 		log.Printf("Error finding user by email: %v", err)
 		return nil, errors.New("invalid email or password")
 	}
-	if !user.IsActive {
-		log.Printf("Login blocked for inactive user %s", req.Email)
-		return nil, errors.New("user account is blocked")
-	}
-
 	// Verify password
 	if !utils.CheckPassword(req.Password, user.PasswordHash) {
 		log.Printf("Login failed for %s: password mismatch", req.Email)
 		return nil, errors.New("invalid email or password")
+	}
+	if !user.IsActive {
+		log.Printf("Login blocked for inactive user %s", req.Email)
+		return nil, ErrAccountBlocked
 	}
 
 	// Generate JWT token
@@ -238,7 +239,7 @@ func (s *authService) LineLogin(req *models.LineLoginRequest) (*models.LineLogin
 		log.Printf("New user created via LINE login: %s (LINE ID: %s)", user.ID, profile.UserID)
 	} else {
 		if !user.IsActive {
-			return nil, errors.New("user account is blocked")
+			return nil, ErrAccountBlocked
 		}
 		// Existing user found, update LINE link status
 		if !user.LineLinked {
@@ -350,6 +351,9 @@ func (s *authService) VerifyOTP(req *models.VerifyOTPRequest) (*models.VerifyOTP
 
 	if !valid {
 		return nil, errors.New("invalid or expired OTP")
+	}
+	if !user.IsActive {
+		return nil, ErrAccountBlocked
 	}
 
 	// Mark email as verified

@@ -15,6 +15,14 @@ import (
 // ErrNoAvailableCredits is returned when a merchant has no unexpired credit lot remaining.
 var ErrNoAvailableCredits = errors.New("no available credits")
 
+var ErrQuotaAdjustmentExceedsRemaining = errors.New("cannot remove credits that have already been used")
+
+var ErrLegacyExtraAlreadyUsed = errors.New("legacy extra credits have already been consumed")
+
+var ErrInvalidQuotaExpiry = errors.New("extra quota expiry must be after now and no later than the current quota reset")
+
+var ErrQuotaExpiryRequired = errors.New("extra quota expiry is required")
+
 // MerchantRepository defines the interface for merchant data operations
 type MerchantRepository interface {
 	// Merchant profile operations
@@ -40,7 +48,7 @@ type MerchantRepository interface {
 	ListPaymentLogsByMerchant(merchantID uuid.UUID, limit int) ([]models.PaymentLog, error)
 	GetAdminMerchantUsage(merchantID uuid.UUID, periodStart time.Time, quota int, remaining int, resetDate time.Time) (models.AdminMerchantUsage, error)
 	GetAdminMerchantBillingSummary(merchantID uuid.UUID) (models.AdminMerchantBillingSummary, error)
-	UpdateAdminMerchantQuota(merchantID uuid.UUID, quotaExtra int) error
+	UpdateAdminMerchantQuota(merchantID uuid.UUID, quotaExtra int, expiresAt *time.Time) error
 	GetAdminAnalyticsDashboard() (models.AdminAnalyticsDashboard, error)
 	GetAdminRevenueAnalytics(period string) (models.AdminRevenueAnalytics, error)
 	GetAdminMerchantPerformance() (models.AdminMerchantPerformanceAnalytics, error)
@@ -109,6 +117,10 @@ func (r *merchantRepository) ListAdminMerchants(status string, search string, st
 			m.is_active,
 			COALESCE(s.status::text, 'none') AS subscription_status,
 			COALESCE(p.name, 'No plan') AS plan,
+			(s.id IS NOT NULL) AS has_subscription,
+			lots.lot_count,
+			lots.active_total,
+			lots.active_remaining,
 			COALESCE((SELECT SUM(scan_count)::int FROM usage_counters uc WHERE uc.merchant_id = m.id), 0) AS total_scans,
 			COALESCE((SELECT COUNT(*)::int FROM transactions t WHERE t.merchant_id = m.id), 0) AS total_transactions,
 			(lwc.merchant_id IS NOT NULL) AS line_connected,
@@ -117,6 +129,13 @@ func (r *merchantRepository) ListAdminMerchants(status string, search string, st
 		JOIN users owner ON owner.id = m.owner_id
 		LEFT JOIN subscriptions s ON s.merchant_id = m.id
 		LEFT JOIN subscription_plans p ON p.id = s.plan_id
+		LEFT JOIN LATERAL (
+			SELECT
+				COUNT(*)::int AS lot_count,
+				COALESCE(SUM(credits_total) FILTER (WHERE expires_at > CURRENT_TIMESTAMP), 0)::int AS active_total,
+				COALESCE(SUM(credits_remaining) FILTER (WHERE expires_at > CURRENT_TIMESTAMP), 0)::int AS active_remaining
+			FROM credit_lots WHERE merchant_id = m.id
+		) lots ON TRUE
 		LEFT JOIN line_webhook_configs lwc ON lwc.merchant_id = m.id
 		%s
 		ORDER BY m.created_at DESC
@@ -131,8 +150,12 @@ func (r *merchantRepository) ListAdminMerchants(status string, search string, st
 	defer rows.Close()
 
 	merchants := make([]models.AdminMerchantListItem, 0)
+	legacyQuotaIndexes := make([]int, 0)
 	for rows.Next() {
 		var item models.AdminMerchantListItem
+		var hasSubscription bool
+		var lotCount int
+		var activeTotal, activeRemaining int
 		if err := rows.Scan(
 			&item.ID,
 			&item.ShopName,
@@ -141,6 +164,10 @@ func (r *merchantRepository) ListAdminMerchants(status string, search string, st
 			&item.IsActive,
 			&item.SubscriptionStatus,
 			&item.Plan,
+			&hasSubscription,
+			&lotCount,
+			&activeTotal,
+			&activeRemaining,
 			&item.TotalScans,
 			&item.TotalTransactions,
 			&item.LineConnected,
@@ -148,10 +175,29 @@ func (r *merchantRepository) ListAdminMerchants(status string, search string, st
 		); err != nil {
 			return nil, 0, err
 		}
+		if lotCount > 0 {
+			item.QuotaLimit = activeTotal
+			item.QuotaRemaining = activeRemaining
+			item.QuotaUsed = activeTotal - activeRemaining
+		} else if hasSubscription {
+			legacyQuotaIndexes = append(legacyQuotaIndexes, len(merchants))
+		}
 		merchants = append(merchants, item)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, 0, err
+	}
+	if err := rows.Close(); err != nil {
+		return nil, 0, err
+	}
+	for _, index := range legacyQuotaIndexes {
+		quota, err := r.GetQuotaStatus(merchants[index].ID)
+		if err != nil {
+			return nil, 0, err
+		}
+		merchants[index].QuotaLimit = quota.QuotaLimit
+		merchants[index].QuotaUsed = quota.Used
+		merchants[index].QuotaRemaining = quota.Remaining
 	}
 
 	return merchants, total, nil
@@ -1089,15 +1135,20 @@ func (r *merchantRepository) GetAdminMerchantPerformance() (models.AdminMerchant
 			COALESCE((SELECT COUNT(*)::int FROM slips sl WHERE sl.merchant_id = m.id), 0) AS scans,
 			COALESCE((SELECT COUNT(*)::int FROM slips sl WHERE sl.merchant_id = m.id AND sl.status = 'verified'), 0) AS verified_scans,
 			COALESCE((SELECT COUNT(*)::int FROM slips sl WHERE sl.merchant_id = m.id AND sl.status = 'failed'), 0) AS failed_scans,
-			COALESCE((
-				SELECT NULLIF(SUM(cl.credits_total) FILTER (WHERE cl.expires_at > CURRENT_TIMESTAMP), 0)::int
-				FROM credit_lots cl
-				WHERE cl.merchant_id = m.id
-			), COALESCE(sp.quota_per_month, 0) + COALESCE(s.quota_override, 0)) AS quota,
+			(s.id IS NOT NULL) AS has_subscription,
+			lots.lot_count,
+			lots.active_total,
+			lots.active_remaining,
 			COALESCE((SELECT MAX(created_at) FROM slips sl WHERE sl.merchant_id = m.id), NULL) AS last_scan
 		FROM merchants m
 		LEFT JOIN subscriptions s ON s.merchant_id = m.id
-		LEFT JOIN subscription_plans sp ON sp.id = s.plan_id
+		LEFT JOIN LATERAL (
+			SELECT
+				COUNT(*)::int AS lot_count,
+				COALESCE(SUM(credits_total) FILTER (WHERE expires_at > CURRENT_TIMESTAMP), 0)::int AS active_total,
+				COALESCE(SUM(credits_remaining) FILTER (WHERE expires_at > CURRENT_TIMESTAMP), 0)::int AS active_remaining
+			FROM credit_lots WHERE merchant_id = m.id
+		) lots ON TRUE
 		ORDER BY scans DESC, m.created_at DESC
 	`
 
@@ -1107,22 +1158,48 @@ func (r *merchantRepository) GetAdminMerchantPerformance() (models.AdminMerchant
 	}
 	defer rows.Close()
 
+	legacyQuotaIndexes := make([]int, 0)
 	for rows.Next() {
 		var item models.AdminMerchantPerformanceItem
 		var lastScan sql.NullTime
-		if err := rows.Scan(&item.MerchantID, &item.ShopName, &item.Scans, &item.VerifiedScans, &item.FailedScans, &item.Quota, &lastScan); err != nil {
+		var hasSubscription bool
+		var lotCount, activeTotal, activeRemaining int
+		if err := rows.Scan(&item.MerchantID, &item.ShopName, &item.Scans, &item.VerifiedScans, &item.FailedScans,
+			&hasSubscription, &lotCount, &activeTotal, &activeRemaining, &lastScan); err != nil {
 			return analytics, err
 		}
 		if lastScan.Valid {
 			item.LastScan = &lastScan.Time
 		}
-		if item.Quota > 0 {
-			item.QuotaPercent = float64(item.Scans) / float64(item.Quota) * 100
+		if lotCount > 0 {
+			item.Quota = activeTotal
+			item.QuotaRemaining = activeRemaining
+			item.QuotaUsed = activeTotal - activeRemaining
+		} else if hasSubscription {
+			legacyQuotaIndexes = append(legacyQuotaIndexes, len(analytics.UsagePerMerchant))
 		}
 		analytics.UsagePerMerchant = append(analytics.UsagePerMerchant, item)
 	}
 	if err := rows.Err(); err != nil {
 		return analytics, err
+	}
+	if err := rows.Close(); err != nil {
+		return analytics, err
+	}
+	for _, index := range legacyQuotaIndexes {
+		quota, err := r.GetQuotaStatus(analytics.UsagePerMerchant[index].MerchantID)
+		if err != nil {
+			return analytics, err
+		}
+		analytics.UsagePerMerchant[index].Quota = quota.QuotaLimit
+		analytics.UsagePerMerchant[index].QuotaUsed = quota.Used
+		analytics.UsagePerMerchant[index].QuotaRemaining = quota.Remaining
+	}
+	for index := range analytics.UsagePerMerchant {
+		item := &analytics.UsagePerMerchant[index]
+		if item.Quota > 0 {
+			item.QuotaPercent = float64(item.QuotaUsed) / float64(item.Quota) * 100
+		}
 	}
 
 	for index, item := range analytics.UsagePerMerchant {
@@ -1413,7 +1490,13 @@ func (r *merchantRepository) ListMerchantAnalyticsExport(merchantID uuid.UUID, s
 func (r *merchantRepository) FindByMerchantID(merchantID uuid.UUID) (*models.Subscription, error) {
 	query := `
 		SELECT s.id, s.merchant_id, s.plan_id, s.status, s.billing_cycle,
-		       s.quota_override, s.stripe_subscription_id, s.stripe_customer_id, s.started_at, s.expires_at,
+		       (SELECT NULLIF(SUM(l.credits_total), 0)::int FROM credit_lots l
+		        WHERE l.merchant_id = s.merchant_id AND l.grant_source = 'admin_extra'
+		          AND l.expires_at > CURRENT_TIMESTAMP),
+		       (SELECT MIN(l.expires_at) FROM credit_lots l
+		        WHERE l.merchant_id = s.merchant_id AND l.grant_source = 'admin_extra'
+		          AND l.credits_total > 0 AND l.expires_at > CURRENT_TIMESTAMP),
+		       s.stripe_subscription_id, s.stripe_customer_id, s.started_at, s.expires_at,
 		       s.auto_renew, s.cancelled_at, s.created_at, s.updated_at,
 		       p.name as plan_name, p.price_monthly, p.price_yearly, p.quota_per_month,
 		       p.features, p.is_popular
@@ -1428,6 +1511,7 @@ func (r *merchantRepository) FindByMerchantID(merchantID uuid.UUID) (*models.Sub
 	var plan models.SubscriptionPlan
 	var featuresJSON string
 	var quotaOverride sql.NullInt64
+	var extraExpiry sql.NullTime
 
 	err := r.db.QueryRow(query, merchantID).Scan(
 		&subscription.ID,
@@ -1436,6 +1520,7 @@ func (r *merchantRepository) FindByMerchantID(merchantID uuid.UUID) (*models.Sub
 		&subscription.Status,
 		&subscription.BillingCycle,
 		&quotaOverride,
+		&extraExpiry,
 		&subscription.StripeSubscriptionID,
 		&subscription.StripeCustomerID,
 		&subscription.StartedAt,
@@ -1468,11 +1553,18 @@ func (r *merchantRepository) FindByMerchantID(merchantID uuid.UUID) (*models.Sub
 		subscription.QuotaOverride = &value
 		plan.QuotaPerMonth += value
 	}
+	if extraExpiry.Valid {
+		subscription.QuotaExtraExpiresAt = &extraExpiry.Time
+	}
 
 	subscription.Plan = &plan
 
 	// Load usage statistics
-	periodStart, _ := models.QuotaPeriodFor(subscription.StartedAt, time.Now())
+	periodStart, periodEnd := models.QuotaPeriodFor(subscription.StartedAt, time.Now())
+	if subscription.ExpiresAt != nil && subscription.ExpiresAt.Before(periodEnd) {
+		periodEnd = *subscription.ExpiresAt
+	}
+	subscription.QuotaPeriodEnd = &periodEnd
 	subscription.UsageThisMonth = r.getUsageForPeriod(merchantID, periodStart)
 	subscription.RemainingQuota = plan.QuotaPerMonth - subscription.UsageThisMonth
 
@@ -1480,24 +1572,141 @@ func (r *merchantRepository) FindByMerchantID(merchantID uuid.UUID) (*models.Sub
 }
 
 // UpdateAdminMerchantQuota sets extra monthly quota for one merchant on top of the plan quota.
-func (r *merchantRepository) UpdateAdminMerchantQuota(merchantID uuid.UUID, quotaExtra int) error {
-	query := `
-		UPDATE subscriptions
-		SET quota_override = NULLIF($2, 0), updated_at = CURRENT_TIMESTAMP
-		WHERE merchant_id = $1
-	`
+func (r *merchantRepository) UpdateAdminMerchantQuota(merchantID uuid.UUID, quotaExtra int, expiresAt *time.Time) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
 
-	result, err := r.db.Exec(query, merchantID, quotaExtra)
+	var subscriptionID uuid.UUID
+	var planID string
+	var baseQuota int
+	var previousExtra int
+	var startedAt time.Time
+	var subscriptionExpiry sql.NullTime
+	err = tx.QueryRow(`
+		SELECT s.id, s.plan_id, p.quota_per_month, COALESCE(s.quota_override, 0), s.started_at, s.expires_at
+		FROM subscriptions s JOIN subscription_plans p ON p.id = s.plan_id
+		WHERE s.merchant_id = $1 FOR UPDATE OF s
+	`, merchantID).Scan(&subscriptionID, &planID, &baseQuota, &previousExtra, &startedAt, &subscriptionExpiry)
+	if err == sql.ErrNoRows {
+		return errors.New("subscription not found")
+	}
 	if err != nil {
 		return err
 	}
 
-	rows, _ := result.RowsAffected()
-	if rows == 0 {
-		return errors.New("subscription not found")
+	now := time.Now()
+	_, resetDate := models.QuotaPeriodFor(startedAt, now)
+	if subscriptionExpiry.Valid && subscriptionExpiry.Time.Before(resetDate) {
+		resetDate = subscriptionExpiry.Time
+	}
+	if quotaExtra > 0 && !resetDate.After(now) {
+		return errors.New("subscription expired")
+	}
+	if quotaExtra > 0 && expiresAt == nil {
+		return ErrQuotaExpiryRequired
+	}
+	if expiresAt != nil && (!expiresAt.After(now) || expiresAt.After(resetDate)) {
+		return ErrInvalidQuotaExpiry
+	}
+	grantExpiry := resetDate
+	if expiresAt != nil {
+		grantExpiry = *expiresAt
 	}
 
-	return nil
+	var grantID uuid.UUID
+	var grantTotal, grantRemaining int
+	grantErr := tx.QueryRow(`
+		SELECT id, credits_total, credits_remaining FROM credit_lots
+		WHERE merchant_id = $1 AND grant_source = 'admin_extra'
+		  AND expires_at > CURRENT_TIMESTAMP
+		ORDER BY started_at DESC, id DESC LIMIT 1 FOR UPDATE
+	`, merchantID).Scan(&grantID, &grantTotal, &grantRemaining)
+	if grantErr != nil && grantErr != sql.ErrNoRows {
+		return grantErr
+	}
+
+	// Older adjustments were embedded in a plan lot. Split them once on the
+	// next admin save so the package keeps its original expiry and audit total.
+	if grantErr == sql.ErrNoRows && previousExtra > 0 {
+		var planLotID uuid.UUID
+		var planTotal, planRemaining int
+		planErr := tx.QueryRow(`
+			SELECT id, credits_total, credits_remaining FROM credit_lots
+			WHERE merchant_id = $1 AND subscription_id = $2 AND plan_id = $3
+			  AND grant_source = 'plan' AND expires_at > CURRENT_TIMESTAMP
+			ORDER BY started_at DESC, id DESC LIMIT 1 FOR UPDATE
+		`, merchantID, subscriptionID, planID).Scan(&planLotID, &planTotal, &planRemaining)
+		if planErr != nil && planErr != sql.ErrNoRows {
+			return planErr
+		}
+		if planErr == nil && planTotal == baseQuota+previousExtra {
+			used := planTotal - planRemaining
+			if used > baseQuota {
+				return ErrLegacyExtraAlreadyUsed
+			}
+			baseRemaining := max(baseQuota-used, 0)
+			legacyRemaining := planRemaining - baseRemaining
+			grantRemaining = legacyRemaining + quotaExtra - previousExtra
+			if grantRemaining < 0 {
+				return ErrQuotaAdjustmentExceedsRemaining
+			}
+			if _, err := tx.Exec(`
+				UPDATE credit_lots SET credits_total = $2, credits_remaining = $3,
+				    updated_at = CURRENT_TIMESTAMP WHERE id = $1
+			`, planLotID, baseQuota, baseRemaining); err != nil {
+				return err
+			}
+			if _, err := tx.Exec(`
+				INSERT INTO credit_lots (merchant_id, subscription_id, plan_id,
+				    grant_source, credits_total, credits_remaining, started_at, expires_at)
+				VALUES ($1, $2, $3, 'admin_extra', $4, $5, $6, $7)
+			`, merchantID, subscriptionID, planID, quotaExtra, grantRemaining, now, grantExpiry); err != nil {
+				return err
+			}
+			grantTotal = quotaExtra
+			grantErr = nil
+		}
+	}
+
+	if grantErr == sql.ErrNoRows && quotaExtra > 0 {
+		_, err = tx.Exec(`
+			INSERT INTO credit_lots (merchant_id, subscription_id, plan_id,
+			    grant_source, credits_total, credits_remaining, started_at, expires_at)
+			VALUES ($1, $2, $3, 'admin_extra', $4, $4, $5, $6)
+		`, merchantID, subscriptionID, planID, quotaExtra, now, grantExpiry)
+		if err != nil {
+			return err
+		}
+	} else if grantErr == nil {
+		delta := quotaExtra - grantTotal
+		if grantRemaining+delta < 0 {
+			return ErrQuotaAdjustmentExceedsRemaining
+		}
+		if delta != 0 || expiresAt != nil {
+			_, err = tx.Exec(`
+				UPDATE credit_lots SET credits_total = credits_total + $2,
+				    credits_remaining = credits_remaining + $2,
+				    expires_at = COALESCE($3::timestamptz, expires_at),
+				    updated_at = CURRENT_TIMESTAMP WHERE id = $1
+			`, grantID, delta, expiresAt)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	if _, err := tx.Exec(`
+		UPDATE subscriptions
+		SET quota_override = NULLIF($2, 0), updated_at = CURRENT_TIMESTAMP
+		WHERE id = $1
+	`, subscriptionID, quotaExtra); err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 // UpdateSubscription updates subscription information

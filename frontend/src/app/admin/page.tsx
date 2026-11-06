@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { api } from '@/lib/api-client';
 import { useAuth } from '@/contexts/auth-context';
 import { AdminShell } from '@/components/admin/AdminShell';
+import { ConfirmModal } from '@/components/ConfirmModal';
 import { RejectedSlipDetailModal, TransactionDetailModal } from '@/components/admin/AdminMerchantTransactions';
 import { formatReasonLabel } from '@/lib/admin-format';
 import type { AdminAnalyticsDashboard, AdminBankStatus, AdminMerchantPerformanceAnalytics, AdminPaymentDetail, AdminRevenueAnalytics, AdminSlipHistoryItem, PaymentLog, SubscriptionPlan } from '@/types/api';
@@ -57,15 +58,6 @@ function formatPercent(value?: number) {
 
 function isVerifiedStatus(value?: string) {
   return value === 'success' || value === 'verified';
-}
-
-function getPlanQuota(plan?: string) {
-  const normalized = (plan || '').toLowerCase();
-  if (normalized.includes('enterprise')) return 4000;
-  if (normalized.includes('pro')) return 1000;
-  if (normalized.includes('starter')) return 200;
-  if (normalized.includes('free')) return 20;
-  return 0;
 }
 
 function getQuotaTone(percent: number) {
@@ -626,11 +618,12 @@ function AdminAnalyticsOverview({
                   <li key={merchant.merchant_id}>
                     <div className="flex items-baseline justify-between gap-3 text-sm">
                       <span className="truncate font-medium" style={{ color: 'var(--ink)' }}>{merchant.shop_name}</span>
-                      <span className="tabular-nums" style={{ color: 'var(--text-muted)' }}>{merchant.scans.toLocaleString()} / {merchant.quota.toLocaleString()}</span>
+                      <span className="tabular-nums" style={{ color: 'var(--text-muted)' }}>{merchant.quota_used.toLocaleString()} / {merchant.quota.toLocaleString()}</span>
                     </div>
                     <div className="mt-2 h-2.5 rounded-full" style={{ background: 'var(--border)' }}>
-                      <div className="h-full rounded-full" style={{ width: `${Math.min(100, Math.max(3, merchant.quota_percent))}%`, background: color }} />
+                      <div className="h-full rounded-full" style={{ width: `${Math.min(100, Math.max(0, merchant.quota_percent))}%`, background: color }} />
                     </div>
+                    <p className="mt-1 text-xs tabular-nums" style={{ color: 'var(--text-muted)' }}>เหลือ {merchant.quota_remaining.toLocaleString()} เครดิต</p>
                   </li>
                 );
               })}
@@ -841,6 +834,7 @@ function AdminBackofficeContent() {
   const [transactionStatus, setTransactionStatus] = useState('');
   const [transactionSearch, setTransactionSearch] = useState('');
   const [selectedSlip, setSelectedSlip] = useState<AdminSlipHistoryItem | null>(null);
+  const [pendingUserStatus, setPendingUserStatus] = useState<{ id: string; name: string; isActive: boolean } | null>(null);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [reportOpen, setReportOpen] = useState(false);
@@ -913,11 +907,12 @@ function AdminBackofficeContent() {
   const updateUserStatusMutation = useMutation({
     mutationFn: ({ userId, isActive }: { userId: string; isActive: boolean }) => api.updateAdminUserStatus(userId, isActive),
     onSuccess: (_, variables) => {
-      toast.success(variables.isActive ? 'User unblocked' : 'User blocked');
+      toast.success(variables.isActive ? 'เปิดใช้งานผู้ใช้แล้ว' : 'ระงับผู้ใช้แล้ว');
+      setPendingUserStatus(null);
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : 'Failed to update user status');
+      toast.error(error instanceof Error ? error.message : 'เปลี่ยนสถานะผู้ใช้ไม่สำเร็จ');
     },
   });
 
@@ -1415,9 +1410,9 @@ function AdminBackofficeContent() {
                       </td>
                     </tr>
                   ) : merchants.map((merchant) => {
-                    const quota = getPlanQuota(merchant.plan);
-                    const quotaPercent = quota > 0 ? Math.min(100, (merchant.total_scans / quota) * 100) : 0;
-                    const remaining = Math.max(0, quota - merchant.total_scans);
+                    const quota = merchant.quota_limit;
+                    const quotaPercent = quota > 0 ? Math.min(100, (merchant.quota_used / quota) * 100) : 0;
+                    const remaining = merchant.quota_remaining;
                     const quotaTone = getQuotaTone(quotaPercent);
                     const initials = merchant.shop_name.slice(0, 2).toUpperCase();
                     return (
@@ -1453,7 +1448,7 @@ function AdminBackofficeContent() {
                       <td className="min-w-[220px] px-4 py-4">
                         <div className="mb-1 flex items-center justify-between text-xs">
                           <span className="font-semibold" style={{ color: 'var(--ink)' }}>
-                            {merchant.total_scans.toLocaleString()} / {quota > 0 ? quota.toLocaleString() : '-'} ใบ
+                            {merchant.quota_used.toLocaleString()} / {quota > 0 ? quota.toLocaleString() : '-'} ใบ
                           </span>
                           <span className="font-bold" style={{ color: quotaTone.text }}>{formatPercent(quotaPercent)}</span>
                         </div>
@@ -1572,7 +1567,7 @@ function AdminBackofficeContent() {
                         <button
                           type="button"
                           disabled={updateUserStatusMutation.isPending}
-                          onClick={() => updateUserStatusMutation.mutate({ userId: item.id, isActive: !item.is_active })}
+                          onClick={() => setPendingUserStatus({ id: item.id, name: item.name || item.email || 'ผู้ใช้', isActive: !item.is_active })}
                           className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium disabled:opacity-50"
                           style={{
                             border: item.is_active ? '1px solid #FCA5A5' : '1px solid #86EFAC',
@@ -1620,6 +1615,21 @@ function AdminBackofficeContent() {
       {selectedSlip && !selectedSlip.transaction && (
         <RejectedSlipDetailModal slip={selectedSlip.slip} onClose={() => setSelectedSlip(null)} />
       )}
+      <ConfirmModal
+        open={pendingUserStatus !== null}
+        title={pendingUserStatus?.isActive ? 'เปิดใช้งานผู้ใช้' : 'ยืนยันการระงับผู้ใช้'}
+        message={pendingUserStatus?.isActive
+          ? `ต้องการเปิดใช้งานบัญชี ${pendingUserStatus.name} อีกครั้งหรือไม่?`
+          : `ต้องการระงับบัญชี ${pendingUserStatus?.name ?? ''} หรือไม่? ผู้ใช้นี้จะไม่สามารถเข้าสู่ระบบได้จนกว่าจะเปิดใช้งานอีกครั้ง`}
+        confirmLabel={pendingUserStatus?.isActive ? 'เปิดใช้งาน' : 'ระงับผู้ใช้'}
+        cancelLabel="ยกเลิก"
+        destructive={!pendingUserStatus?.isActive}
+        isLoading={updateUserStatusMutation.isPending}
+        onConfirm={() => {
+          if (pendingUserStatus) updateUserStatusMutation.mutate({ userId: pendingUserStatus.id, isActive: pendingUserStatus.isActive });
+        }}
+        onCancel={() => setPendingUserStatus(null)}
+      />
     </AdminShell>
   );
 }

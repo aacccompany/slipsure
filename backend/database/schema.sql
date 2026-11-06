@@ -282,6 +282,7 @@ CREATE TABLE credit_lots (
     plan_id VARCHAR(50) NOT NULL REFERENCES subscription_plans(id),
     credits_total INTEGER NOT NULL CHECK (credits_total >= 0),
     credits_remaining INTEGER NOT NULL CHECK (credits_remaining >= 0),
+    grant_source VARCHAR(16) NOT NULL DEFAULT 'plan' CHECK (grant_source IN ('plan', 'admin_extra')),
     started_at TIMESTAMP WITH TIME ZONE NOT NULL,
     expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -319,6 +320,24 @@ CREATE TABLE system_logs (
     message TEXT NOT NULL,
     error_details TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE admin_audit_logs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    admin_id UUID,
+    admin_email VARCHAR(255),
+    action VARCHAR(80) NOT NULL,
+    category VARCHAR(40) NOT NULL,
+    target_type VARCHAR(40),
+    target_id UUID,
+    target_name VARCHAR(255),
+    status VARCHAR(10) NOT NULL CHECK (status IN ('success', 'failed')),
+    ip_address VARCHAR(45),
+    user_agent VARCHAR(500),
+    old_values JSONB,
+    new_values JSONB,
+    metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ============================================

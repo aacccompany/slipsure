@@ -140,6 +140,8 @@ export interface Subscription {
   status: SubscriptionStatus;
   billing_cycle: BillingCycle;
   quota_override?: number;
+  quota_extra_expires_at?: string;
+  quota_period_end?: string;
   stripe_subscription_id?: string;
   stripe_customer_id?: string;
   started_at: string;
@@ -268,6 +270,9 @@ export interface AdminMerchantListItem {
   is_active: boolean;
   subscription_status: string;
   plan: string;
+  quota_limit: number;
+  quota_used: number;
+  quota_remaining: number;
   total_scans: number;
   total_transactions: number;
   line_connected: boolean;
@@ -430,6 +435,8 @@ export interface AdminMerchantPerformanceItem {
   verified_scans: number;
   failed_scans: number;
   quota: number;
+  quota_used: number;
+  quota_remaining: number;
   quota_percent: number;
   last_scan?: string;
 }
@@ -438,6 +445,29 @@ export interface AdminMerchantPerformanceAnalytics {
   usage_per_merchant: AdminMerchantPerformanceItem[];
   top_active: AdminMerchantPerformanceItem[];
   low_usage: AdminMerchantPerformanceItem[];
+}
+
+export interface AdminAuditLog {
+  id: string;
+  admin_id: string | null;
+  admin_email: string;
+  action: string;
+  category: string;
+  target_type: string;
+  target_id: string | null;
+  target_name: string;
+  status: 'success' | 'failed';
+  ip_address: string;
+  user_agent: string;
+  old_values: Record<string, unknown> | null;
+  new_values: Record<string, unknown> | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface AdminAuditLogResponse {
+  items: AdminAuditLog[];
+  pagination: Pagination;
 }
 
 export interface AdminBankStatusItem {
