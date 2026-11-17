@@ -165,7 +165,7 @@ export default function ServicesPage() {
                 <span style={{ color: 'var(--cyan)' }}>ธุรกิจของคุณ?</span>
               </h2>
               <p className="mb-8 max-w-md text-base leading-relaxed md:text-lg" style={{ color: 'rgba(255,255,255,0.65)' }}>
-                สมัครฟรีวันนี้ รับโควต้า 20 สลิปต่อเดือน ไม่ต้องใช้บัตรเครดิต ยกเลิกได้ทุกเมื่อ
+                รับโควต้าฟรี 20 สลิป
               </p>
               <div className="flex flex-wrap gap-3">
                 <Link

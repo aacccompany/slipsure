@@ -48,7 +48,7 @@ export function FreePlanConfirmModal({
 
         <div className="space-y-3 p-6">
           {[
-            '20 verification credits are included.',
+            'รับโควต้าฟรี 20 สลิป',
             'No payment is required.',
             'After activation, the Free plan will no longer appear for this account.',
           ].map((item) => (

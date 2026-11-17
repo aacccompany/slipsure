@@ -61,8 +61,7 @@ export default function RegisterPage() {
         <div className="relative space-y-5">
           <div className="font-black select-none leading-none" style={{ fontSize: '7rem', color: 'rgba(0,82,255,0.1)', letterSpacing: '-0.04em' }}>01</div>
           <h2 className="font-bold leading-tight" style={{ fontSize: '1.75rem', color: 'rgba(248,250,252,0.9)', letterSpacing: '-0.02em' }}>
-            เริ่มต้นฟรี<br />
-            <span style={{ color: 'var(--cyan)' }}>20 สลิปฟรีครั้งแรกที่สมัครใช้งาน </span>
+            <span style={{ color: 'var(--cyan)' }}>รับโควต้าฟรี 20 สลิป</span>
           </h2>
           <p className="text-sm leading-relaxed" style={{ color: 'rgba(248,250,252,0.45)' }}>
             ไม่ต้องใช้บัตรเครดิต ไม่มีสัญญาผูกมัด
@@ -93,7 +92,7 @@ export default function RegisterPage() {
             <h1 className="font-bold mb-1" style={{ fontSize: '1.75rem', color: 'var(--ink)', letterSpacing: '-0.02em' }}>
               สมัครสมาชิก
             </h1>
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>ฟรี 20 สลิป/ครั้งแรกที่สมัครใช้งาน ไม่ต้องใช้บัตรเครดิต</p>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>รับโควต้าฟรี 20 สลิป</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">

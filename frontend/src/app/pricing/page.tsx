@@ -127,7 +127,7 @@ export default function PricingPage() {
             </span>
           </h1>
           <p className="mx-auto mt-7 max-w-xl text-base leading-relaxed md:text-lg" style={{ color: 'var(--text-muted)' }}>
-            เริ่มต้นฟรี 20 สลิป ครั้งแรกที่สมัครใช้งาน แล้วอัพเกรดเมื่อต้องการโควต้าสูงขึ้น ไม่ต้องผูกบัตรเครดิต ยกเลิกได้ทุกเมื่อ
+            รับโควต้าฟรี 20 สลิป
           </p>
         </div>
 
@@ -179,7 +179,9 @@ export default function PricingPage() {
                     {exceedsAll
                       ? 'มากกว่าทุกแผน ติดต่อเราเพื่อขอแผน Enterprise'
                       : recommendedPlan
-                        ? <>แนะนำแผน <b>{recommendedPlan.name === 'Free' ? 'ฟรี' : recommendedPlan.name}</b> ({recommendedPlan.quota_per_month.toLocaleString()} สลิป/{recommendedPlan.id === 'plan-free' ? 'ครั้งแรกที่สมัครใช้งาน' : 'เดือน'})</>
+                        ? recommendedPlan.id === 'plan-free'
+                          ? `รับโควต้าฟรี ${recommendedPlan.quota_per_month.toLocaleString()} สลิป`
+                          : <>แนะนำแผน <b>{recommendedPlan.name}</b> ({recommendedPlan.quota_per_month.toLocaleString()} สลิป/เดือน)</>
                         : 'เลือกจำนวนสลิปเพื่อดูแผนที่เหมาะสม'}
                   </p>
                   {recommendedPlan && (
@@ -210,10 +212,7 @@ export default function PricingPage() {
                       {isRec ? 'ฟรี · เหมาะกับคุณ' : 'ฟรี'}
                     </p>
                     <p className="font-display text-3xl font-extrabold md:text-4xl" style={{ color: 'var(--ink)' }}>
-                      {freePlan.quota_per_month.toLocaleString()} สลิป/ครั้งแรกที่สมัครใช้งาน
-                    </p>
-                    <p className="mt-1 text-sm md:text-base" style={{ color: 'var(--text-muted)' }}>
-                      {freePlan.description}
+                      รับโควต้าฟรี {freePlan.quota_per_month.toLocaleString()} สลิป
                     </p>
                   </div>
                   <button
