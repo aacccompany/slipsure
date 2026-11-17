@@ -352,7 +352,7 @@ export default function Home() {
             </div>
 
             <div className="mt-14 flex flex-wrap gap-2 pt-8" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
-              {['ฟรี 20 สลิป/เดือน', 'ไม่ต้องใช้บัตรเครดิต', 'ยกเลิกได้ทุกเมื่อ', 'รองรับทุกธนาคารไทย', ...trust].map((t) => (
+              {['ฟรี 20 สลิป ครั้งแรกที่สมัครใช้งาน', 'ไม่ต้องใช้บัตรเครดิต', 'ยกเลิกได้ทุกเมื่อ', 'รองรับทุกธนาคารไทย', ...trust].map((t) => (
                 <span
                   key={t}
                   className="rounded-full px-4 py-1.5 text-sm font-medium"
