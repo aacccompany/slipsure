@@ -127,7 +127,7 @@ export default function PricingPage() {
             </span>
           </h1>
           <p className="mx-auto mt-7 max-w-xl text-base leading-relaxed md:text-lg" style={{ color: 'var(--text-muted)' }}>
-            รับโควต้าฟรี 20 สลิป
+            20 สลิป/ครั้ง
           </p>
         </div>
 
@@ -180,7 +180,7 @@ export default function PricingPage() {
                       ? 'มากกว่าทุกแผน ติดต่อเราเพื่อขอแผน Enterprise'
                       : recommendedPlan
                         ? recommendedPlan.id === 'plan-free'
-                          ? `รับโควต้าฟรี ${recommendedPlan.quota_per_month.toLocaleString()} สลิป`
+                          ? `${recommendedPlan.quota_per_month.toLocaleString()} สลิป/ครั้ง`
                           : <>แนะนำแผน <b>{recommendedPlan.name}</b> ({recommendedPlan.quota_per_month.toLocaleString()} สลิป/เดือน)</>
                         : 'เลือกจำนวนสลิปเพื่อดูแผนที่เหมาะสม'}
                   </p>
@@ -212,7 +212,7 @@ export default function PricingPage() {
                       {isRec ? 'ฟรี · เหมาะกับคุณ' : 'ฟรี'}
                     </p>
                     <p className="font-display text-3xl font-extrabold md:text-4xl" style={{ color: 'var(--ink)' }}>
-                      รับโควต้าฟรี {freePlan.quota_per_month.toLocaleString()} สลิป
+                      {freePlan.quota_per_month.toLocaleString()} สลิป/ครั้ง
                     </p>
                   </div>
                   <button

@@ -15,7 +15,7 @@ const stats = [
 ];
 
 const steps = [
-  { num: '1', title: 'สมัครฟรี', desc: 'รับโควต้าฟรี 20 สลิป' },
+  { num: '1', title: 'สมัครฟรี', desc: '20 สลิป/ครั้ง' },
   { num: '2', title: 'ตั้งค่า LINE OA หรือ API', desc: 'เชื่อมต่อ LINE OA ผ่าน Dashboard หรือรับ Token เพื่อใช้งานผ่าน API' },
   { num: '3', title: 'รับสลิป ตรวจอัตโนมัติ', desc: 'ลูกค้าส่งสลิปมา ระบบตรวจสอบและตอบกลับให้อัตโนมัติทันที' },
 ];
@@ -352,7 +352,7 @@ export default function Home() {
             </div>
 
             <div className="mt-14 flex flex-wrap gap-2 pt-8" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
-              {['รับโควต้าฟรี 20 สลิป', 'ไม่ต้องใช้บัตรเครดิต', 'ยกเลิกได้ทุกเมื่อ', 'รองรับทุกธนาคารไทย', ...trust].map((t) => (
+              {['20 สลิป/ครั้ง', 'ไม่ต้องใช้บัตรเครดิต', 'ยกเลิกได้ทุกเมื่อ', 'รองรับทุกธนาคารไทย', ...trust].map((t) => (
                 <span
                   key={t}
                   className="rounded-full px-4 py-1.5 text-sm font-medium"

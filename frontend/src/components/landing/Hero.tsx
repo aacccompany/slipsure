@@ -228,7 +228,7 @@ export const Hero = () => {
           </div>
 
           <div className="pop-in mt-8 flex flex-wrap gap-2" style={{ animationDelay: '0.32s' }}>
-            {['รับโควต้าฟรี 20 สลิป', 'ไม่ต้องใช้บัตรเครดิต', 'ยกเลิกได้ทุกเมื่อ'].map((t) => (
+            {['20 สลิป/ครั้ง', 'ไม่ต้องใช้บัตรเครดิต', 'ยกเลิกได้ทุกเมื่อ'].map((t) => (
               <span
                 key={t}
                 className="rounded-full px-4 py-1.5 text-sm font-medium"
