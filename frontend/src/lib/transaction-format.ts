@@ -1,19 +1,19 @@
 import type { TransactionStatus } from '@/types/api';
 
 export const STATUS_LABEL: Record<TransactionStatus, string> = {
-  pending: 'Pending',
-  processing: 'Processing',
-  success: 'Success',
-  failed: 'Failed',
+  pending: 'รอดำเนินการ',
+  processing: 'กำลังตรวจสอบ',
+  success: 'สำเร็จ',
+  failed: 'ไม่สำเร็จ',
 };
 
 export const FAIL_LABEL: Record<string, string> = {
-  DUPLICATE_SLIP: 'Duplicate slip',
-  AMOUNT_MISMATCH: 'Amount mismatch',
-  TIMEOUT: 'Timed out',
-  INVALID_QR: 'Invalid QR',
-  BANK_ERROR: 'Bank error',
-  EXPIRED_SLIP: 'Expired slip',
+  DUPLICATE_SLIP: 'สลิปซ้ำ',
+  AMOUNT_MISMATCH: 'ยอดเงินไม่ตรง',
+  TIMEOUT: 'หมดเวลาตรวจสอบ',
+  INVALID_QR: 'QR ไม่ถูกต้อง',
+  BANK_ERROR: 'ธนาคารขัดข้อง',
+  EXPIRED_SLIP: 'สลิปหมดอายุ',
 };
 
 export function statusStyle(status: TransactionStatus) {
@@ -31,7 +31,7 @@ export function statusStyle(status: TransactionStatus) {
 
 export function formatTime(value?: string) {
   if (!value) return '-';
-  return new Date(value).toLocaleString('en-GB', {
+  return new Date(value).toLocaleString('th-TH', {
     day: '2-digit',
     month: 'short',
     hour: '2-digit',

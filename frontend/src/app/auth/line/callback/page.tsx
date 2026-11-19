@@ -23,18 +23,18 @@ function LineCallbackContent() {
 
     if (!code || !state || handledRef.current) {
       if (!code) {
-        setError('Missing LINE authorization code');
+        setError('ไม่พบรหัสยืนยันจาก LINE');
       }
       return;
     }
 
     if (state !== 'login' && state !== 'connect') {
-      setError('Invalid LINE authorization state');
+      setError('ข้อมูลยืนยันจาก LINE ไม่ถูกต้อง');
       return;
     }
 
     if (state === 'connect' && !isAuthenticated) {
-      setError('Please sign in before connecting LINE');
+      setError('กรุณาเข้าสู่ระบบก่อนเชื่อมต่อ LINE');
       return;
     }
 
@@ -43,7 +43,7 @@ function LineCallbackContent() {
     const authAction = state === 'connect' ? connectLine : lineLogin;
 
     authAction(code, redirectUri).catch((err) => {
-      setError(err instanceof Error ? err.message : 'LINE login failed');
+      setError(err instanceof Error ? err.message : 'เข้าสู่ระบบด้วย LINE ไม่สำเร็จ');
     });
   }, [connectLine, isAuthenticated, lineLogin, searchParams]);
 
@@ -64,8 +64,8 @@ function LineCallbackContent() {
         ) : (
           <>
             <Loader2 className="mx-auto h-8 w-8 animate-spin text-zinc-400" />
-            <h1 className="mt-5 text-xl font-black text-zinc-900 tracking-tight">Connecting LINE</h1>
-            <p className="mt-2 text-sm text-zinc-500">Please wait while we finish LINE authorization.</p>
+            <h1 className="mt-5 text-xl font-black text-zinc-900 tracking-tight">กำลังเชื่อมต่อ LINE</h1>
+            <p className="mt-2 text-sm text-zinc-500">กรุณารอสักครู่ ระบบกำลังยืนยันข้อมูลกับ LINE</p>
           </>
         )}
       </div>

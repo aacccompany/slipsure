@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { api, tokenManager } from '@/lib/api-client';
 import type { User } from '@/types/api';
 import { useRouter } from 'next/navigation';
+import { getPostLoginDestination } from '@/lib/line-onboarding';
 
 interface AuthContextType {
   user: User | null;
@@ -60,7 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         tokenManager.setTokens({ access_token, refresh_token, expires_in });
         setUser(userData);
 
-        router.push(userData.role === 'admin' ? '/admin?tab=analytics' : '/dashboard');
+        router.push(await getPostLoginDestination(userData.role));
       } else {
         throw new Error(response.message || 'Login failed');
       }
@@ -80,7 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         tokenManager.setTokens({ access_token, refresh_token, expires_in });
         setUser(userData);
 
-        router.push(userData.role === 'admin' ? '/admin?tab=analytics' : '/dashboard');
+        router.push(await getPostLoginDestination(userData.role));
       } else {
         throw new Error(response.message || 'LINE login failed');
       }
@@ -121,7 +122,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { access_token, refresh_token, expires_in } = response.data;
       tokenManager.setTokens({ access_token, refresh_token, expires_in });
       await refreshUser();
-      router.push('/dashboard');
+      const profile = await api.getProfile();
+      router.push(await getPostLoginDestination(profile.data?.role ?? 'merchant'));
     }
   };
 

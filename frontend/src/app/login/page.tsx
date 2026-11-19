@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/auth-context';
 import { api } from '@/lib/api-client';
+import { getPostLoginDestination } from '@/lib/line-onboarding';
 
 type LoginMode = 'password' | 'otp';
 
@@ -46,15 +47,18 @@ function LoginContent() {
   const [isOtpSent, setIsOtpSent] = useState(false);
   const router = useRouter();
   const lineCallbackHandledRef = React.useRef(false);
+  const loginSubmittedRef = React.useRef(false);
 
   const getLineRedirectUri = () =>
     process.env.NEXT_PUBLIC_LINE_LOGIN_CALLBACK_URL || `${window.location.origin}/auth/line/callback`;
 
   React.useEffect(() => {
-    if (isAuthenticated && user) {
-      const redirect = searchParams.get('redirect');
-      router.push(redirect || '/dashboard');
-    }
+    if (!isAuthenticated || !user || loginSubmittedRef.current || lineCallbackHandledRef.current) return;
+    let cancelled = false;
+    getPostLoginDestination(user.role).then((destination) => {
+      if (!cancelled) router.replace(destination === '/dashboard' ? searchParams.get('redirect') || destination : destination);
+    });
+    return () => { cancelled = true; };
   }, [isAuthenticated, user, router, searchParams]);
 
   React.useEffect(() => {
@@ -86,10 +90,11 @@ function LoginContent() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault(); setIsLoading(true); setError('');
+    loginSubmittedRef.current = true;
     try {
       if (mode === 'otp') router.push(`/auth/verify?email=${encodeURIComponent(email)}`);
       else await login(email, password);
-    } catch (err) { setError(err instanceof Error ? err.message : 'เข้าสู่ระบบไม่สำเร็จ'); setIsLoading(false); }
+    } catch (err) { loginSubmittedRef.current = false; setError(err instanceof Error ? err.message : 'เข้าสู่ระบบไม่สำเร็จ'); setIsLoading(false); }
   };
 
   const handleLineLogin = () => {

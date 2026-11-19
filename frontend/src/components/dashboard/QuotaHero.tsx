@@ -8,9 +8,10 @@ interface QuotaHeroProps {
   remaining: number;
   resetLabel: string;
   isBlocked?: boolean;
+  pendingSetup?: boolean;
 }
 
-export const QuotaHero: React.FC<QuotaHeroProps> = ({ limit, used, remaining, resetLabel, isBlocked }) => {
+export const QuotaHero: React.FC<QuotaHeroProps> = ({ limit, used, remaining, resetLabel, isBlocked, pendingSetup }) => {
   const percentUsed = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
   const tone = isBlocked || percentUsed >= 100
     ? { ring: '#F43F5E', soft: 'var(--err-pale)', text: '#BE123C', note: 'โควต้าหมดแล้ว' }
@@ -58,7 +59,7 @@ export const QuotaHero: React.FC<QuotaHeroProps> = ({ limit, used, remaining, re
           style={{ background: tone.soft, color: tone.text }}
         >
           <span className="h-1.5 w-1.5 rounded-full" style={{ background: tone.ring }} />
-          {tone.note}
+          {pendingSetup ? 'รอตั้งค่า LINE OA' : tone.note}
         </span>
 
         <p className="mt-3 text-sm" style={{ color: 'var(--text-muted)' }}>โควต้าสลิปที่เหลือเดือนนี้</p>
@@ -74,18 +75,18 @@ export const QuotaHero: React.FC<QuotaHeroProps> = ({ limit, used, remaining, re
         <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm" style={{ color: 'var(--text-muted)' }}>
           <span className="inline-flex items-center gap-1.5">
             <CalendarClock className="h-4 w-4" />
-            รีเซ็ตโควต้า {resetLabel}
+            {pendingSetup ? 'รับ 20 สลิปหลังตั้งค่า LINE OA' : `รีเซ็ตโควต้า ${resetLabel}`}
           </span>
           <span>ใช้ไปแล้ว {used.toLocaleString()} สลิป</span>
         </div>
       </div>
 
       <Link
-        href="/dashboard/subscription"
+        href={pendingSetup ? '/dashboard/merchant/line?onboarding=1' : '/dashboard/subscription'}
         className="inline-flex shrink-0 items-center justify-center gap-1.5 px-5 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90 sm:self-start"
         style={{ background: 'var(--blue)' }}
       >
-        อัพเกรดแผน
+        {pendingSetup ? 'ตั้งค่า LINE' : 'อัพเกรดแผน'}
         <ArrowUpRight className="h-4 w-4" />
       </Link>
     </div>

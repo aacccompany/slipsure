@@ -32,6 +32,10 @@ export default function MerchantProfilePage() {
   const subscription = subscriptionData?.data?.subscription;
   const quota = quotaData?.data;
   const lineConfig = lineConfigData?.data?.config;
+  const statusLabels: Record<string, string> = {
+    active: 'ใช้งานอยู่', expired: 'หมดอายุ', canceled: 'ยกเลิกแล้ว',
+    cancelled: 'ยกเลิกแล้ว', trial: 'ทดลองใช้งาน', paused: 'หยุดชั่วคราว',
+  };
 
   if (merchantLoading || subscriptionLoading || quotaLoading || lineConfigLoading) {
     return <PageSkeleton />;
@@ -41,31 +45,31 @@ export default function MerchantProfilePage() {
     {
       href: '/dashboard/merchant/profile',
       icon: Store,
-      title: 'Shop Profile',
+      title: 'ข้อมูลร้านค้า',
       sub: 'ข้อมูลร้าน',
       accent: 'var(--blue)',
     },
     {
       href: '/dashboard/merchant/line',
       icon: MessageSquare,
-      title: 'LINE Integration',
-      sub: lineConfig?.is_configured ? 'Connected' : 'Not configured',
+      title: 'เชื่อมต่อ LINE',
+      sub: lineConfig?.is_configured ? 'เชื่อมต่อแล้ว' : 'ยังไม่ได้ตั้งค่า',
       accent: '#06C755',
       badge: lineConfig?.is_configured
-        ? { label: 'Connected', ok: true }
-        : { label: 'Not configured', ok: false },
+        ? { label: 'เชื่อมต่อแล้ว', ok: true }
+        : { label: 'ยังไม่ได้ตั้งค่า', ok: false },
     },
     {
       href: '/dashboard/subscription',
       icon: CreditCard,
-      title: 'Subscription',
+      title: 'แพ็กเกจ',
       sub: 'แผนการใช้งาน',
       accent: '#F59E0B',
     },
     {
       href: '/dashboard/account',
       icon: User,
-      title: 'Account Settings',
+      title: 'ตั้งค่าบัญชี',
       sub: 'ตั้งค่าบัญชี',
       accent: '#8B5CF6',
     },
@@ -77,10 +81,10 @@ export default function MerchantProfilePage() {
       {/* Header */}
       <div>
         <p className="font-mono text-[10px] uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>
-          / Merchant
+          / ร้านค้า
         </p>
         <h1 className="font-bold tracking-tight" style={{ fontSize: '1.4rem', color: 'var(--ink)', letterSpacing: '-0.02em' }}>
-          {profile?.shop_name || 'Merchant'}
+          {profile?.shop_name || 'ร้านค้า'}
         </h1>
       </div>
 
@@ -138,15 +142,15 @@ export default function MerchantProfilePage() {
               <Store className="w-4 h-4" style={{ color: 'var(--blue)' }} />
             </div>
             <div>
-              <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Shop</p>
-              <h3 className="font-semibold text-sm" style={{ color: 'var(--ink)' }}>{profile?.shop_name || 'Not set'}</h3>
+              <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>ร้านค้า</p>
+              <h3 className="font-semibold text-sm" style={{ color: 'var(--ink)' }}>{profile?.shop_name || 'ยังไม่ได้ตั้งค่า'}</h3>
             </div>
           </div>
           <div className="space-y-2">
             {[
-              { icon: MapPin, value: profile?.address || 'No address' },
-              { icon: Phone, value: profile?.contact_phone || 'No phone' },
-              { icon: Mail, value: profile?.contact_email || 'No email' },
+              { icon: MapPin, value: profile?.address || 'ยังไม่มีที่อยู่' },
+              { icon: Phone, value: profile?.contact_phone || 'ยังไม่มีเบอร์โทรศัพท์' },
+              { icon: Mail, value: profile?.contact_email || 'ยังไม่มีอีเมล' },
             ].map(({ icon: Icon, value }) => (
               <div key={value} className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-muted)' }}>
                 <Icon className="w-3.5 h-3.5 shrink-0" />
@@ -159,7 +163,7 @@ export default function MerchantProfilePage() {
             className="mt-4 block w-full py-2 text-center text-xs font-semibold transition-all hover:opacity-90"
             style={{ border: '1px solid var(--border)', color: 'var(--ink)' }}
           >
-            Edit Profile
+            แก้ไขข้อมูลร้านค้า
           </Link>
         </div>
 
@@ -170,17 +174,17 @@ export default function MerchantProfilePage() {
               <CreditCard className="w-4 h-4 text-amber-600" />
             </div>
             <div>
-              <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Plan</p>
+              <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>แผนการใช้งาน</p>
               <h3 className="font-semibold text-sm" style={{ color: 'var(--ink)' }}>
-                {subscription?.plan?.name || 'Free Plan'}
+                {subscription?.plan?.name === 'Free' ? 'ฟรี' : subscription?.plan?.name || 'แผนฟรี'}
               </h3>
             </div>
           </div>
           <div className="space-y-2">
             {[
-              ['Status', subscription?.status || 'trial'],
-              ['Quota Used', `${quota?.used ?? 0} / ${quota?.quota_limit ?? 20}`],
-              ['Remaining', `${quota?.remaining ?? 20}`],
+              ['สถานะ', statusLabels[subscription?.status || 'trial'] || subscription?.status || 'ทดลองใช้งาน'],
+              ['ใช้โควต้าแล้ว', `${quota?.used ?? 0} / ${quota?.quota_limit ?? 20}`],
+              ['คงเหลือ', `${quota?.remaining ?? 20}`],
             ].map(([label, value]) => (
               <div key={String(label)} className="flex justify-between text-sm">
                 <span style={{ color: 'var(--text-muted)' }}>{label}</span>
@@ -193,7 +197,7 @@ export default function MerchantProfilePage() {
             className="mt-4 block w-full py-2 text-center text-xs font-semibold transition-all hover:opacity-90"
             style={{ border: '1px solid var(--border)', color: 'var(--ink)' }}
           >
-            Manage Subscription
+            จัดการแพ็กเกจ
           </Link>
         </div>
 
@@ -206,14 +210,14 @@ export default function MerchantProfilePage() {
             <div>
               <p className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>LINE</p>
               <h3 className="font-semibold text-sm" style={{ color: 'var(--ink)' }}>
-                {lineConfig?.is_configured ? 'Connected' : 'Not Connected'}
+                {lineConfig?.is_configured ? 'เชื่อมต่อแล้ว' : 'ยังไม่เชื่อมต่อ'}
               </h3>
             </div>
           </div>
           {lineConfig?.is_configured ? (
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span style={{ color: 'var(--text-muted)' }}>Reference ID</span>
+                <span style={{ color: 'var(--text-muted)' }}>รหัสอ้างอิง</span>
                 <span className="font-mono text-xs" style={{ color: 'var(--blue)' }}>
                   {lineConfig?.webhook_reference_id?.slice(0, 8) || '—'}...
                 </span>
@@ -229,7 +233,7 @@ export default function MerchantProfilePage() {
             className="mt-4 block w-full py-2 text-center text-xs font-semibold transition-all hover:opacity-90"
             style={{ border: '1px solid var(--border)', color: 'var(--ink)' }}
           >
-            {lineConfig?.is_configured ? 'Configure LINE' : 'Setup LINE'}
+            {lineConfig?.is_configured ? 'ตั้งค่า LINE' : 'เชื่อมต่อ LINE'}
           </Link>
         </div>
       </div>
@@ -239,14 +243,14 @@ export default function MerchantProfilePage() {
         <div className="bg-white" style={{ border: '1px solid var(--border)' }}>
           <div className="px-5 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
             <p className="font-mono text-[10px] uppercase tracking-widest flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>
-              <Settings className="w-3.5 h-3.5" /> Quick Settings
+              <Settings className="w-3.5 h-3.5" /> ตั้งค่าด่วน
             </p>
           </div>
           {[
-            { href: '/dashboard/merchant/profile', icon: Store, label: 'Edit Shop Profile' },
-            { href: '/dashboard/merchant/line',    icon: MessageSquare, label: 'LINE Webhook Setup' },
-            { href: '/dashboard/subscription', icon: CreditCard, label: 'Manage Subscription' },
-            { href: '/dashboard/account',          icon: User, label: 'Account Settings' },
+            { href: '/dashboard/merchant/profile', icon: Store, label: 'แก้ไขข้อมูลร้านค้า' },
+            { href: '/dashboard/merchant/line',    icon: MessageSquare, label: 'ตั้งค่า LINE Webhook' },
+            { href: '/dashboard/subscription', icon: CreditCard, label: 'จัดการแพ็กเกจ' },
+            { href: '/dashboard/account',          icon: User, label: 'ตั้งค่าบัญชี' },
           ].map((item, i, arr) => (
             <Link
               key={item.href}

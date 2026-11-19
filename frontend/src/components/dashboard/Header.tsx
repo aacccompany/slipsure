@@ -30,7 +30,8 @@ export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
     ? user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
     : 'U';
 
-  const planLabel = subscription?.plan?.name || subscription?.plan_id || 'Free';
+  const planName = subscription?.plan?.name || subscription?.plan_id || 'Free';
+  const planLabel = planName === 'Free' || planName === 'plan-free' ? 'ฟรี' : planName;
 
   return (
     <header
@@ -43,7 +44,7 @@ export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
           onClick={onMenuClick}
           className="md:hidden p-1.5 transition-colors rounded"
           style={{ color: 'var(--text-muted)' }}
-          aria-label="Open menu"
+          aria-label="เปิดเมนู"
         >
           <Menu className="w-5 h-5" />
         </button>

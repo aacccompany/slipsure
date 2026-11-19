@@ -29,11 +29,11 @@ function SuccessContent() {
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
             <span className="font-mono text-[11px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-              Payment Confirmed
+              ชำระเงินสำเร็จ
             </span>
           </div>
           <span className="font-mono text-[10px]" style={{ color: 'var(--border-strong)' }}>
-            FLOWSLIP / CHECKOUT / SUCCESS
+            FLOWSLIP / ชำระเงิน / สำเร็จ
           </span>
         </div>
       </div>
@@ -52,21 +52,21 @@ function SuccessContent() {
             </div>
 
             <p className="font-mono text-[11px] uppercase tracking-widest mb-3" style={{ color: 'var(--gold)' }}>
-              / Payment Successful
+              / ชำระเงินสำเร็จ
             </p>
             <h1 className="font-display text-4xl font-semibold mb-3" style={{ color: 'var(--ink)' }}>
-              Payment Confirmed
+              ยืนยันการชำระเงินแล้ว
             </h1>
             <p className="text-sm leading-relaxed mb-10" style={{ color: 'var(--text-muted)' }}>
-              Your subscription has been activated. You can now use all features included in your plan.
+              แพ็กเกจของคุณเปิดใช้งานแล้ว สามารถเริ่มใช้สิทธิ์ตามแพ็กเกจได้ทันที
             </p>
 
             {/* Details */}
             <div className="mb-10" style={{ border: '1px solid var(--border)' }}>
               {[
-                { label: 'Status',    value: 'Active',                  isGold: true },
-                { label: 'Reference', value: `#${shortRef}`,            isGold: false },
-                { label: 'Redirect',  value: `Dashboard in ${countdown}s`, isGold: false },
+                { label: 'สถานะ',    value: 'ใช้งานอยู่',                  isGold: true },
+                { label: 'หมายเลขอ้างอิง', value: `#${shortRef}`,            isGold: false },
+                { label: 'กำลังไปยัง',  value: `หน้าภาพรวมใน ${countdown} วินาที`, isGold: false },
               ].map(({ label, value, isGold }) => (
                 <div key={label} className="flex items-center justify-between px-5 py-3"
                   style={{ borderBottom: '1px solid var(--border)' }}>
@@ -84,7 +84,7 @@ function SuccessContent() {
               className="flex items-center justify-center gap-2 w-full py-4 text-sm font-semibold transition-all hover:opacity-90"
               style={{ background: 'var(--navy)', color: 'var(--gold-pale)' }}>
               <LayoutDashboard className="w-4 h-4" />
-              Go to Dashboard
+              ไปที่หน้าภาพรวม
               <span style={{ color: 'var(--gold)' }}>→</span>
             </Link>
           </div>
@@ -92,13 +92,13 @@ function SuccessContent() {
 
         {/* Next steps */}
         <p className="font-mono text-[11px] uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>
-          / What&apos;s Next
+          / ขั้นตอนถัดไป
         </p>
         <div className="space-y-3">
           {[
-            { icon: Zap,     title: 'Your quota is ready',     desc: 'Start verifying slips immediately — your monthly quota is now active.' },
-            { icon: Receipt, title: 'Review transactions',     desc: 'Use your dashboard to monitor verified slips and payment history.' },
-            { icon: Shield,  title: 'Configure LINE webhook',  desc: 'Connect your LINE OA to receive and verify slips automatically.' },
+            { icon: Zap,     title: 'โควต้าพร้อมใช้งาน',     desc: 'เริ่มตรวจสอบสลิปได้ทันทีตามสิทธิ์ในแพ็กเกจ' },
+            { icon: Receipt, title: 'ดูประวัติสลิป',     desc: 'ติดตามผลการตรวจสอบและประวัติการชำระเงินได้ในหน้าภาพรวม' },
+            { icon: Shield,  title: 'ตั้งค่า LINE',  desc: 'เชื่อมต่อ LINE OA เพื่อรับและตรวจสอบสลิปอัตโนมัติ' },
           ].map(({ icon: Icon, title, desc }) => (
             <div key={title} className="flex items-start gap-4 p-4"
               style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>

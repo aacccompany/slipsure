@@ -19,14 +19,14 @@ export function RecentSlips() {
     <div className="bg-white" style={{ border: '1px solid var(--border)' }}>
       <div className="px-6 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border)' }}>
         <p className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-          Recent Slips
+          สลิปล่าสุด
         </p>
         <Link
           href="/dashboard/slips"
           className="font-mono text-[9px] uppercase tracking-widest transition-colors hover:opacity-70"
           style={{ color: 'var(--blue)' }}
         >
-          View all →
+          ดูทั้งหมด →
         </Link>
       </div>
 
@@ -36,7 +36,7 @@ export function RecentSlips() {
         <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
           <ImageIcon className="h-5 w-5" style={{ color: 'var(--text-muted)' }} />
           <p className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--border-strong)' }}>
-            No slips yet
+            ยังไม่มีสลิป
           </p>
         </div>
       ) : (
@@ -63,15 +63,15 @@ export function RecentSlips() {
                   {transaction.reference_no ? (
                     <>
                       <p className="truncate text-sm font-semibold" style={{ color: 'var(--ink)' }}>
-                        THB {Number(transaction.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        ฿{Number(transaction.amount).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                       </p>
                       <p className="truncate font-mono text-[10px]" style={{ color: 'var(--text-muted)' }}>
-                        {transaction.sender_bank || '-'} to {transaction.receiver_bank || '-'}
+                        {transaction.sender_bank || '-'} → {transaction.receiver_bank || '-'}
                       </p>
                     </>
                   ) : (
                     <p className="truncate text-sm font-semibold" style={{ color: 'var(--ink)' }}>
-                      {transaction.fail_reason ? FAIL_LABEL[transaction.fail_reason] ?? transaction.fail_reason : 'No transaction data'}
+                      {transaction.fail_reason ? FAIL_LABEL[transaction.fail_reason] ?? transaction.fail_reason : 'ไม่มีข้อมูลธุรกรรม'}
                     </p>
                   )}
                 </div>

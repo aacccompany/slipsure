@@ -11,26 +11,26 @@ import { toast } from 'sonner';
 import type { AdminSlipHistoryItem, Slip, SlipStatus, Transaction, TransactionStatus } from '@/types/api';
 
 const STATUS_LABEL: Record<TransactionStatus, string> = {
-  pending: 'Pending',
-  processing: 'Processing',
-  success: 'Success',
-  failed: 'Failed',
+  pending: 'รอดำเนินการ',
+  processing: 'กำลังตรวจสอบ',
+  success: 'สำเร็จ',
+  failed: 'ไม่สำเร็จ',
 };
 
 const SLIP_STATUS_LABEL: Record<SlipStatus, string> = {
-  pending: 'Pending',
-  processing: 'Processing',
-  verified: 'Success',
-  failed: 'Failed',
+  pending: 'รอดำเนินการ',
+  processing: 'กำลังตรวจสอบ',
+  verified: 'สำเร็จ',
+  failed: 'ไม่สำเร็จ',
 };
 
 const FAIL_LABEL: Record<string, string> = {
-  DUPLICATE_SLIP: 'Duplicate slip',
-  AMOUNT_MISMATCH: 'Amount mismatch',
-  TIMEOUT: 'Timed out',
-  INVALID_QR: 'Invalid QR',
-  BANK_ERROR: 'Bank error',
-  EXPIRED_SLIP: 'Expired slip',
+  DUPLICATE_SLIP: 'สลิปซ้ำ',
+  AMOUNT_MISMATCH: 'ยอดเงินไม่ตรง',
+  TIMEOUT: 'หมดเวลาตรวจสอบ',
+  INVALID_QR: 'QR ไม่ถูกต้อง',
+  BANK_ERROR: 'ธนาคารขัดข้อง',
+  EXPIRED_SLIP: 'สลิปหมดอายุ',
 };
 
 type FilterState = {
@@ -78,7 +78,7 @@ function statusStyle(status: SlipStatus) {
 
 function formatTime(value?: string) {
   if (!value) return '-';
-  return new Date(value).toLocaleString('en-GB', {
+  return new Date(value).toLocaleString('th-TH', {
     day: '2-digit',
     month: 'short',
     hour: '2-digit',
@@ -109,7 +109,7 @@ function DetailLine({ label, value }: { label: string; value?: string | number |
     <div className="flex items-start justify-between gap-4 border-b border-zinc-100 py-2 text-sm">
       <span style={{ color: 'var(--text-muted)' }}>{label}</span>
       <span className="text-right font-semibold" style={{ color: 'var(--ink)' }}>
-        {value === undefined || value === null || value === '' ? '-' : String(value)}
+        {value === undefined || value === null || value === '' ? '-' : typeof value === 'boolean' ? (value ? 'ใช่' : 'ไม่ใช่') : String(value)}
       </span>
     </div>
   );
@@ -132,7 +132,7 @@ function TransactionDetailModal({
         <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-4">
           <div>
             <p className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-              Transaction detail
+              รายละเอียดรายการ
             </p>
             <h2 className="text-xl font-bold" style={{ color: 'var(--ink)' }}>
               {transaction.reference_no || transaction.id}
@@ -150,37 +150,37 @@ function TransactionDetailModal({
         <div className="max-h-[calc(90vh-81px)] overflow-y-auto p-6">
           <div className="grid gap-6 lg:grid-cols-2">
             <section className="rounded-lg border border-zinc-200 p-4">
-              <h3 className="mb-3 text-sm font-bold" style={{ color: 'var(--ink)' }}>HaveSLIP Result</h3>
-              <DetailLine label="Provider" value={transaction.provider || 'haveslip'} />
-              <DetailLine label="Verification UUID" value={transaction.provider_verification_id} />
-              <DetailLine label="Provider status" value={transaction.provider_status} />
-              <DetailLine label="Valid" value={transaction.provider_valid} />
-              <DetailLine label="Cached" value={transaction.provider_cached} />
-              <DetailLine label="Charged credits" value={transaction.provider_charged_credits ?? 1} />
-              <DetailLine label="Duplicate" value={transaction.is_duplicate} />
+              <h3 className="mb-3 text-sm font-bold" style={{ color: 'var(--ink)' }}>ผลตรวจจาก HaveSLIP</h3>
+              <DetailLine label="ผู้ให้บริการ" value={transaction.provider || 'haveslip'} />
+              <DetailLine label="รหัสการตรวจสอบ" value={transaction.provider_verification_id} />
+              <DetailLine label="สถานะผู้ให้บริการ" value={transaction.provider_status} />
+              <DetailLine label="ข้อมูลถูกต้อง" value={transaction.provider_valid} />
+              <DetailLine label="ใช้ผลตรวจเดิม" value={transaction.provider_cached} />
+              <DetailLine label="เครดิตที่เรียกเก็บ" value={transaction.provider_charged_credits ?? 1} />
+              <DetailLine label="สลิปซ้ำ" value={transaction.is_duplicate} />
             </section>
 
             <section className="rounded-lg border border-zinc-200 p-4">
-              <h3 className="mb-3 text-sm font-bold" style={{ color: 'var(--ink)' }}>Transaction Data</h3>
-              <DetailLine label="Amount" value={formatAmount(transaction.amount)} />
-              <DetailLine label="Status" value={STATUS_LABEL[transaction.status]} />
-              <DetailLine label="Transaction date" value={formatTime(transaction.transfer_at || transaction.transaction_time || transaction.created_at)} />
-              <DetailLine label="Reference no." value={transaction.reference_no} />
-              <DetailLine label="Slip ID" value={transaction.slip_id} />
+              <h3 className="mb-3 text-sm font-bold" style={{ color: 'var(--ink)' }}>ข้อมูลธุรกรรม</h3>
+              <DetailLine label="ยอดเงิน" value={formatAmount(transaction.amount)} />
+              <DetailLine label="สถานะ" value={STATUS_LABEL[transaction.status]} />
+              <DetailLine label="วันที่ทำรายการ" value={formatTime(transaction.transfer_at || transaction.transaction_time || transaction.created_at)} />
+              <DetailLine label="เลขอ้างอิง" value={transaction.reference_no} />
+              <DetailLine label="รหัสสลิป" value={transaction.slip_id} />
             </section>
 
             <section className="rounded-lg border border-zinc-200 p-4">
-              <h3 className="mb-3 text-sm font-bold" style={{ color: 'var(--ink)' }}>Sender</h3>
-              <DetailLine label="Name" value={transaction.sender_name} />
-              <DetailLine label="Bank" value={transaction.sender_bank} />
-              <DetailLine label="Account" value={transaction.sender_account} />
+              <h3 className="mb-3 text-sm font-bold" style={{ color: 'var(--ink)' }}>ผู้โอน</h3>
+              <DetailLine label="ชื่อ" value={transaction.sender_name} />
+              <DetailLine label="ธนาคาร" value={transaction.sender_bank} />
+              <DetailLine label="เลขบัญชี" value={transaction.sender_account} />
             </section>
 
             <section className="rounded-lg border border-zinc-200 p-4">
-              <h3 className="mb-3 text-sm font-bold" style={{ color: 'var(--ink)' }}>Receiver</h3>
-              <DetailLine label="Name" value={transaction.receiver_name} />
-              <DetailLine label="Bank" value={transaction.receiver_bank} />
-              <DetailLine label="Account" value={transaction.receiver_account} />
+              <h3 className="mb-3 text-sm font-bold" style={{ color: 'var(--ink)' }}>ผู้รับ</h3>
+              <DetailLine label="ชื่อ" value={transaction.receiver_name} />
+              <DetailLine label="ธนาคาร" value={transaction.receiver_bank} />
+              <DetailLine label="เลขบัญชี" value={transaction.receiver_account} />
             </section>
           </div>
 
@@ -188,7 +188,7 @@ function TransactionDetailModal({
             <section className="mt-6 rounded-lg border border-zinc-200 p-4">
               <div className="mb-3 flex items-center gap-2">
                 <Code2 className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />
-                <h3 className="text-sm font-bold" style={{ color: 'var(--ink)' }}>Raw HaveSLIP Response</h3>
+                <h3 className="text-sm font-bold" style={{ color: 'var(--ink)' }}>ข้อมูลดิบจาก HaveSLIP</h3>
               </div>
               <pre className="max-h-80 overflow-auto rounded-md bg-zinc-950 p-4 text-xs text-zinc-100">
                 {rawResponse}
@@ -207,23 +207,23 @@ function RejectedSlipDetailModal({ slip, onClose }: { slip: Slip; onClose: () =>
       <div className="w-full max-w-lg rounded-lg bg-white shadow-xl" onClick={(event) => event.stopPropagation()}>
         <div className="flex items-start justify-between gap-4 border-b border-zinc-200 px-6 py-4">
           <div className="min-w-0">
-            <p className="font-mono text-[10px] uppercase" style={{ color: 'var(--text-muted)' }}>Slip detail</p>
+            <p className="font-mono text-[10px] uppercase" style={{ color: 'var(--text-muted)' }}>รายละเอียดสลิป</p>
             <h2 className="break-all text-lg font-bold" style={{ color: 'var(--ink)' }}>{slip.id}</h2>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close slip detail" className="rounded-md border border-zinc-200 p-2">
+          <button type="button" onClick={onClose} aria-label="ปิดรายละเอียดสลิป" className="rounded-md border border-zinc-200 p-2">
             <X className="h-4 w-4" />
           </button>
         </div>
         <div className="p-6">
-          <DetailLine label="Status" value={SLIP_STATUS_LABEL[slip.status]} />
-          <DetailLine label="Reason" value={slip.fail_reason ? FAIL_LABEL[slip.fail_reason] ?? slip.fail_reason : '-'} />
-          <DetailLine label="Plan credits" value={1} />
-          <DetailLine label="Submitted" value={formatTime(slip.created_at)} />
-          <DetailLine label="Completed" value={formatTime(slip.processing_completed_at)} />
-          <p className="mt-4 text-sm" style={{ color: 'var(--text-muted)' }}>This rejected slip has no transaction record.</p>
+          <DetailLine label="สถานะ" value={SLIP_STATUS_LABEL[slip.status]} />
+          <DetailLine label="สาเหตุ" value={slip.fail_reason ? FAIL_LABEL[slip.fail_reason] ?? slip.fail_reason : '-'} />
+          <DetailLine label="เครดิตแพ็กเกจ" value={1} />
+          <DetailLine label="ส่งเมื่อ" value={formatTime(slip.created_at)} />
+          <DetailLine label="ตรวจเสร็จเมื่อ" value={formatTime(slip.processing_completed_at)} />
+          <p className="mt-4 text-sm" style={{ color: 'var(--text-muted)' }}>สลิปที่ไม่ผ่านการตรวจสอบไม่มีรายการธุรกรรม</p>
           {slip.image_url && (
             <a href={slip.image_url} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--blue)' }}>
-              <ImageIcon className="h-4 w-4" /> View slip image
+              <ImageIcon className="h-4 w-4" /> ดูรูปสลิป
             </a>
           )}
         </div>
@@ -256,7 +256,7 @@ function TransactionRow({
           className="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide"
           style={{ background: colors.bg, color: colors.text }}
         >
-          {isDuplicate && slip.status === 'failed' ? 'Duplicate' : SLIP_STATUS_LABEL[slip.status]}
+          {isDuplicate && slip.status === 'failed' ? 'สลิปซ้ำ' : SLIP_STATUS_LABEL[slip.status]}
         </span>
       </div>
 
@@ -279,7 +279,7 @@ function TransactionRow({
         ) : (
           <>
             <p className="truncate text-sm font-semibold" style={{ color: 'var(--ink)' }}>
-              {slip.fail_reason ? FAIL_LABEL[slip.fail_reason] ?? slip.fail_reason : 'No transaction data'}
+              {slip.fail_reason ? FAIL_LABEL[slip.fail_reason] ?? slip.fail_reason : 'ไม่มีข้อมูลธุรกรรม'}
             </p>
             <p className="mt-0.5 truncate font-mono text-[10px]" style={{ color: 'var(--text-muted)' }}>
               {slip.id}
@@ -314,12 +314,12 @@ function TransactionRow({
             rel="noreferrer"
             className="rounded-full border border-zinc-200 px-2.5 py-1 text-[10px] font-semibold text-zinc-600 hover:border-zinc-900 hover:text-zinc-900"
           >
-            Image
+            รูปสลิป
           </a>
         )}
         {isDuplicate && (
           <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-semibold text-amber-700">
-            Duplicate
+            สลิปซ้ำ
           </span>
         )}
       </div>
@@ -434,10 +434,10 @@ export default function SlipsPage() {
       }
 
       setSelectedTransaction(transaction);
-      toast.error(response.error || 'Could not load full transaction detail');
+      toast.error(response.error || 'ไม่สามารถโหลดรายละเอียดธุรกรรมได้');
     } catch (error) {
       setSelectedTransaction(transaction);
-      toast.error(error instanceof Error ? error.message : 'Could not load full transaction detail');
+      toast.error(error instanceof Error ? error.message : 'ไม่สามารถโหลดรายละเอียดธุรกรรมได้');
     } finally {
       setDetailLoadingId(null);
     }
@@ -458,10 +458,10 @@ export default function SlipsPage() {
       <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="mb-1 font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-            / Slip history
+            / ประวัติสลิป
           </p>
           <h1 className="text-3xl font-bold tracking-tight" style={{ color: 'var(--ink)' }}>
-            Slip History
+            ประวัติสลิป
           </h1>
         </div>
 
@@ -485,14 +485,14 @@ export default function SlipsPage() {
             className="inline-flex items-center gap-2 border border-zinc-200 bg-white px-4 py-2 text-xs font-semibold text-zinc-700 transition-colors hover:border-zinc-900 hover:text-zinc-900"
           >
             <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
-            Refresh
+            รีเฟรช
           </button>
           <Link
             href="/dashboard/merchant/line"
             className="inline-flex items-center gap-2 bg-zinc-950 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-zinc-800"
           >
             <MessageSquare className="h-4 w-4" />
-            LINE setup
+            ตั้งค่า LINE
           </Link>
         </div>
       </div>
@@ -506,10 +506,10 @@ export default function SlipsPage() {
         </div>
         <div>
           <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
-            Verification now runs through your merchant LINE bot.
+            ระบบตรวจสอบสลิปผ่าน LINE Bot ของร้านค้าแล้ว
           </p>
           <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
-            Customers send slips in LINE, SlipSure verifies them, then the result is returned in that same chat.
+            ลูกค้าส่งสลิปทาง LINE และรับผลตรวจสอบกลับในแชตเดียวกัน
           </p>
         </div>
       </div>
@@ -561,7 +561,7 @@ export default function SlipsPage() {
               className="h-10 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm font-medium outline-none transition-colors focus:border-blue-500"
             >
               <option value="">ทั้งหมด</option>
-              <option value="line">LINE bot</option>
+              <option value="line">LINE Bot</option>
             </select>
           </label>
 
@@ -706,11 +706,11 @@ export default function SlipsPage() {
 
         <div className="flex items-center justify-between px-5 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
           <span className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-            Slip history
+            ประวัติสลิป
           </span>
           {pagination && (
             <span className="font-mono text-[10px]" style={{ color: 'var(--text-muted)' }}>
-              {pagination.total.toLocaleString()} total
+              ทั้งหมด {pagination.total.toLocaleString()} รายการ
             </span>
           )}
         </div>
@@ -723,12 +723,12 @@ export default function SlipsPage() {
               <ImageIcon className="h-5 w-5" style={{ color: 'var(--text-muted)' }} />
             </div>
             <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
-              {hasActiveFilters ? 'No matching slips' : 'No slips yet'}
+              {hasActiveFilters ? 'ไม่พบสลิปที่ตรงกับตัวกรอง' : 'ยังไม่มีสลิป'}
             </p>
             <p className="max-w-sm text-sm" style={{ color: 'var(--text-muted)' }}>
               {hasActiveFilters
-                ? 'Try widening the date range or clearing filters.'
-                : 'Once a customer sends a slip to your connected LINE bot, it will appear here.'}
+                ? 'ลองขยายช่วงวันที่หรือล้างตัวกรอง'
+                : 'เมื่อมีลูกค้าส่งสลิปผ่าน LINE Bot ของร้านค้า รายการจะแสดงที่นี่'}
             </p>
             {hasActiveFilters ? (
               <button
@@ -737,7 +737,7 @@ export default function SlipsPage() {
                 className="mt-1 font-mono text-[10px] uppercase tracking-widest transition-colors"
                 style={{ color: 'var(--blue)' }}
               >
-                Clear filters
+                ล้างตัวกรอง
               </button>
             ) : null}
           </div>
@@ -759,14 +759,14 @@ export default function SlipsPage() {
               onClick={() => setPage((current) => Math.max(1, current - 1))}
               className="border border-zinc-200 px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-zinc-700 transition-colors disabled:cursor-not-allowed disabled:opacity-30"
             >
-              Previous
+              ก่อนหน้า
             </button>
             <div className="text-center">
               <p className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-                Page {pagination.page ?? page} / {totalPages}
+                หน้า {pagination.page ?? page} / {totalPages}
               </p>
               <p className="mt-1 font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-                {pagination.total.toLocaleString()} total slips
+                ทั้งหมด {pagination.total.toLocaleString()} สลิป
               </p>
             </div>
             <button
@@ -774,7 +774,7 @@ export default function SlipsPage() {
               onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
               className="border border-zinc-200 px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-zinc-700 transition-colors disabled:cursor-not-allowed disabled:opacity-30"
             >
-              Next
+              ถัดไป
             </button>
           </div>
         )}

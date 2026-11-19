@@ -8,6 +8,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api, tokenManager } from '@/lib/api-client';
 import { FreePlanConfirmModal } from '@/components/subscription/FreePlanConfirmModal';
+import { planDescription } from '@/lib/plan-description';
 
 const featureLabels: Record<string, string> = {
   slip_verify:          'ตรวจสอบสลิป',
@@ -92,7 +93,7 @@ export default function PricingPage() {
 
   const activateFreePlan = () => {
     setFreeConfirmOpen(false);
-    checkoutMutation.mutate({ plan_id: 'plan-free', billing_cycle: 'monthly' });
+    window.location.href = '/dashboard/merchant/line?onboarding=1';
   };
 
   return (
@@ -195,7 +196,7 @@ export default function PricingPage() {
 
             {/* แผนฟรี */}
             {freePlan && (() => {
-              const isCurrent = freePlan.id === currentPlanId;
+              const isCurrent = freePlan.id === currentPlanId && freePlanUsed;
               const isFreeUnavailable = freePlanUsed && !isCurrent;
               const isRec = recommendedId === freePlan.id;
               return (
@@ -214,6 +215,7 @@ export default function PricingPage() {
                     <p className="font-display text-3xl font-extrabold md:text-4xl" style={{ color: 'var(--ink)' }}>
                       ฟรี {freePlan.quota_per_month.toLocaleString()}สลิป
                     </p>
+                    <p className="mt-2 text-sm font-medium" style={{ color: 'var(--text-muted)' }}>ตั้งค่า LINE OA ให้เสร็จเพื่อรับสิทธิ์ครั้งแรก</p>
                   </div>
                   <button
                     onClick={() => handlePlanClick(freePlan.id)}
@@ -224,9 +226,9 @@ export default function PricingPage() {
                     {checkoutMutation.isPending ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : isCurrent ? (
-                      'Current Plan'
+                      'แผนปัจจุบัน'
                     ) : isFreeUnavailable ? (
-                      'Used Already'
+                      'ใช้สิทธิ์แล้ว'
                     ) : (
                       <>เริ่มใช้งานฟรี <ArrowUpRight className="h-4 w-4" /></>
                     )}
@@ -281,7 +283,7 @@ export default function PricingPage() {
                           {plan.name}
                         </p>
                         <p className="text-sm" style={{ color: isPopular ? 'rgba(255,255,255,0.65)' : 'var(--text-muted)' }}>
-                          {plan.description}
+                          {planDescription(plan.id, plan.description)}
                         </p>
                       </div>
 
@@ -339,7 +341,7 @@ export default function PricingPage() {
                         {checkoutMutation.isPending ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : isCurrent ? (
-                          'Current Plan'
+                          'แผนปัจจุบัน'
                         ) : (
                           <>เลือกแผนนี้ <ArrowUpRight className="h-4 w-4" /></>
                         )}

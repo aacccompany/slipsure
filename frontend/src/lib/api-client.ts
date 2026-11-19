@@ -371,6 +371,10 @@ class ApiClient {
     return this.request('/v1/merchants/me/quota');
   }
 
+  async claimLINEFreeCredits(): Promise<ApiResponse<{ granted: boolean }>> {
+    return this.request('/v1/merchants/me/free-credits/claim', { method: 'POST' });
+  }
+
   // Merchant Analytics
   async getMerchantAnalyticsDashboard(): Promise<ApiResponse<MerchantAnalyticsDashboard>> {
     return this.request('/v1/merchants/me/analytics/dashboard');

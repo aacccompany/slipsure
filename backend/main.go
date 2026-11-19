@@ -301,6 +301,7 @@ func main() {
 
 			// Quota management
 			merchants.GET("/quota", merchantHandler.GetQuota)
+			merchants.POST("/free-credits/claim", merchantHandler.ClaimLINEFreeCredits)
 
 			// Analytics
 			merchants.GET("/analytics/dashboard", merchantHandler.GetMerchantAnalyticsDashboard)

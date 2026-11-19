@@ -25,7 +25,7 @@ export const Navbar = () => {
   const navLinks = [
     { name: 'บริการ', href: '/services' },
     { name: 'ราคา', href: '/pricing' },
-    { name: 'Login', href: '/login' },
+    { name: 'เข้าสู่ระบบ', href: '/login' },
   ];
 
   return (

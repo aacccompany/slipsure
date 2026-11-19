@@ -123,6 +123,12 @@ export default function DashboardPage() {
     queryFn: () => api.getSubscription(),
   });
 
+  const { data: lineConfigData } = useQuery({
+    queryKey: ['line-webhook-config'],
+    queryFn: () => api.getLINEWebhookConfig(),
+    retry: false,
+  });
+
   const stats = slipStatsData?.data;
   const successRate = Math.round(stats?.success_rate ?? 0);
   const rawDailyUsage = usageData?.data?.usage_per_day ?? [];
@@ -267,10 +273,13 @@ export default function DashboardPage() {
   }
 
   // Day + month only for the hero card (the full date stays in the Account page).
-  const resetDayMonth = quota?.data?.reset_date
+  const pendingTrial = subscriptionData?.data?.free_plan_used === false
+    && subscriptionData?.data?.subscription?.plan_id === 'plan-free';
+  const resetDayMonth = !pendingTrial && quota?.data?.reset_date
     ? new Date(quota.data.reset_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'long' })
     : '-';
   const hasTrendActivity = chartData.some((item) => item.verified > 0 || item.failed > 0);
+  const lineConfigured = lineConfigData?.data?.config?.is_configured === true;
   return (
     <div className="p-6 space-y-6" style={{ background: 'var(--bg)' }}>
       <div className="flex items-center justify-between gap-4">
@@ -293,7 +302,19 @@ export default function DashboardPage() {
       </div>
 
       <ReportExportDialog open={reportOpen} onClose={() => setReportOpen(false)} initialPeriod={analyticsPeriod} startDate={appliedTransactionFilters.startDate} endDate={appliedTransactionFilters.endDate} />
-      {quota?.data?.is_blocked && (
+      {pendingTrial && (
+        <div className="flex flex-col gap-3 border border-emerald-200 bg-emerald-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm font-semibold text-emerald-900">ตั้งค่า LINE OA ให้เสร็จ แล้วรับเครดิตฟรี 20 สลิปสำหรับทดลองใช้งาน</p>
+          <Link href="/dashboard/merchant/line?onboarding=1" className="inline-flex h-10 shrink-0 items-center justify-center rounded-md bg-emerald-700 px-4 text-sm font-bold text-white hover:bg-emerald-800">ตั้งค่า LINE เพื่อรับสิทธิ์</Link>
+        </div>
+      )}
+      {lineConfigData && !lineConfigData.data?.config?.is_configured && subscriptionData?.data?.free_plan_used !== false && (
+        <div className="flex flex-col gap-3 border border-amber-200 bg-amber-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm font-medium text-amber-900">ยังไม่ได้เชื่อมต่อ LINE OA – ตั้งค่าให้เสร็จเพื่อเริ่มตรวจสลิป</p>
+          <Link href="/dashboard/merchant/line?onboarding=1" className="inline-flex h-10 shrink-0 items-center justify-center bg-blue-700 px-4 text-sm font-bold text-white hover:bg-blue-800">ตั้งค่าต่อ</Link>
+        </div>
+      )}
+      {quota?.data?.is_blocked && !pendingTrial && (
         <div className="flex items-center gap-3 px-4 py-3" style={{ background: 'var(--err-pale)', border: '1px solid #FECACA' }}>
           <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
           <p className="text-sm text-rose-700">
@@ -309,7 +330,8 @@ export default function DashboardPage() {
         used={quota?.data?.used ?? 0}
         remaining={quota?.data?.remaining ?? 0}
         resetLabel={resetDayMonth}
-        isBlocked={quota?.data?.is_blocked}
+        isBlocked={!pendingTrial && quota?.data?.is_blocked}
+        pendingSetup={pendingTrial}
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -401,9 +423,17 @@ export default function DashboardPage() {
             {!hasTrendActivity ? (
               <EmptyState
                 icon={ScanLine}
-                title="ยังไม่มีสลิปที่ตรวจสอบ"
-                description="เชื่อมต่อ LINE bot เพื่อเริ่มรับและตรวจสลิป ผลจะแสดงเป็นกราฟที่นี่"
-                action={{ label: 'เชื่อมต่อ LINE', href: '/dashboard/merchant/line' }}
+                title={lineConfigured ? 'ตั้งค่า LINE OA แล้ว' : 'ยังไม่มีสลิปที่ตรวจสอบ'}
+                description={lineConfigured
+                  ? 'ยังไม่มีสลิปที่ตรวจสอบในช่วงเวลานี้ เมื่อมีรายการใหม่ ผลจะแสดงเป็นกราฟที่นี่'
+                  : lineConfigData
+                    ? 'เชื่อมต่อ LINE OA เพื่อเริ่มรับและตรวจสลิป ผลจะแสดงเป็นกราฟที่นี่'
+                    : 'ยังไม่มีสลิปที่ตรวจสอบในช่วงเวลานี้'}
+                action={lineConfigured
+                  ? { label: 'ดูการตั้งค่า LINE', href: '/dashboard/merchant/line' }
+                  : lineConfigData
+                    ? { label: 'เชื่อมต่อ LINE', href: '/dashboard/merchant/line?onboarding=1' }
+                    : undefined}
               />
             ) : (
             <div className="relative" onMouseLeave={() => setChartTooltip(null)}>
@@ -437,7 +467,7 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="h-72 w-full overflow-visible" role="img" aria-label="Verification trend">
+              <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="h-72 w-full overflow-visible" role="img" aria-label="แนวโน้มการตรวจสอบสลิป">
                 {yTicks.map((tick) => {
                   const y = getY(tick);
                   return (
@@ -541,7 +571,7 @@ export default function DashboardPage() {
               />
             ) : (
             <div className="flex min-h-72 flex-col items-center justify-center">
-              <svg viewBox="0 0 220 220" className="h-56 w-56" role="img" aria-label="Payment method chart">
+              <svg viewBox="0 0 220 220" className="h-56 w-56" role="img" aria-label="แผนภูมิวิธีชำระเงิน">
                 <circle cx="110" cy="110" r={donutRadius} fill="none" stroke="#E5E7EB" strokeWidth={donutStroke} />
                 <circle
                   cx="110"
@@ -556,20 +586,20 @@ export default function DashboardPage() {
                 >
                   <title>
                     {hasStripePayments
-                      ? `Stripe ${stripePaymentCount} payments, THB ${stripePaymentAmount.toLocaleString()}`
-                      : 'No paid Stripe payments yet. Current account is on Free tier.'}
+                      ? `ชำระผ่าน Stripe ${stripePaymentCount} รายการ รวม ${stripePaymentAmount.toLocaleString()} บาท`
+                      : 'ยังไม่มีการชำระเงินผ่าน Stripe ขณะนี้ใช้แผนฟรี'}
                   </title>
                 </circle>
               </svg>
               <div className="mt-2 flex items-center gap-2 text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
                 <span className="h-3 w-3 rounded-full" style={{ background: hasStripePayments ? '#5B8FF9' : '#CBD5E1' }} />
-                {hasStripePayments ? 'Stripe' : 'Free tier'}
+                {hasStripePayments ? 'Stripe' : 'แผนฟรี'}
                 <span style={{ color: 'var(--ink)' }}>{stripePaymentCount.toLocaleString()}</span>
               </div>
               <div className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
                 {hasStripePayments
-                  ? `THB ${stripePaymentAmount.toLocaleString()} collected`
-                  : 'No paid Stripe payments yet'}
+                  ? `รับชำระแล้ว ${stripePaymentAmount.toLocaleString()} บาท`
+                  : 'ยังไม่มีการชำระเงินผ่าน Stripe'}
               </div>
             </div>
             )}
@@ -986,7 +1016,7 @@ export default function DashboardPage() {
                 type="button"
                 onClick={() => setSelectedOrder(null)}
                 className="rounded-md p-2 transition-colors hover:bg-slate-100"
-                aria-label="Close order detail"
+                aria-label="ปิดรายละเอียดการชำระเงิน"
                 style={{ color: 'var(--text-muted)' }}
               >
                 <X className="h-5 w-5" />
@@ -999,10 +1029,10 @@ export default function DashboardPage() {
                 ['วิธีชำระ', selectedOrder.gateway],
                 ['สถานะ', orderStatusLabel(selectedOrder.status)],
                 ['เลขอ้างอิง Stripe', selectedOrder.gateway_reference_id || '-'],
-                ['Payment ID', selectedOrder.id],
-                ['Merchant ID', selectedOrder.merchant_id],
-                ['Merchant', selectedOrder.merchant_name || '-'],
-                ['Subscription ID', selectedOrder.subscription_id || '-'],
+                ['รหัสการชำระเงิน', selectedOrder.id],
+                ['รหัสร้านค้า', selectedOrder.merchant_id],
+                ['ร้านค้า', selectedOrder.merchant_name || '-'],
+                ['รหัสแพ็กเกจ', selectedOrder.subscription_id || '-'],
                 ['สร้างเมื่อ', new Date(selectedOrder.created_at).toLocaleString('th-TH')],
                 ['ชำระเมื่อ', selectedOrder.paid_at ? new Date(selectedOrder.paid_at).toLocaleString('th-TH') : '-'],
               ].map(([label, value]) => (

@@ -22,6 +22,7 @@ type paidLotState struct {
 	paid        bool
 	lotCreated  bool
 	lotInserts  int
+	freeRetires int
 	createdTime time.Time
 }
 
@@ -37,10 +38,15 @@ func (c paidLotConn) Prepare(string) (driver.Stmt, error) {
 func (c paidLotConn) Close() error              { return nil }
 func (c paidLotConn) Begin() (driver.Tx, error) { return paidLotTx{}, nil }
 func (c paidLotConn) ExecContext(_ context.Context, query string, _ []driver.NamedValue) (driver.Result, error) {
-	if !strings.Contains(query, "pg_advisory_xact_lock") {
+	switch {
+	case strings.Contains(query, "pg_advisory_xact_lock"):
+		return driver.RowsAffected(1), nil
+	case strings.Contains(query, "UPDATE credit_lots") && strings.Contains(query, "plan_id = 'plan-free'"):
+		c.state.freeRetires++
+		return driver.RowsAffected(1), nil
+	default:
 		return nil, fmt.Errorf("unexpected exec: %s", query)
 	}
-	return driver.RowsAffected(1), nil
 }
 
 func (c paidLotConn) QueryContext(_ context.Context, query string, _ []driver.NamedValue) (driver.Rows, error) {
@@ -121,6 +127,28 @@ func TestPaidCheckoutRecoversMissingLotWithoutDuplicateCredits(t *testing.T) {
 	}
 	if state.lotInserts != 1 {
 		t.Fatalf("credit lot inserts = %d, want 1", state.lotInserts)
+	}
+	if state.freeRetires != 2 {
+		t.Fatalf("free credit retire calls = %d, want 2 (new and replay)", state.freeRetires)
+	}
+}
+
+func TestFreeLotDoesNotRetireTrialCredits(t *testing.T) {
+	state := &paidLotState{lotID: uuid.New(), createdTime: time.Now()}
+	name := "free-lot-" + uuid.NewString()
+	sql.Register(name, paidLotDriver{state})
+	db, err := sql.Open(name, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	repo := &merchantRepository{db: db}
+	lot := &models.CreditLot{MerchantID: uuid.New(), PlanID: "plan-free", CreditsTotal: 20, StartedAt: state.createdTime, ExpiresAt: state.createdTime.AddDate(100, 0, 0)}
+	if err := repo.CreateCreditLot(lot); err != nil {
+		t.Fatal(err)
+	}
+	if state.freeRetires != 0 {
+		t.Fatalf("free credit retire calls = %d, want 0", state.freeRetires)
 	}
 }
 

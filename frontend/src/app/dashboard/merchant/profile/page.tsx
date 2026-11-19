@@ -81,10 +81,10 @@ export default function MerchantProfileDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['merchant-profile'] });
       queryClient.invalidateQueries({ queryKey: ['subscription'] });
       queryClient.invalidateQueries({ queryKey: ['quota'] });
-      toast.success(merchantData?.data?.profile ? 'Shop profile updated successfully!' : 'Shop profile created successfully!');
+      toast.success(merchantData?.data?.profile ? 'อัปเดตข้อมูลร้านค้าแล้ว' : 'สร้างข้อมูลร้านค้าแล้ว');
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : 'Failed to save shop profile');
+      toast.error(error instanceof Error ? error.message : 'บันทึกข้อมูลร้านค้าไม่สำเร็จ');
     },
   });
 
@@ -92,11 +92,11 @@ export default function MerchantProfileDetailPage() {
     mutationFn: (file: File) => api.uploadLogo(file),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['merchant-profile'] });
-      toast.success('Logo uploaded successfully!');
+      toast.success('อัปโหลดโลโก้แล้ว');
       setLogoFile(null);
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : 'Failed to upload logo');
+      toast.error(error instanceof Error ? error.message : 'อัปโหลดโลโก้ไม่สำเร็จ');
     },
   });
 
@@ -132,14 +132,14 @@ export default function MerchantProfileDetailPage() {
               className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-zinc-500 transition-colors hover:text-zinc-900"
             >
               <ChevronLeft className="h-4 w-4" />
-              Back to Merchant
+              กลับไปร้านค้า
             </Link>
             <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-400">
-              Merchant settings
+              ตั้งค่าร้านค้า
             </p>
-            <h1 className="mt-1 text-3xl font-black tracking-tight text-zinc-950">Shop Profile</h1>
+            <h1 className="mt-1 text-3xl font-black tracking-tight text-zinc-950">ข้อมูลร้านค้า</h1>
             <p className="mt-2 max-w-2xl text-sm text-zinc-500">
-              Manage the public shop name, logo, and contact details shown to customers.
+              จัดการชื่อร้าน โลโก้ และข้อมูลติดต่อที่แสดงให้ลูกค้าเห็น
             </p>
           </div>
           <div className="flex gap-2">
@@ -148,7 +148,7 @@ export default function MerchantProfileDetailPage() {
               onClick={() => router.push('/dashboard/merchant')}
               className="h-11 rounded-md border border-zinc-200 bg-white px-5 text-sm font-bold text-zinc-700 transition-colors hover:border-zinc-900"
             >
-              Cancel
+              ยกเลิก
             </button>
             <button
               type="button"
@@ -157,7 +157,7 @@ export default function MerchantProfileDetailPage() {
               className="inline-flex h-11 items-center gap-2 rounded-md bg-zinc-950 px-6 text-sm font-bold text-white shadow-sm transition-colors hover:bg-zinc-800 disabled:cursor-wait disabled:opacity-50"
             >
               {saveProfileMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              Save Changes
+              บันทึกการเปลี่ยนแปลง
             </button>
           </div>
         </div>
@@ -168,7 +168,7 @@ export default function MerchantProfileDetailPage() {
               <div className="flex items-center gap-3">
                 <Store className="h-4 w-4 text-blue-700" />
                 <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-500">
-                  Brand
+                  แบรนด์
                 </p>
               </div>
 
@@ -176,7 +176,7 @@ export default function MerchantProfileDetailPage() {
                 {profile?.logo_url ? (
                   <img
                     src={profile.logo_url}
-                    alt="Shop logo"
+                    alt="โลโก้ร้านค้า"
                     className="h-28 w-28 rounded-lg border border-zinc-200 bg-white object-cover shadow-sm"
                   />
                 ) : (
@@ -185,10 +185,10 @@ export default function MerchantProfileDetailPage() {
                   </div>
                 )}
                 <h2 className="mt-5 max-w-full truncate text-xl font-black text-zinc-950">
-                  {profileData.shop_name || 'Your Shop Name'}
+                  {profileData.shop_name || 'ชื่อร้านค้าของคุณ'}
                 </h2>
                 <p className="mt-1 text-sm text-zinc-500">
-                  {profileData.contact_email || 'No contact email yet'}
+                  {profileData.contact_email || 'ยังไม่มีอีเมลติดต่อ'}
                 </p>
               </div>
 
@@ -205,8 +205,8 @@ export default function MerchantProfileDetailPage() {
                   className="flex min-h-24 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-zinc-300 bg-white px-4 py-5 text-center text-sm font-semibold text-zinc-600 transition-colors hover:border-blue-400 hover:text-blue-700"
                 >
                   <Upload className="mb-2 h-5 w-5" />
-                  <span className="max-w-full truncate">{logoFile ? logoFile.name : 'Choose logo image'}</span>
-                  <span className="mt-1 text-xs font-normal text-zinc-400">PNG, JPG, or WEBP</span>
+                  <span className="max-w-full truncate">{logoFile ? logoFile.name : 'เลือกรูปโลโก้'}</span>
+                  <span className="mt-1 text-xs font-normal text-zinc-400">ไฟล์ PNG, JPG หรือ WEBP</span>
                 </label>
                 {logoFile && (
                   <button
@@ -216,7 +216,7 @@ export default function MerchantProfileDetailPage() {
                     className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-blue-700 text-sm font-bold text-white transition-colors hover:bg-blue-800 disabled:cursor-wait disabled:opacity-50"
                   >
                     {isUploadingLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                    Upload Logo
+                    อัปโหลดโลโก้
                   </button>
                 )}
               </div>
@@ -224,24 +224,24 @@ export default function MerchantProfileDetailPage() {
 
             <div className="p-6 md:p-8">
               <div className="mb-6">
-                <h3 className="text-base font-black text-zinc-950">Business Details</h3>
-                <p className="mt-1 text-sm text-zinc-500">Keep these details accurate for receipts and customer replies.</p>
+                <h3 className="text-base font-black text-zinc-950">ข้อมูลธุรกิจ</h3>
+                <p className="mt-1 text-sm text-zinc-500">ตรวจสอบข้อมูลให้ถูกต้องเพื่อใช้ในใบเสร็จและการตอบกลับลูกค้า</p>
               </div>
 
               <div className="grid gap-5">
                 <label className="space-y-2">
-                  <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">Shop Name</span>
+                  <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">ชื่อร้านค้า</span>
                   <input
                     type="text"
                     value={profileData.shop_name || ''}
                     onChange={(e) => setProfileData({ ...profileData, shop_name: e.target.value })}
                     className="h-11 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-950 outline-none transition-colors placeholder:text-zinc-400 focus:border-blue-500"
-                    placeholder="Enter your shop name"
+                    placeholder="กรอกชื่อร้านค้า"
                   />
                 </label>
 
                 <label className="space-y-2">
-                  <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">Address</span>
+                  <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">ที่อยู่</span>
                   <span className="relative block">
                     <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
                     <input
@@ -249,14 +249,14 @@ export default function MerchantProfileDetailPage() {
                       value={profileData.address || ''}
                       onChange={(e) => setProfileData({ ...profileData, address: e.target.value })}
                       className="h-11 w-full rounded-md border border-zinc-200 bg-white pl-10 pr-3 text-sm font-semibold text-zinc-950 outline-none transition-colors placeholder:text-zinc-400 focus:border-blue-500"
-                      placeholder="Enter your shop address"
+                      placeholder="กรอกที่อยู่ร้านค้า"
                     />
                   </span>
                 </label>
 
                 <div className="grid gap-5 md:grid-cols-2">
                   <label className="space-y-2">
-                    <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">Contact Email</span>
+                    <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">อีเมลติดต่อ</span>
                     <span className="relative block">
                       <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
                       <input
@@ -264,13 +264,13 @@ export default function MerchantProfileDetailPage() {
                         value={profileData.contact_email || ''}
                         onChange={(e) => setProfileData({ ...profileData, contact_email: e.target.value })}
                         className="h-11 w-full rounded-md border border-zinc-200 bg-white pl-10 pr-3 text-sm font-semibold text-zinc-950 outline-none transition-colors placeholder:text-zinc-400 focus:border-blue-500"
-                        placeholder="Enter contact email"
+                        placeholder="กรอกอีเมลติดต่อ"
                       />
                     </span>
                   </label>
 
                   <label className="space-y-2">
-                    <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">Contact Phone</span>
+                    <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">เบอร์โทรติดต่อ</span>
                     <span className="relative block">
                       <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
                       <input
@@ -278,7 +278,7 @@ export default function MerchantProfileDetailPage() {
                         value={profileData.contact_phone || ''}
                         onChange={(e) => setProfileData({ ...profileData, contact_phone: e.target.value })}
                         className="h-11 w-full rounded-md border border-zinc-200 bg-white pl-10 pr-3 text-sm font-semibold text-zinc-950 outline-none transition-colors placeholder:text-zinc-400 focus:border-blue-500"
-                        placeholder="Enter contact phone"
+                        placeholder="กรอกเบอร์โทรติดต่อ"
                       />
                     </span>
                   </label>
@@ -286,11 +286,11 @@ export default function MerchantProfileDetailPage() {
 
                 <label className="flex items-center justify-between gap-4 rounded-lg border border-zinc-200 bg-slate-50 px-4 py-3">
                   <span>
-                    <span className="block text-sm font-bold text-zinc-950">Strict duplicate checks</span>
-                    <span className="mt-0.5 block text-xs text-zinc-500">Repeated slips are always blocked during verification.</span>
+                    <span className="block text-sm font-bold text-zinc-950">ตรวจสลิปซ้ำอย่างเข้มงวด</span>
+                    <span className="mt-0.5 block text-xs text-zinc-500">ระบบจะปฏิเสธสลิปที่เคยตรวจแล้วเสมอ</span>
                   </span>
                   <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-200">
-                    Always on
+                    เปิดตลอด
                   </span>
                 </label>
               </div>

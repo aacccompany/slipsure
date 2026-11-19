@@ -27,10 +27,10 @@ export function FreePlanConfirmModal({
             </div>
             <div>
               <h2 className="text-lg font-bold tracking-tight" style={{ color: 'var(--ink)' }}>
-                Activate Free Plan?
+                ยืนยันการใช้แผนฟรี?
               </h2>
               <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
-                This free plan can be used only once for this account.
+                เชื่อมต่อ LINE OA ให้เสร็จเพื่อรับเครดิตฟรี 20 สลิป ใช้สิทธิ์ได้หนึ่งครั้ง
               </p>
             </div>
           </div>
@@ -40,7 +40,7 @@ export function FreePlanConfirmModal({
             disabled={isLoading}
             className="p-1.5 transition-colors disabled:opacity-50"
             style={{ color: 'var(--text-muted)' }}
-            aria-label="Close"
+            aria-label="ปิด"
           >
             <X className="h-4 w-4" />
           </button>
@@ -49,8 +49,8 @@ export function FreePlanConfirmModal({
         <div className="space-y-3 p-6">
           {[
             'ฟรี 20สลิป',
-            'No payment is required.',
-            'After activation, the Free plan will no longer appear for this account.',
+            'ไม่ต้องชำระเงิน',
+            'เมื่อเปิดใช้แล้ว บัญชีนี้จะไม่สามารถรับแผนฟรีซ้ำได้',
           ].map((item) => (
             <div key={item} className="flex gap-3 text-sm" style={{ color: 'var(--text-muted)' }}>
               <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center" style={{ background: 'var(--ok-pale)', color: 'var(--ok-ink)' }}>
@@ -69,7 +69,7 @@ export function FreePlanConfirmModal({
             className="px-5 py-3 text-sm font-semibold transition-colors disabled:opacity-50"
             style={{ border: '1px solid var(--border)', color: 'var(--ink)' }}
           >
-            Not now
+            ไว้ทีหลัง
           </button>
           <button
             type="button"
@@ -79,7 +79,7 @@ export function FreePlanConfirmModal({
             style={{ background: 'var(--navy)', color: '#fff' }}
           >
             {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Activate Free
+            ไปตั้งค่า LINE OA
           </button>
         </div>
       </div>

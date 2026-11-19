@@ -17,7 +17,7 @@ const columns = [
     title: 'ข้อมูล',
     links: [
       { label: 'ราคา', href: '/pricing' },
-      { label: 'FAQ', href: '/#faq' },
+      { label: 'คำถามที่พบบ่อย', href: '/#faq' },
     ],
   },
 ];
@@ -63,7 +63,7 @@ export const Footer = () => {
               style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.75)' }}
             >
               <span className="h-2 w-2 rounded-full" style={{ background: 'var(--cyan)' }} />
-              All systems online
+              ระบบพร้อมใช้งาน
             </span>
           </div>
 
@@ -107,10 +107,10 @@ export const Footer = () => {
           style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}
         >
           <span className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
-            © 2026 FLOWSLIP — ALL RIGHTS RESERVED
+            © 2026 FLOWSLIP สงวนลิขสิทธิ์
           </span>
           <div className="flex gap-2">
-            {['Privacy', 'Terms'].map((item) => (
+            {['ความเป็นส่วนตัว', 'ข้อกำหนด'].map((item) => (
               <a
                 key={item}
                 href="#"

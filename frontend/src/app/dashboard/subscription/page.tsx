@@ -6,6 +6,16 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
 import { toast } from 'sonner';
 import { PageSkeleton } from '@/components/ui/Skeleton';
+import { planDescription } from '@/lib/plan-description';
+
+const subscriptionStatusLabels: Record<string, string> = {
+  active: 'ใช้งานอยู่',
+  trial: 'ทดลองใช้งาน',
+  pending: 'รอดำเนินการ',
+  suspended: 'ระงับชั่วคราว',
+  cancelled: 'ยกเลิกแล้ว',
+  expired: 'หมดอายุ',
+};
 
 const techHuntPlan = {
   price: 9252,
@@ -43,11 +53,11 @@ export default function SubscriptionPage() {
     mutationFn: (data: { cancel_immediately: boolean; reason: string }) =>
       api.cancelSubscription(data),
     onSuccess: () => {
-      toast.success('Subscription cancelled successfully');
+      toast.success('ยกเลิกแพ็กเกจแล้ว');
       queryClient.invalidateQueries({ queryKey: ['subscription'] });
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : 'Failed to cancel subscription');
+      toast.error(error instanceof Error ? error.message : 'ยกเลิกแพ็กเกจไม่สำเร็จ');
     },
   });
 
@@ -59,17 +69,18 @@ export default function SubscriptionPage() {
         window.location.href = response.data.checkout_url;
         return;
       }
-      toast.success(response.message || 'Plan updated successfully');
+      toast.success(response.message || 'อัปเดตแพ็กเกจแล้ว');
       queryClient.invalidateQueries({ queryKey: ['subscription'] });
       queryClient.invalidateQueries({ queryKey: ['quota'] });
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : 'Failed to create checkout session');
+      toast.error(error instanceof Error ? error.message : 'เริ่มการชำระเงินไม่สำเร็จ');
       queryClient.invalidateQueries({ queryKey: ['subscription'] });
     },
   });
 
   const subscription = subscriptionData?.data?.subscription;
+  const pendingTrial = subscription?.plan_id === 'plan-free' && subscriptionData?.data?.free_plan_used === false;
   const plans = plansData?.data?.plans || [];
   const planOrder = ['plan-mini', 'plan-starter', 'plan-basic', 'plan-standard', 'plan-pro', 'plan-business'];
   const visiblePlans = plans
@@ -126,25 +137,32 @@ export default function SubscriptionPage() {
       <div className="mx-auto max-w-6xl space-y-6">
         <div className="flex flex-col gap-4 border-b border-zinc-200 pb-5 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-400">/ Billing</p>
-            <h1 className="mt-1 text-3xl font-black tracking-tight text-zinc-950">Subscription</h1>
+            <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-400">/ การชำระเงิน</p>
+            <h1 className="mt-1 text-3xl font-black tracking-tight text-zinc-950">แพ็กเกจ</h1>
             <p className="mt-2 max-w-2xl text-sm text-zinc-500">
-              Manage your plan, billing cycle, and monthly verification credits.
+              จัดการแพ็กเกจ รอบชำระเงิน และเครดิตตรวจสอบสลิป
             </p>
           </div>
           {subscription && (
             <div className="inline-flex h-9 items-center gap-2 self-start rounded-full border border-blue-100 bg-blue-50 px-4 text-xs font-bold uppercase tracking-widest text-blue-900 md:self-auto">
               <Zap className="h-4 w-4" />
-              {isSubscriptionExpired ? 'Expired plan' : `${subscription.status} plan`}
+              {pendingTrial ? 'รอรับเครดิตฟรี' : isSubscriptionExpired ? 'แพ็กเกจหมดอายุ' : `แพ็กเกจ${subscriptionStatusLabels[subscription.status] ?? subscription.status}`}
             </div>
           )}
         </div>
+
+        {pendingTrial && (
+          <div className="flex flex-col gap-3 border border-emerald-200 bg-emerald-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm font-semibold text-emerald-900">ตั้งค่า LINE OA ให้เสร็จเพื่อรับเครดิตฟรี 20 สลิปครั้งแรก</p>
+            <a href="/dashboard/merchant/line?onboarding=1" className="inline-flex h-10 shrink-0 items-center justify-center rounded-md bg-emerald-700 px-4 text-sm font-bold text-white hover:bg-emerald-800">ตั้งค่า LINE</a>
+          </div>
+        )}
 
         {quota && (
           <section className="grid gap-4 md:grid-cols-3">
             <div className="rounded-lg border border-zinc-200 bg-white p-5">
               <div className="mb-4 flex items-center justify-between">
-                <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">Monthly Usage</p>
+                <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">การใช้งานรอบนี้</p>
                 <Zap className="h-4 w-4 text-zinc-400" />
               </div>
               <p className="text-2xl font-black text-zinc-950">{quota.used} / {quota.quota_limit}</p>
@@ -154,36 +172,38 @@ export default function SubscriptionPage() {
                   style={{ width: `${quota.quota_limit > 0 ? Math.min(100, (quota.used / quota.quota_limit) * 100) : 0}%` }}
                 />
               </div>
-              <p className="mt-2 text-sm text-zinc-500">{quota.remaining} credits remaining</p>
+              <p className="mt-2 text-sm text-zinc-500">คงเหลือ {quota.remaining} เครดิต</p>
             </div>
 
             <div className="rounded-lg border border-zinc-200 bg-white p-5">
               <div className="mb-4 flex items-center justify-between">
-                <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">Quota Reset</p>
+                <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">รีเซ็ตโควต้า</p>
                 <Clock className="h-4 w-4 text-zinc-400" />
               </div>
               <p className="text-2xl font-black text-zinc-950">
-                {new Date(quota.reset_date).toLocaleDateString('th-TH', { month: 'short', day: 'numeric', year: 'numeric' })}
+                {pendingTrial ? 'หลังตั้งค่า LINE' : new Date(quota.reset_date).toLocaleDateString('th-TH', { month: 'short', day: 'numeric', year: 'numeric' })}
               </p>
-              <p className="mt-2 text-sm text-zinc-500">{resetDays > 0 ? `In ${resetDays} days` : 'Reset is due'}</p>
+              <p className="mt-2 text-sm text-zinc-500">{pendingTrial ? 'ยังไม่เริ่มใช้เครดิตฟรี' : resetDays > 0 ? `อีก ${resetDays} วัน` : 'ถึงกำหนดรีเซ็ตแล้ว'}</p>
             </div>
 
             <div className="rounded-lg border border-zinc-200 bg-white p-5">
               <div className="mb-4 flex items-center justify-between">
-                <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">Status</p>
+                <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">สถานะ</p>
                 <CreditCard className="h-4 w-4 text-zinc-400" />
               </div>
-              <p className={`text-2xl font-black ${verificationBlocked ? 'text-rose-600' : 'text-emerald-600'}`}>
-                {isSubscriptionExpired ? 'Expired' : quota.is_blocked ? 'Blocked' : 'Active'}
+              <p className={`text-2xl font-black ${pendingTrial ? 'text-blue-700' : verificationBlocked ? 'text-rose-600' : 'text-emerald-600'}`}>
+                {pendingTrial ? 'รอตั้งค่า LINE' : isSubscriptionExpired ? 'หมดอายุ' : quota.is_blocked ? 'โควต้าเต็ม' : 'ใช้งานอยู่'}
               </p>
               <p className="mt-2 text-sm text-zinc-500">
-                {isSubscriptionExpired
-                  ? `Expired at ${expiryLabel}. Renew to continue.`
+                {pendingTrial
+                  ? 'เชื่อมต่อ LINE OA และตั้งค่า Webhook ให้เสร็จเพื่อรับ 20 สลิป'
+                  : isSubscriptionExpired
+                  ? `หมดอายุเมื่อ ${expiryLabel} ต่ออายุเพื่อใช้งานต่อ`
                   : quota.is_blocked
-                    ? 'Quota exceeded. Upgrade to continue.'
+                    ? 'โควต้าเต็มแล้ว อัปเกรดแพ็กเกจเพื่อใช้งานต่อ'
                     : expiryLabel
-                      ? `Verification available until ${expiryLabel}.`
-                      : 'Verification is available.'}
+                      ? `ตรวจสอบสลิปได้ถึง ${expiryLabel}`
+                      : 'พร้อมตรวจสอบสลิป'}
               </p>
             </div>
           </section>
@@ -224,14 +244,14 @@ export default function SubscriptionPage() {
 
                 <div className="pr-24">
                   <h2 className="text-base font-black text-blue-950">{plan.name}</h2>
-                  <p className="mt-1 text-xs text-zinc-500">{plan.description}</p>
+                  <p className="mt-1 text-xs text-zinc-500">{planDescription(plan.id, plan.description)}</p>
                 </div>
 
                 <div className="mt-7 flex items-end gap-2">
                   <span className="text-4xl font-black tracking-tight text-zinc-950">
                     {plan.quota_per_month.toLocaleString()}
                   </span>
-                  <span className="pb-1 text-xs font-bold uppercase text-blue-950">credit</span>
+                  <span className="pb-1 text-xs font-bold uppercase text-blue-950">เครดิต</span>
                 </div>
 
                 <div className="mt-5 rounded-md border border-sky-100 bg-sky-50 p-4 text-sm">
@@ -261,7 +281,7 @@ export default function SubscriptionPage() {
                 <div className="mt-8 space-y-2">
                   {isCurrentPlan ? (
                     <button className="h-10 w-full cursor-default rounded-md bg-blue-100 text-sm font-bold text-blue-800">
-                      Current Plan
+                      แผนปัจจุบัน
                     </button>
                   ) : (
                     <>
@@ -291,7 +311,7 @@ export default function SubscriptionPage() {
 
             <div className="mt-7 flex items-end gap-2">
               <span className="text-4xl font-black text-zinc-950">{techHuntPlan.quota.toLocaleString()}</span>
-              <span className="pb-1 text-xs font-bold uppercase text-blue-950">credit / เดือน</span>
+              <span className="pb-1 text-xs font-bold uppercase text-blue-950">เครดิต / เดือน</span>
             </div>
             <p className="mt-2 text-sm font-semibold text-blue-950">
               {formatTHB(techHuntPlan.price)} / เดือน
@@ -338,23 +358,23 @@ export default function SubscriptionPage() {
             <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-4">
               <h2 className="flex items-center gap-2 text-base font-black text-zinc-950">
                 <History className="h-4 w-4 text-blue-700" />
-                Subscription Details
+                รายละเอียดแพ็กเกจ
               </h2>
               <button
                 onClick={() => setIsCancelling(true)}
                 className="text-sm font-bold text-rose-600 transition-colors hover:text-rose-700"
               >
-                Cancel Plan
+                ยกเลิกแพ็กเกจ
               </button>
             </div>
             <div className="grid gap-0 md:grid-cols-2">
               {[
-                ['Plan', subscription.plan?.name || 'N/A'],
-                ['Status', subscription.status],
-                ['Billing Cycle', subscription.billing_cycle],
-                ['Started At', new Date(subscription.started_at).toLocaleDateString('th-TH')],
-                ['Expires At', subscription.expires_at ? new Date(subscription.expires_at).toLocaleDateString('th-TH') : 'N/A'],
-                ['Auto Renew', subscription.auto_renew ? 'Enabled' : 'Disabled'],
+                ['แพ็กเกจ', subscription.plan?.name || 'ไม่ระบุ'],
+                ['สถานะ', subscriptionStatusLabels[subscription.status] ?? subscription.status],
+                ['รอบชำระเงิน', subscription.billing_cycle === 'monthly' ? 'รายเดือน' : subscription.billing_cycle === 'yearly' ? 'รายปี' : subscription.billing_cycle],
+                ['เริ่มเมื่อ', new Date(subscription.started_at).toLocaleDateString('th-TH')],
+                ['หมดอายุเมื่อ', subscription.expires_at ? new Date(subscription.expires_at).toLocaleDateString('th-TH') : 'ไม่ระบุ'],
+                ['ต่ออายุอัตโนมัติ', subscription.auto_renew ? 'เปิด' : 'ปิด'],
               ].map(([label, value]) => (
                 <div key={label} className="flex items-center justify-between border-b border-zinc-100 px-6 py-4 text-sm">
                   <span className="text-zinc-500">{label}</span>
@@ -368,9 +388,9 @@ export default function SubscriptionPage() {
         {isCancelling && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <div className="w-full max-w-md rounded-lg bg-white p-6">
-              <h3 className="text-xl font-black text-zinc-950">Cancel Subscription?</h3>
+              <h3 className="text-xl font-black text-zinc-950">ยกเลิกแพ็กเกจ?</h3>
               <p className="mt-3 text-sm text-zinc-600">
-                Your subscription will remain active until the end of your current billing period.
+                แพ็กเกจจะยังใช้งานได้จนสิ้นสุดรอบชำระเงินปัจจุบัน
               </p>
               <div className="mt-6 space-y-2">
                 <button
@@ -378,7 +398,7 @@ export default function SubscriptionPage() {
                   disabled={cancelMutation.isPending}
                   className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-rose-600 text-sm font-bold text-white transition-colors hover:bg-rose-700 disabled:cursor-wait disabled:opacity-60"
                 >
-                  {cancelMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Yes, Cancel Subscription'}
+                  {cancelMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'ยืนยันการยกเลิก'}
                 </button>
                 <button
                   onClick={() => setIsCancelling(false)}
@@ -386,7 +406,7 @@ export default function SubscriptionPage() {
                   className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md border border-zinc-200 bg-white text-sm font-bold text-zinc-700 transition-colors hover:border-zinc-900"
                 >
                   <X className="h-4 w-4" />
-                  No, Keep My Plan
+                  ไม่ยกเลิกแพ็กเกจ
                 </button>
               </div>
             </div>

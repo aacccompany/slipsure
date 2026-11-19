@@ -15,6 +15,8 @@ import (
 // ErrFreePlanAlreadyUsed is returned when a merchant tries to activate Free more than once.
 var ErrFreePlanAlreadyUsed = errors.New("free plan can only be used once per account")
 
+var ErrLINEConfigRequired = errors.New("configure LINE OA before claiming free credits")
+
 // MerchantService handles merchant business logic
 type MerchantService struct {
 	merchantRepo  repositories.MerchantRepository
@@ -54,11 +56,6 @@ func (s *MerchantService) GetPlanByID(planID string) (*models.SubscriptionPlan, 
 
 // CreateCheckout creates a Stripe checkout session for subscription
 func (s *MerchantService) CreateCheckout(userID uuid.UUID, userEmail string, req *models.CheckoutRequest) (*models.CheckoutResponse, error) {
-	// Check if Stripe service is available
-	if s.stripeService == nil {
-		return nil, errors.New("stripe service is not available. please configure STRIPE_SECRET_KEY and STRIPE_PRICE_ID_* environment variables")
-	}
-
 	// Validate plan exists
 	plan, err := s.merchantRepo.GetPlanByID(req.PlanID)
 	if err != nil {
@@ -68,9 +65,12 @@ func (s *MerchantService) CreateCheckout(userID uuid.UUID, userEmail string, req
 	// Log plan validation
 	fmt.Printf("Plan validated: %s (%s) - %.2f THB/%s for user %s\n", plan.Name, plan.ID, plan.PriceMonthly, req.BillingCycle, userEmail)
 
-	// Handle free plans - activate immediately without Stripe
+	// Trial credits are claimed only after completing LINE OA onboarding.
 	if plan.PriceMonthly == 0 && plan.PriceYearly == 0 {
-		return s.activateFreePlan(userID, req.PlanID, req.BillingCycle)
+		return nil, ErrLINEConfigRequired
+	}
+	if s.stripeService == nil {
+		return nil, errors.New("stripe service is not available. please configure STRIPE_SECRET_KEY and STRIPE_PRICE_ID_* environment variables")
 	}
 
 	// Create Stripe checkout session for paid plans
@@ -82,44 +82,7 @@ func (s *MerchantService) CreateCheckout(userID uuid.UUID, userEmail string, req
 	return checkoutResp, nil
 }
 
-// activateFreePlan activates a free plan immediately without Stripe checkout
-func (s *MerchantService) activateFreePlan(userID uuid.UUID, planID string, billingCycle models.BillingCycle) (*models.CheckoutResponse, error) {
-	// Get or create merchant profile first
-	merchant, err := s.merchantRepo.FindByOwnerID(userID)
-	if err != nil {
-		// Create merchant profile if it doesn't exist
-		profileReq := &models.CreateMerchantProfileRequest{
-			ShopName:   "My Shop",
-			StrictMode: true,
-		}
-		profileResp, err := s.CreateProfile(userID, profileReq)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create merchant profile: %w", err)
-		}
-		expiresAt := time.Now().AddDate(100, 0, 0)
-		return &models.CheckoutResponse{
-			CheckoutSessionID: "free_plan_" + profileResp.Profile.ID.String(),
-			CheckoutURL:       "",
-			Amount:            0,
-			Currency:          "THB",
-			PlanID:            planID,
-			BillingCycle:      billingCycle,
-			ExpiresAt:         expiresAt,
-		}, nil
-	}
-
-	return s.activateFreePlanForMerchant(merchant.ID, planID, billingCycle)
-}
-
 func (s *MerchantService) activateFreePlanForMerchant(merchantID uuid.UUID, planID string, billingCycle models.BillingCycle) (*models.CheckoutResponse, error) {
-	usedFreePlan, err := s.merchantRepo.HasUsedFreePlan(merchantID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to check free plan eligibility: %w", err)
-	}
-	if usedFreePlan {
-		return nil, ErrFreePlanAlreadyUsed
-	}
-
 	// Calculate subscription expiration (free plans never expire, but set a far future date)
 	expiresAt := time.Now().AddDate(100, 0, 0) // 100 years from now
 
@@ -141,31 +104,18 @@ func (s *MerchantService) activateFreePlanForMerchant(merchantID uuid.UUID, plan
 		UpdatedAt:            time.Now(),
 	}
 
-	err = s.merchantRepo.CreateSubscription(subscription)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create free plan subscription: %w", err)
-	}
 	plan, err := s.merchantRepo.GetPlanByID(planID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load free plan credits: %w", err)
 	}
-	if plan.QuotaPerMonth > 0 {
-		lot := &models.CreditLot{
-			MerchantID:       merchantID,
-			SubscriptionID:   &subscription.ID,
-			PlanID:           planID,
-			CreditsTotal:     plan.QuotaPerMonth,
-			CreditsRemaining: plan.QuotaPerMonth,
-			StartedAt:        subscription.StartedAt,
-			ExpiresAt:        *subscription.ExpiresAt,
+	if err := s.merchantRepo.ActivateFreePlan(subscription, plan.QuotaPerMonth); err != nil {
+		if errors.Is(err, repositories.ErrFreePlanAlreadyUsed) {
+			return nil, ErrFreePlanAlreadyUsed
 		}
-		if err := s.merchantRepo.CreateCreditLot(lot); err != nil {
-			return nil, fmt.Errorf("failed to record free plan credits: %w", err)
+		if errors.Is(err, repositories.ErrLINEConfigRequired) {
+			return nil, ErrLINEConfigRequired
 		}
-	}
-
-	if err := s.merchantRepo.MarkFreePlanUsed(merchantID); err != nil {
-		return nil, fmt.Errorf("failed to mark free plan as used: %w", err)
+		return nil, fmt.Errorf("failed to activate free plan: %w", err)
 	}
 
 	fmt.Printf("Free plan activated for merchant %s, plan %s (%s)\n", merchantID, planID, billingCycle)
@@ -180,6 +130,12 @@ func (s *MerchantService) activateFreePlanForMerchant(merchantID uuid.UUID, plan
 		BillingCycle:      billingCycle,
 		ExpiresAt:         expiresAt,
 	}, nil
+}
+
+// ClaimFreeCreditsForLINE grants the one-time trial only after LINE OA setup.
+func (s *MerchantService) ClaimFreeCreditsForLINE(merchantID uuid.UUID) error {
+	_, err := s.activateFreePlanForMerchant(merchantID, "plan-free", models.BillingCycleMonthly)
+	return err
 }
 
 // GetSubscription retrieves current merchant subscription
@@ -276,8 +232,19 @@ func (s *MerchantService) CreateProfile(ownerID uuid.UUID, req *models.CreateMer
 		return nil, errors.New("failed to associate merchant with user")
 	}
 
-	if _, err := s.activateFreePlanForMerchant(profile.ID, "plan-free", models.BillingCycleMonthly); err != nil {
-		return nil, fmt.Errorf("failed to activate free plan: %w", err)
+	freePlanID := "free_plan"
+	expiresAt := time.Now().AddDate(100, 0, 0)
+	if err := s.merchantRepo.CreateSubscription(&models.Subscription{
+		MerchantID:           profile.ID,
+		PlanID:               "plan-free",
+		Status:               models.SubscriptionStatusActive,
+		BillingCycle:         models.BillingCycleMonthly,
+		StripeSubscriptionID: &freePlanID,
+		StartedAt:            time.Now(),
+		ExpiresAt:            &expiresAt,
+		AutoRenew:            false,
+	}); err != nil {
+		return nil, fmt.Errorf("failed to create pending free plan: %w", err)
 	}
 
 	return &models.MerchantProfileResponse{

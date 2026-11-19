@@ -37,9 +37,9 @@ function VerifyEmailContent() {
     setIsLoading(true); setError('');
     try {
       await verifyOTP(email, otp);
-      toast.success('Email verified!');
+      toast.success('ยืนยันอีเมลแล้ว');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Verification failed');
+      setError(err instanceof Error ? err.message : 'ยืนยันอีเมลไม่สำเร็จ');
       setIsLoading(false);
     }
   };
@@ -49,9 +49,9 @@ function VerifyEmailContent() {
     try {
       const { api } = await import('@/lib/api-client');
       await api.resendOTP(email);
-      toast.success('New code sent!');
+      toast.success('ส่งรหัสใหม่แล้ว');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to resend');
+      setError(err instanceof Error ? err.message : 'ส่งรหัสใหม่ไม่สำเร็จ');
       setCanResend(true);
     } finally { setIsLoading(false); }
   };
@@ -66,17 +66,17 @@ function VerifyEmailContent() {
           style={{ color: 'var(--text-muted)' }}
           onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--gold)')}
           onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}>
-          ← Back to Login
+          ← กลับไปหน้าเข้าสู่ระบบ
         </Link>
 
         <div className="mb-8">
           <h1 className="font-display text-4xl font-semibold mb-1" style={{ color: 'var(--ink)' }}>
-            Verify Email
+            ยืนยันอีเมล
           </h1>
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: 'var(--gold)' }} />
             <span className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--gold)' }}>
-              Check Your Inbox
+              ตรวจสอบกล่องจดหมาย
             </span>
           </div>
         </div>
@@ -93,7 +93,7 @@ function VerifyEmailContent() {
               </svg>
             </div>
             <p className="text-sm text-center leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-              We sent a 6-digit code to<br />
+              ส่งรหัส 6 หลักไปที่<br />
               <span className="font-semibold" style={{ color: 'var(--ink)' }}>{email}</span>
             </p>
           </div>
@@ -101,7 +101,7 @@ function VerifyEmailContent() {
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block font-mono text-[10px] uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>
-                Verification Code
+                รหัสยืนยัน
               </label>
               <input
                 type="text" value={otp}
@@ -124,25 +124,25 @@ function VerifyEmailContent() {
             <button type="submit" disabled={isLoading || otp.length !== 6}
               className="w-full py-3 text-sm font-semibold flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-60"
               style={{ background: 'var(--navy)', color: 'var(--gold-pale)' }}>
-              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Verify Email <span style={{ color: 'var(--gold)' }}>→</span></>}
+              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>ยืนยันอีเมล <span style={{ color: 'var(--gold)' }}>→</span></>}
             </button>
 
             <div className="text-center">
               <button type="button" onClick={handleResend} disabled={!canResend || isLoading}
                 className="font-mono text-[10px] uppercase tracking-widest transition-colors disabled:opacity-40"
                 style={{ color: canResend ? 'var(--gold)' : 'var(--text-muted)' }}>
-                {canResend ? 'Resend Code' : `Resend in ${countdown}s`}
+                {canResend ? 'ส่งรหัสใหม่' : `ส่งใหม่ได้ใน ${countdown} วินาที`}
               </button>
             </div>
           </form>
 
           <div className="pt-2" style={{ borderTop: '1px solid var(--border)' }}>
             <p className="text-xs text-center" style={{ color: 'var(--text-muted)' }}>
-              Wrong email?{' '}
+              อีเมลไม่ถูกต้อง?{' '}
               <Link href="/login" className="font-medium transition-colors" style={{ color: 'var(--ink)' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--gold)')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--ink)')}>
-                Change address
+                เปลี่ยนอีเมล
               </Link>
             </p>
           </div>

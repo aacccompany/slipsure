@@ -156,6 +156,14 @@ func (h *MerchantHandler) CreateCheckout(c *gin.Context) {
 			})
 			return
 		}
+		if errors.Is(err, services.ErrLINEConfigRequired) {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "LINE_CONFIG_REQUIRED",
+				"message": "ตั้งค่า LINE OA ให้เสร็จเพื่อรับเครดิตฟรี 20 สลิป",
+			})
+			return
+		}
 
 		// Return more specific error message
 		errorMessage := "Failed to create checkout session"
@@ -655,6 +663,27 @@ func (h *MerchantHandler) UpdateSettings(c *gin.Context) {
 }
 
 // Quota handlers
+
+// ClaimLINEFreeCredits grants the trial once the merchant has completed LINE setup.
+func (h *MerchantHandler) ClaimLINEFreeCredits(c *gin.Context) {
+	merchantID, err := getMerchantID(c, h.merchantRepo)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "MERCHANT_NOT_FOUND"})
+		return
+	}
+	if err := h.merchantService.ClaimFreeCreditsForLINE(merchantID); err != nil {
+		switch {
+		case errors.Is(err, services.ErrFreePlanAlreadyUsed):
+			c.JSON(http.StatusOK, gin.H{"success": true, "data": gin.H{"granted": false}})
+		case errors.Is(err, services.ErrLINEConfigRequired):
+			c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "LINE_CONFIG_REQUIRED", "message": "กรุณาตั้งค่า LINE OA ก่อนรับเครดิตฟรี"})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "FREE_CREDIT_GRANT_FAILED"})
+		}
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true, "data": gin.H{"granted": true}})
+}
 
 // GetQuota handles GET /merchants/me/quota - get current quota status
 func (h *MerchantHandler) GetQuota(c *gin.Context) {

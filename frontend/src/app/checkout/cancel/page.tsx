@@ -19,18 +19,18 @@ export default function CancelPage() {
               onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--ink)')}
               onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}>
               <ArrowLeft className="w-3.5 h-3.5" />
-              Back to Plans
+              กลับไปหน้าแพ็กเกจ
             </Link>
             <div className="h-4 w-px" style={{ background: 'var(--border)' }} />
             <div className="flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
               <span className="font-mono text-[11px] uppercase tracking-widest text-rose-500">
-                Payment Cancelled
+                ยกเลิกการชำระเงิน
               </span>
             </div>
           </div>
           <span className="font-mono text-[10px]" style={{ color: 'var(--border-strong)' }}>
-            FLOWSLIP / CHECKOUT / CANCEL
+            FLOWSLIP / การชำระเงิน / ยกเลิก
           </span>
         </div>
       </div>
@@ -49,22 +49,22 @@ export default function CancelPage() {
             </div>
 
             <p className="font-mono text-[11px] uppercase tracking-widest mb-3 text-rose-400">
-              / Payment Not Completed
+              / ชำระเงินไม่สำเร็จ
             </p>
             <h1 className="font-display text-4xl font-semibold mb-3" style={{ color: 'var(--ink)' }}>
-              Payment Cancelled
+              ยกเลิกการชำระเงิน
             </h1>
             <p className="text-sm leading-relaxed mb-10" style={{ color: 'var(--text-muted)' }}>
-              Your payment was not completed. No charge has been made to your account.
-              You can return to the plans page and try again anytime.
+              การชำระเงินยังไม่เสร็จสมบูรณ์ ระบบไม่ได้เรียกเก็บเงินจากบัญชีของคุณ
+              กลับไปเลือกแพ็กเกจและลองใหม่ได้ทุกเมื่อ
             </p>
 
             {/* Status rows */}
             <div className="mb-10" style={{ border: '1px solid var(--border)' }}>
               {[
-                { label: 'Charge',  value: 'None — your card was not charged' },
-                { label: 'Account', value: 'Unchanged — still on Free plan' },
-                { label: 'Session', value: 'Expired' },
+                { label: 'ยอดเรียกเก็บ',  value: 'ไม่มีการเรียกเก็บเงิน' },
+                { label: 'บัญชี', value: 'ไม่เปลี่ยนแปลง ยังคงใช้แผนฟรี' },
+                { label: 'รอบการชำระเงิน', value: 'หมดอายุแล้ว' },
               ].map(({ label, value }) => (
                 <div key={label} className="flex items-center justify-between px-5 py-3"
                   style={{ borderBottom: '1px solid var(--border)' }}>
@@ -81,13 +81,13 @@ export default function CancelPage() {
                 className="flex items-center justify-center gap-2 w-full py-4 text-sm font-semibold transition-all hover:opacity-90"
                 style={{ background: 'var(--navy)', color: 'var(--gold-pale)' }}>
                 <RotateCcw className="w-4 h-4" />
-                Try Again
+                ลองอีกครั้ง
                 <span style={{ color: 'var(--gold)' }}>→</span>
               </Link>
               <Link href="/dashboard"
                 className="flex items-center justify-center gap-2 w-full py-3 text-sm font-medium border transition-all hover:opacity-75"
                 style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
-                Return to Dashboard
+                กลับไปหน้าภาพรวม
               </Link>
             </div>
           </div>
@@ -100,14 +100,14 @@ export default function CancelPage() {
             <MessageSquare className="w-4 h-4" style={{ color: 'var(--gold)' }} />
           </div>
           <div>
-            <p className="text-sm font-semibold mb-1" style={{ color: 'var(--ink)' }}>Need help?</p>
+            <p className="text-sm font-semibold mb-1" style={{ color: 'var(--ink)' }}>ต้องการความช่วยเหลือ?</p>
             <p className="text-xs leading-relaxed mb-3" style={{ color: 'var(--text-muted)' }}>
-              If you experienced issues during checkout or were charged unexpectedly, our support team is ready to help.
+              หากพบปัญหาระหว่างชำระเงินหรือถูกเรียกเก็บเงินโดยไม่คาดคิด ติดต่อทีมช่วยเหลือได้
             </p>
             <a href="mailto:support@flowslip.ai"
               className="font-mono text-[11px] uppercase tracking-widest hover:underline transition-colors"
               style={{ color: 'var(--gold)' }}>
-              Contact Support →
+              ติดต่อทีมช่วยเหลือ →
             </a>
           </div>
         </div>

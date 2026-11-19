@@ -23,6 +23,10 @@ var ErrInvalidQuotaExpiry = errors.New("extra quota expiry must be after now and
 
 var ErrQuotaExpiryRequired = errors.New("extra quota expiry is required")
 
+var ErrFreePlanAlreadyUsed = errors.New("free plan can only be used once per merchant")
+
+var ErrLINEConfigRequired = errors.New("LINE OA must be configured before claiming free credits")
+
 // MerchantRepository defines the interface for merchant data operations
 type MerchantRepository interface {
 	// Merchant profile operations
@@ -32,7 +36,7 @@ type MerchantRepository interface {
 	UpdateMerchant(merchant *models.MerchantProfile) error
 	UpdateLogo(merchantID uuid.UUID, logoURL string) error
 	HasUsedFreePlan(merchantID uuid.UUID) (bool, error)
-	MarkFreePlanUsed(merchantID uuid.UUID) error
+	ActivateFreePlan(subscription *models.Subscription, credits int) error
 	ListAdminMerchants(status string, search string, startDate *time.Time, endDate *time.Time, limit int, offset int) ([]models.AdminMerchantListItem, int, error)
 
 	// Subscription operations
@@ -394,7 +398,7 @@ func (r *merchantRepository) UpdateLogo(merchantID uuid.UUID, logoURL string) er
 	return nil
 }
 
-// HasUsedFreePlan returns true once the merchant has consumed the one-time free plan.
+// HasUsedFreePlan reports whether a merchant has already received credits or a paid plan.
 func (r *merchantRepository) HasUsedFreePlan(merchantID uuid.UUID) (bool, error) {
 	query := `
 		SELECT
@@ -402,7 +406,12 @@ func (r *merchantRepository) HasUsedFreePlan(merchantID uuid.UUID) (bool, error)
 			OR EXISTS (
 				SELECT 1
 				FROM subscriptions s
-				WHERE s.merchant_id = m.id AND s.plan_id = 'plan-free'
+				WHERE s.merchant_id = m.id AND s.plan_id <> 'plan-free'
+			)
+			OR EXISTS (
+				SELECT 1
+				FROM credit_lots l
+				WHERE l.merchant_id = m.id
 			)
 		FROM merchants m
 		WHERE m.id = $1
@@ -416,25 +425,68 @@ func (r *merchantRepository) HasUsedFreePlan(merchantID uuid.UUID) (bool, error)
 	return used, nil
 }
 
-// MarkFreePlanUsed permanently records that the merchant has consumed the free plan.
-func (r *merchantRepository) MarkFreePlanUsed(merchantID uuid.UUID) error {
-	query := `
-		UPDATE merchants
-		SET free_plan_used = true, updated_at = CURRENT_TIMESTAMP
-		WHERE id = $1
-	`
-
-	result, err := r.db.Exec(query, merchantID)
+// ActivateFreePlan locks the merchant so eligibility, the subscription, and
+// the one-time trial grant succeed or fail together.
+func (r *merchantRepository) ActivateFreePlan(subscription *models.Subscription, credits int) error {
+	tx, err := r.db.Begin()
 	if err != nil {
 		return err
 	}
+	defer tx.Rollback()
 
-	rows, _ := result.RowsAffected()
-	if rows == 0 {
-		return errors.New("merchant not found")
+	var used, configured bool
+	err = tx.QueryRow(`
+		SELECT COALESCE(m.free_plan_used, false)
+			OR EXISTS (SELECT 1 FROM credit_lots l WHERE l.merchant_id = m.id)
+			OR EXISTS (SELECT 1 FROM subscriptions s WHERE s.merchant_id = m.id AND s.plan_id <> 'plan-free'),
+			EXISTS (SELECT 1 FROM line_webhook_configs c WHERE c.merchant_id = m.id)
+		FROM merchants m WHERE m.id = $1 FOR UPDATE OF m
+	`, subscription.MerchantID).Scan(&used, &configured)
+	if err != nil {
+		return err
+	}
+	if used {
+		return ErrFreePlanAlreadyUsed
+	}
+	if !configured {
+		return ErrLINEConfigRequired
 	}
 
-	return nil
+	err = tx.QueryRow(`
+		INSERT INTO subscriptions (merchant_id, plan_id, status, billing_cycle, stripe_subscription_id, stripe_customer_id, started_at, expires_at, auto_renew)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		ON CONFLICT (merchant_id) DO UPDATE SET
+			status = EXCLUDED.status,
+			started_at = EXCLUDED.started_at,
+			expires_at = EXCLUDED.expires_at,
+			updated_at = CURRENT_TIMESTAMP
+		WHERE subscriptions.plan_id = 'plan-free'
+		RETURNING id, created_at, updated_at
+	`, subscription.MerchantID, subscription.PlanID, subscription.Status,
+		subscription.BillingCycle, subscription.StripeSubscriptionID,
+		subscription.StripeCustomerID, subscription.StartedAt,
+		subscription.ExpiresAt, subscription.AutoRenew,
+	).Scan(&subscription.ID, &subscription.CreatedAt, &subscription.UpdatedAt)
+	if err == sql.ErrNoRows {
+		return ErrFreePlanAlreadyUsed
+	}
+	if err != nil {
+		return err
+	}
+	if credits > 0 {
+		_, err = tx.Exec(`
+			INSERT INTO credit_lots (merchant_id, subscription_id, plan_id, credits_total, credits_remaining, started_at, expires_at)
+			VALUES ($1, $2, $3, $4, $4, $5, $6)
+		`, subscription.MerchantID, subscription.ID, subscription.PlanID,
+			credits, subscription.StartedAt, *subscription.ExpiresAt)
+		if err != nil {
+			return err
+		}
+	}
+	if _, err := tx.Exec(`UPDATE merchants SET free_plan_used = true, updated_at = CURRENT_TIMESTAMP WHERE id = $1`, subscription.MerchantID); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // CreateSubscription creates a new subscription
@@ -549,6 +601,9 @@ func (r *merchantRepository) CreateCreditLot(lot *models.CreditLot) error {
 		err := tx.QueryRow(`SELECT id, created_at, updated_at FROM credit_lots WHERE payment_log_id = $1`,
 			*lot.PaymentLogID).Scan(&lot.ID, &lot.CreatedAt, &lot.UpdatedAt)
 		if err == nil {
+			if err := retireFreeCredits(tx, lot); err != nil {
+				return err
+			}
 			return tx.Commit()
 		}
 		if err != sql.ErrNoRows {
@@ -578,7 +633,22 @@ func (r *merchantRepository) CreateCreditLot(lot *models.CreditLot) error {
 	).Scan(&lot.ID, &lot.CreatedAt, &lot.UpdatedAt); err != nil {
 		return err
 	}
+	if err := retireFreeCredits(tx, lot); err != nil {
+		return err
+	}
 	return tx.Commit()
+}
+
+func retireFreeCredits(tx *sql.Tx, lot *models.CreditLot) error {
+	if lot.PaymentLogID == nil || lot.PlanID == "plan-free" {
+		return nil
+	}
+	_, err := tx.Exec(`
+		UPDATE credit_lots
+		SET expires_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+		WHERE merchant_id = $1 AND plan_id = 'plan-free' AND expires_at > CURRENT_TIMESTAMP
+	`, lot.MerchantID)
+	return err
 }
 
 // ConsumeCreditFIFO consumes one scan credit from the oldest unexpired lot.
@@ -601,6 +671,18 @@ func (r *merchantRepository) ConsumeCreditFIFO(merchantID, verificationID uuid.U
 		LIMIT 1
 	`, merchantID).Scan(&lotID)
 	if err == sql.ErrNoRows {
+		var pendingTrial bool
+		if err := tx.QueryRow(`
+			SELECT EXISTS (
+				SELECT 1 FROM subscriptions s JOIN merchants m ON m.id = s.merchant_id
+				WHERE s.merchant_id = $1 AND s.plan_id = 'plan-free' AND NOT COALESCE(m.free_plan_used, false)
+			)
+		`, merchantID).Scan(&pendingTrial); err != nil {
+			return err
+		}
+		if pendingTrial {
+			return ErrNoAvailableCredits
+		}
 		var lotCount int
 		if countErr := tx.QueryRow(`SELECT COUNT(*)::int FROM credit_lots WHERE merchant_id = $1`, merchantID).Scan(&lotCount); countErr != nil {
 			return countErr
@@ -1923,6 +2005,15 @@ func (r *merchantRepository) GetQuotaStatus(merchantID uuid.UUID) (*models.Quota
 			ResetDate:  resetDate,
 			IsBlocked:  remaining <= 0,
 		}, nil
+	}
+	if subscription.PlanID == "plan-free" {
+		var granted bool
+		if err := r.db.QueryRow(`SELECT COALESCE(free_plan_used, false) FROM merchants WHERE id = $1`, merchantID).Scan(&granted); err != nil {
+			return nil, err
+		}
+		if !granted {
+			return &models.QuotaStatus{QuotaLimit: 0, Used: 0, Remaining: 0, IsBlocked: true}, nil
+		}
 	}
 
 	periodStart, resetDate := models.QuotaPeriodFor(subscription.StartedAt, time.Now())

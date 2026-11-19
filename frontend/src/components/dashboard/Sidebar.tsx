@@ -9,10 +9,10 @@ import { useAuth } from '@/contexts/auth-context';
 import { ConfirmModal } from '@/components/ConfirmModal';
 
 const menuItems = [
-  { name: 'Overview',  href: '/dashboard',          icon: LayoutDashboard, exact: true },
-  { name: 'Transactions', href: '/dashboard/slips', icon: ReceiptText },
-  { name: 'Merchant',  href: '/dashboard/merchant',  icon: Store },
-  { name: 'Account',   href: '/dashboard/account',   icon: User },
+  { name: 'ภาพรวม',  href: '/dashboard',          icon: LayoutDashboard, exact: true },
+  { name: 'ประวัติสลิป', href: '/dashboard/slips', icon: ReceiptText },
+  { name: 'ร้านค้า',  href: '/dashboard/merchant',  icon: Store },
+  { name: 'บัญชี',   href: '/dashboard/account',   icon: User },
 ];
 
 interface DashboardSidebarProps {
@@ -95,16 +95,16 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
           }}
         >
           <LogOut className="w-4 h-4 shrink-0" />
-          <span>Log Out</span>
+          <span>ออกจากระบบ</span>
         </button>
       </div>
     </aside>
 
     <ConfirmModal
       open={confirmingLogout}
-      title="Confirm logout"
-      message="Are you sure you want to log out?"
-      confirmLabel="OK"
+      title="ยืนยันการออกจากระบบ"
+      message="คุณต้องการออกจากระบบหรือไม่?"
+      confirmLabel="ออกจากระบบ"
       isLoading={isLoggingOut}
       onConfirm={handleLogout}
       onCancel={() => setConfirmingLogout(false)}

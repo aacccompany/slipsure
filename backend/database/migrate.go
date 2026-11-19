@@ -32,6 +32,7 @@ var migrations = []string{
 	"20261105_repair_missing_paid_credit_lots.sql",
 	"20261106_add_admin_credit_lots.sql",
 	"20261106_add_admin_audit_logs.sql",
+	"20261119_retire_free_credits_after_paid_purchase.sql",
 }
 
 // RunMigrations applies pending migrations once, in order. A fresh database is

@@ -27,15 +27,15 @@ function ResetPasswordContent() {
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault(); setError('');
-    if (newPassword !== confirmPassword) { setError('Passwords do not match.'); return; }
-    if (newPassword.length < 8) { setError('Password must be at least 8 characters.'); return; }
+    if (newPassword !== confirmPassword) { setError('รหัสผ่านไม่ตรงกัน'); return; }
+    if (newPassword.length < 8) { setError('รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร'); return; }
     setIsLoading(true);
     try {
       await api.resetPassword({ email, otp, new_password: newPassword });
       setSuccess(true);
-      toast.success('Password reset successfully!');
+      toast.success('ตั้งรหัสผ่านใหม่แล้ว');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Reset failed. Please try again.');
+      setError(err instanceof Error ? err.message : 'ตั้งรหัสผ่านใหม่ไม่สำเร็จ กรุณาลองอีกครั้ง');
     } finally { setIsLoading(false); }
   };
 
@@ -49,17 +49,17 @@ function ResetPasswordContent() {
           style={{ color: 'var(--text-muted)' }}
           onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--gold)')}
           onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}>
-          ← Back
+          ← ย้อนกลับ
         </Link>
 
         <div className="mb-8">
           <h1 className="font-display text-4xl font-semibold mb-1" style={{ color: 'var(--ink)' }}>
-            New Password
+            ตั้งรหัสผ่านใหม่
           </h1>
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--gold)' }} />
             <span className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--gold)' }}>
-              Password Reset
+              รีเซ็ตรหัสผ่าน
             </span>
           </div>
         </div>
@@ -73,20 +73,20 @@ function ResetPasswordContent() {
                   <span style={{ color: 'var(--gold)', fontSize: 24 }}>✓</span>
                 </div>
                 <p className="font-mono text-[11px] text-center uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-                  Password updated successfully
+                  อัปเดตรหัสผ่านแล้ว
                 </p>
               </div>
               <button onClick={() => router.push('/login')}
                 className="w-full py-3 text-sm font-semibold transition-all hover:opacity-90"
                 style={{ background: 'var(--navy)', color: 'var(--gold-pale)' }}>
-                Sign In <span style={{ color: 'var(--gold)' }}>→</span>
+                เข้าสู่ระบบ <span style={{ color: 'var(--gold)' }}>→</span>
               </button>
             </div>
           ) : (
             <form onSubmit={handleReset} className="space-y-5">
               {!searchParams.get('email') && (
                 <div>
-                  <label className="block font-mono text-[10px] uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>Email Address</label>
+                  <label className="block font-mono text-[10px] uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>อีเมล</label>
                   <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@company.com" required className={inputClass}
                     style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
@@ -95,7 +95,7 @@ function ResetPasswordContent() {
                 </div>
               )}
               <div>
-                <label className="block font-mono text-[10px] uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>Reset Code</label>
+                <label className="block font-mono text-[10px] uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>รหัสรีเซ็ต</label>
                 <input type="text" value={otp}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                   placeholder="000000" maxLength={6} required
@@ -105,15 +105,15 @@ function ResetPasswordContent() {
                   onBlur={(e) => (e.target.style.borderColor = 'var(--border)')} />
               </div>
               <div>
-                <label className="block font-mono text-[10px] uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>New Password</label>
+                <label className="block font-mono text-[10px] uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>รหัสผ่านใหม่</label>
                 <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Min. 8 characters" required className={inputClass}
+                  placeholder="อย่างน้อย 8 ตัวอักษร" required className={inputClass}
                   style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
                   onFocus={(e) => (e.target.style.borderColor = 'var(--gold)')}
                   onBlur={(e) => (e.target.style.borderColor = 'var(--border)')} />
               </div>
               <div>
-                <label className="block font-mono text-[10px] uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>Confirm Password</label>
+                <label className="block font-mono text-[10px] uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>ยืนยันรหัสผ่าน</label>
                 <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="••••••••" required className={inputClass}
                   style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
@@ -129,7 +129,7 @@ function ResetPasswordContent() {
               <button type="submit" disabled={isLoading}
                 className="w-full py-3 text-sm font-semibold flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-60"
                 style={{ background: 'var(--navy)', color: 'var(--gold-pale)' }}>
-                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Reset Password <span style={{ color: 'var(--gold)' }}>→</span></>}
+                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>ตั้งรหัสผ่านใหม่ <span style={{ color: 'var(--gold)' }}>→</span></>}
               </button>
             </form>
           )}

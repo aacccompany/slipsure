@@ -104,7 +104,7 @@ export default function OrdersPage() {
               <ArrowLeft className="h-4 w-4" />
               กลับแดชบอร์ด
             </Link>
-            <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-400">/ Recent Orders</p>
+            <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-400">/ รายการชำระเงิน</p>
             <h1 className="mt-1 text-3xl font-black tracking-tight text-zinc-950">รายการชำระเงินทั้งหมด</h1>
             <p className="mt-2 text-sm text-zinc-500">ดูประวัติการจ่ายเงินผ่าน Stripe และรายละเอียดของแต่ละรายการ</p>
           </div>
@@ -216,7 +216,7 @@ export default function OrdersPage() {
             <div className="flex items-start justify-between border-b px-6 py-5" style={{ borderColor: 'var(--border)' }}>
               <div>
                 <p className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-                  Order Detail
+                  รายละเอียดการชำระเงิน
                 </p>
                 <h2 className="mt-1 text-xl font-black" style={{ color: 'var(--ink)' }}>
                   {orderNumber(selectedOrder.id, selectedOrder.created_at)}
@@ -226,7 +226,7 @@ export default function OrdersPage() {
                 type="button"
                 onClick={() => setSelectedOrder(null)}
                 className="rounded-md p-2 transition-colors hover:bg-slate-100"
-                aria-label="Close order detail"
+                aria-label="ปิดรายละเอียดการชำระเงิน"
                 style={{ color: 'var(--text-muted)' }}
               >
                 <X className="h-5 w-5" />
@@ -239,10 +239,10 @@ export default function OrdersPage() {
                 ['วิธีชำระ', selectedOrder.gateway],
                 ['สถานะ', orderStatusLabel(selectedOrder.status)],
                 ['เลขอ้างอิง Stripe', selectedOrder.gateway_reference_id || '-'],
-                ['Payment ID', selectedOrder.id],
-                ['Merchant ID', selectedOrder.merchant_id],
-                ['Merchant', selectedOrder.merchant_name || '-'],
-                ['Subscription ID', selectedOrder.subscription_id || '-'],
+                ['รหัสการชำระเงิน', selectedOrder.id],
+                ['รหัสร้านค้า', selectedOrder.merchant_id],
+                ['ร้านค้า', selectedOrder.merchant_name || '-'],
+                ['รหัสแพ็กเกจ', selectedOrder.subscription_id || '-'],
                 ['สร้างเมื่อ', formatDate(selectedOrder.created_at)],
                 ['ชำระเมื่อ', formatDate(selectedOrder.paid_at)],
               ].map(([label, value]) => (

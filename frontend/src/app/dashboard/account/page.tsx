@@ -29,16 +29,16 @@ export default function AccountPage() {
     setIsSaving(true);
     try {
       await api.updateProfile(profileData);
-      toast.success('Profile updated successfully!');
+      toast.success('อัปเดตข้อมูลบัญชีแล้ว');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update profile');
+      toast.error(error instanceof Error ? error.message : 'อัปเดตข้อมูลบัญชีไม่สำเร็จ');
     } finally { setIsSaving(false); }
   };
 
   const handleConnectLine = () => {
     const channelId = process.env.NEXT_PUBLIC_LINE_LOGIN_CHANNEL_ID;
     if (!channelId || channelId === 'your_line_login_channel_id_here') {
-      toast.error('LINE login channel ID is not configured'); return;
+      toast.error('ยังไม่ได้ตั้งค่า LINE Login Channel ID'); return;
     }
     setIsConnectingLine(true);
     const redirectUri = process.env.NEXT_PUBLIC_LINE_LOGIN_CALLBACK_URL || `${window.location.origin}/auth/line/callback`;
@@ -47,12 +47,20 @@ export default function AccountPage() {
 
   const subscription = subscriptionData?.data?.subscription;
   const quota = quotaData?.data;
+  const pendingTrial = subscription?.plan_id === 'plan-free' && subscriptionData?.data?.free_plan_used === false;
   const isSubscriptionExpired = Boolean(subscription?.expires_at && new Date(subscription.expires_at).getTime() <= Date.now());
-  const effectivePlanStatus = isSubscriptionExpired
+  const effectivePlanStatus = pendingTrial
+    ? 'pending'
+    : isSubscriptionExpired
     ? 'expired'
     : quota?.is_blocked
       ? 'blocked'
       : subscription?.status || 'trial';
+  const planStatusLabel: Record<string, string> = {
+    active: 'ใช้งานอยู่', expired: 'หมดอายุ', blocked: 'ระงับการใช้งาน',
+    trial: 'ทดลองใช้งาน', canceled: 'ยกเลิกแล้ว', cancelled: 'ยกเลิกแล้ว',
+    pending: 'รอตั้งค่า LINE OA',
+  };
 
   if (!user || subscriptionLoading || quotaLoading) {
     return <PageSkeleton />;
@@ -64,17 +72,17 @@ export default function AccountPage() {
     <div className="min-h-full px-6 py-6 md:px-8" style={{ background: 'var(--bg)' }}>
       <div className="mx-auto max-w-6xl space-y-6">
         <div className="border-b border-zinc-200 pb-5">
-          <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-400">/ Account</p>
-          <h1 className="mt-1 text-3xl font-black tracking-tight text-zinc-950">Account Settings</h1>
+          <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-400">/ บัญชี</p>
+          <h1 className="mt-1 text-3xl font-black tracking-tight text-zinc-950">ตั้งค่าบัญชี</h1>
           <p className="mt-2 max-w-2xl text-sm text-zinc-500">
-            Manage your personal profile, sign-in connection, and current usage plan.
+            จัดการข้อมูลส่วนตัว การเชื่อมต่อบัญชี และแผนการใช้งาน
           </p>
         </div>
 
         <section className="overflow-hidden rounded-lg border border-zinc-200 bg-white">
           <div className="grid lg:grid-cols-[320px_1fr]">
             <aside className="border-b border-zinc-200 bg-slate-50 p-6 lg:border-b-0 lg:border-r">
-              <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-500">Identity</p>
+              <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-500">ข้อมูลผู้ใช้</p>
               <div className="mt-7 flex flex-col items-center text-center">
                 <div className="flex h-24 w-24 items-center justify-center rounded-lg bg-zinc-950 text-3xl font-black text-white">
                   {initials}
@@ -91,7 +99,7 @@ export default function AccountPage() {
                     borderColor: user.email_verified ? '#A7F3D0' : '#FCD34D',
                   }}
                 >
-                  {user.email_verified ? 'Verified' : 'Not Verified'}
+                  {user.email_verified ? 'ยืนยันอีเมลแล้ว' : 'ยังไม่ยืนยันอีเมล'}
                 </span>
                 <span
                   className="rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-widest"
@@ -101,7 +109,7 @@ export default function AccountPage() {
                     borderColor: user.line_linked ? '#A7F3D0' : '#CBD5E1',
                   }}
                 >
-                  {user.line_linked ? 'LINE Connected' : 'LINE Not Connected'}
+                  {user.line_linked ? 'เชื่อมต่อ LINE แล้ว' : 'ยังไม่เชื่อมต่อ LINE'}
                 </span>
               </div>
 
@@ -114,7 +122,7 @@ export default function AccountPage() {
                   style={{ background: '#06C755' }}
                 >
                   {isConnectingLine ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
-                  Connect LINE
+                  เชื่อมต่อ LINE
                 </button>
               )}
             </aside>
@@ -122,8 +130,8 @@ export default function AccountPage() {
             <div className="p-6 md:p-8">
               <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <h3 className="text-base font-black text-zinc-950">Personal Information</h3>
-                  <p className="mt-1 text-sm text-zinc-500">Update the profile details used inside FlowSlip.</p>
+                  <h3 className="text-base font-black text-zinc-950">ข้อมูลส่วนตัว</h3>
+                  <p className="mt-1 text-sm text-zinc-500">แก้ไขข้อมูลบัญชีที่ใช้ใน FlowSlip</p>
                 </div>
                 <button
                   type="button"
@@ -132,13 +140,13 @@ export default function AccountPage() {
                   className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-zinc-950 px-5 text-sm font-bold text-white transition-colors hover:bg-zinc-800 disabled:cursor-wait disabled:opacity-60"
                 >
                   {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                  Save Changes
+                  บันทึกการเปลี่ยนแปลง
                 </button>
               </div>
 
               <div className="grid gap-5 md:grid-cols-2">
                 <label className="space-y-2">
-                  <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">Full Name</span>
+                  <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">ชื่อ-นามสกุล</span>
                   <span className="relative block">
                     <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
                     <input
@@ -151,7 +159,7 @@ export default function AccountPage() {
                 </label>
 
                 <label className="space-y-2">
-                  <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">Email Address</span>
+                  <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">อีเมล</span>
                   <span className="relative block">
                     <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
                     <input
@@ -161,11 +169,11 @@ export default function AccountPage() {
                       className="h-11 w-full rounded-md border border-zinc-200 bg-slate-50 pl-10 pr-3 text-sm font-semibold text-zinc-500 outline-none"
                     />
                   </span>
-                  <span className="block text-xs text-zinc-400">Email cannot be changed</span>
+                  <span className="block text-xs text-zinc-400">ไม่สามารถเปลี่ยนอีเมลได้</span>
                 </label>
 
                 <label className="space-y-2">
-                  <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">Phone Number</span>
+                  <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">เบอร์โทรศัพท์</span>
                   <span className="relative block">
                     <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
                     <input
@@ -179,7 +187,7 @@ export default function AccountPage() {
                 </label>
 
                 <label className="space-y-2">
-                  <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">Account Created</span>
+                  <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">วันที่สมัครสมาชิก</span>
                   <span className="relative block">
                     <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
                     <input
@@ -197,9 +205,9 @@ export default function AccountPage() {
 
         <section className="grid gap-4 lg:grid-cols-3">
           {[
-            { icon: CreditCard, label: 'Current Plan', value: subscription?.plan?.name || 'Free', sub: `Status: ${effectivePlanStatus}` },
-            { icon: Shield, label: 'Quota', value: `${quota?.used ?? 0} / ${quota?.quota_limit ?? 20}`, sub: `${quota?.remaining ?? 0} remaining` },
-            { icon: Calendar, label: 'Next Reset', value: quota?.reset_date ? new Date(quota.reset_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }) : '-', sub: 'Monthly quota reset' },
+            { icon: CreditCard, label: 'แผนปัจจุบัน', value: subscription?.plan?.name === 'Free' ? 'ฟรี' : subscription?.plan?.name || 'ฟรี', sub: `สถานะ: ${planStatusLabel[effectivePlanStatus] || effectivePlanStatus}` },
+            { icon: Shield, label: 'โควต้า', value: `${quota?.used ?? 0} / ${quota?.quota_limit ?? 0}`, sub: pendingTrial ? 'ตั้งค่า LINE OA เพื่อรับฟรี 20 สลิป' : `คงเหลือ ${quota?.remaining ?? 0} สลิป` },
+            { icon: Calendar, label: 'รีเซ็ตครั้งถัดไป', value: pendingTrial ? 'ยังไม่เริ่ม' : quota?.reset_date ? new Date(quota.reset_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }) : '-', sub: pendingTrial ? 'รับสิทธิ์หลังตั้งค่า LINE' : 'วันที่รีเซ็ตโควต้า' },
           ].map(({ icon: Icon, label, value, sub }) => (
             <div key={label} className="rounded-lg border border-zinc-200 bg-white p-5">
               <div className="mb-4 flex items-center justify-between">
@@ -214,9 +222,9 @@ export default function AccountPage() {
 
         <section className="rounded-lg border border-zinc-200 bg-white p-5">
           <div className="mb-4 flex items-center justify-between">
-            <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">Quick Actions</p>
+            <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">เมนูลัด</p>
             <Link href="/dashboard/subscription" className="text-sm font-bold text-blue-700 hover:text-blue-800">
-              Manage Plan →
+              จัดการแผน →
             </Link>
           </div>
           <div className="grid gap-3 md:grid-cols-2">
@@ -225,8 +233,8 @@ export default function AccountPage() {
                 <Crown className="h-4 w-4 text-blue-700" />
               </span>
               <span>
-                <span className="block text-sm font-bold text-zinc-950">Upgrade Plan</span>
-                <span className="text-xs text-zinc-500">View pricing and features</span>
+                <span className="block text-sm font-bold text-zinc-950">อัปเกรดแผน</span>
+                <span className="text-xs text-zinc-500">ดูราคาและสิทธิประโยชน์</span>
               </span>
             </Link>
             <Link href="/forgot-password" className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 transition-colors hover:border-rose-200 hover:bg-rose-50">
@@ -234,8 +242,8 @@ export default function AccountPage() {
                 <Shield className="h-4 w-4 text-rose-500" />
               </span>
               <span>
-                <span className="block text-sm font-bold text-zinc-950">Change Password</span>
-                <span className="text-xs text-zinc-500">Update your password</span>
+                <span className="block text-sm font-bold text-zinc-950">เปลี่ยนรหัสผ่าน</span>
+                <span className="text-xs text-zinc-500">ตั้งรหัสผ่านใหม่</span>
               </span>
             </Link>
           </div>

@@ -19,9 +19,9 @@ export default function ForgotPasswordPage() {
     try {
       await api.forgotPassword({ email });
       setSent(true);
-      toast.success('Reset code sent!');
+      toast.success('ส่งรหัสรีเซ็ตรหัสผ่านแล้ว');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send reset code.');
+      setError(err instanceof Error ? err.message : 'ส่งรหัสรีเซ็ตไม่สำเร็จ');
     } finally { setIsLoading(false); }
   };
 
@@ -35,17 +35,17 @@ export default function ForgotPasswordPage() {
           style={{ color: 'var(--text-muted)' }}
           onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--gold)')}
           onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}>
-          ← Back to Login
+          ← กลับไปหน้าเข้าสู่ระบบ
         </Link>
 
         <div className="mb-8">
           <h1 className="font-display text-4xl font-semibold mb-1" style={{ color: 'var(--ink)' }}>
-            Reset Password
+            ลืมรหัสผ่าน
           </h1>
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--gold)' }} />
             <span className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--gold)' }}>
-              Account Recovery
+              กู้คืนบัญชี
             </span>
           </div>
         </div>
@@ -59,24 +59,24 @@ export default function ForgotPasswordPage() {
                   <span style={{ color: 'var(--gold)', fontSize: 24 }}>✓</span>
                 </div>
                 <p className="font-mono text-[11px] text-center uppercase tracking-widest leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-                  Reset code sent to<br />
+                  ส่งรหัสรีเซ็ตไปที่<br />
                   <span className="font-bold" style={{ color: 'var(--ink)' }}>{email}</span>
                 </p>
               </div>
               <Link href={`/reset-password?email=${encodeURIComponent(email)}`}
                 className="block w-full py-3 text-sm font-semibold text-center transition-all hover:opacity-90"
                 style={{ background: 'var(--navy)', color: 'var(--gold-pale)' }}>
-                Enter Reset Code <span style={{ color: 'var(--gold)' }}>→</span>
+                กรอกรหัสรีเซ็ต <span style={{ color: 'var(--gold)' }}>→</span>
               </Link>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
               <p className="font-mono text-[11px] leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-                Enter your email and we&apos;ll send you a reset code.
+                กรอกอีเมลเพื่อรับรหัสรีเซ็ตรหัสผ่าน
               </p>
               <div>
                 <label className="block font-mono text-[10px] uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>
-                  Email Address
+                  อีเมล
                 </label>
                 <input
                   type="email" value={email} onChange={(e) => setEmail(e.target.value)}
@@ -96,7 +96,7 @@ export default function ForgotPasswordPage() {
               <button type="submit" disabled={isLoading}
                 className="w-full py-3 text-sm font-semibold flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-60"
                 style={{ background: 'var(--navy)', color: 'var(--gold-pale)' }}>
-                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Send Reset Code <span style={{ color: 'var(--gold)' }}>→</span></>}
+                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>ส่งรหัสรีเซ็ต <span style={{ color: 'var(--gold)' }}>→</span></>}
               </button>
             </form>
           )}

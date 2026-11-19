@@ -8,8 +8,8 @@ import { toast } from 'sonner';
 import { api, tokenManager } from '@/lib/api-client';
 
 const STEPS = [
-  { id: 1, label: 'Shop Profile', icon: Store },
-  { id: 2, label: 'Logo',         icon: ImageIcon },
+  { id: 1, label: 'ข้อมูลร้านค้า', icon: Store },
+  { id: 2, label: 'โลโก้',         icon: ImageIcon },
   { id: 3, label: 'LINE Bot',     icon: MessageSquare },
 ];
 
@@ -103,7 +103,7 @@ export default function OnboardingPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { setError('File must be under 2MB.'); return; }
+    if (file.size > 2 * 1024 * 1024) { setError('ไฟล์ต้องมีขนาดไม่เกิน 2 MB'); return; }
     setLogoFile(file);
     setLogoPreview(URL.createObjectURL(file));
     setError('');
@@ -129,7 +129,7 @@ export default function OnboardingPage() {
       }
       setStep(2);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save profile.');
+      setError(err instanceof Error ? err.message : 'บันทึกข้อมูลร้านค้าไม่สำเร็จ');
     } finally { setIsLoading(false); }
   };
 
@@ -140,14 +140,14 @@ export default function OnboardingPage() {
       await api.uploadLogo(logoFile);
       setStep(3);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to upload logo.');
+      setError(err instanceof Error ? err.message : 'อัปโหลดโลโก้ไม่สำเร็จ');
     } finally { setIsLoading(false); }
   };
 
   const handleComplete = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!lineChannelId || !lineChannelSecret || !lineAccessToken) {
-      setError('Please fill in all LINE bot credentials.');
+      setError('กรุณากรอกข้อมูล LINE Bot ให้ครบ');
       return;
     }
 
@@ -159,10 +159,10 @@ export default function OnboardingPage() {
         line_access_token: lineAccessToken,
       });
       localStorage.setItem('hasCompletedOnboarding', 'true');
-      toast.success('Setup complete! Welcome to FlowSlip.');
+      toast.success('ตั้งค่าเสร็จแล้ว ยินดีต้อนรับสู่ FlowSlip');
       router.push('/dashboard');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to configure LINE bot.');
+      setError(err instanceof Error ? err.message : 'ตั้งค่า LINE Bot ไม่สำเร็จ');
     } finally { setIsLoading(false); }
   };
 
@@ -189,12 +189,12 @@ export default function OnboardingPage() {
 
         <div className="mb-8">
           <h1 className="font-display text-4xl font-semibold mb-1" style={{ color: 'var(--ink)' }}>
-            Account Setup
+            ตั้งค่าบัญชี
           </h1>
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--gold)' }} />
             <span className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--gold)' }}>
-              Step {step} of {STEPS.length}
+              ขั้นตอนที่ {step} จาก {STEPS.length}
             </span>
           </div>
         </div>
@@ -242,16 +242,16 @@ export default function OnboardingPage() {
                   <Store className="w-5 h-5" style={{ color: 'var(--gold)' }} />
                 </div>
                 <div>
-                  <h2 className="font-display text-lg font-semibold" style={{ color: 'var(--ink)' }}>Shop Profile</h2>
-                  <p className="font-mono text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Tell us about your business</p>
+                  <h2 className="font-display text-lg font-semibold" style={{ color: 'var(--ink)' }}>ข้อมูลร้านค้า</h2>
+                  <p className="font-mono text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>กรอกข้อมูลธุรกิจของคุณ</p>
                 </div>
               </div>
 
               {[
-                { label: 'Shop Name *', type: 'text', value: shopName, setter: setShopName, placeholder: 'Premium Coffee Hub', required: true },
-                { label: 'Contact Email', type: 'email', value: contactEmail, setter: setContactEmail, placeholder: 'shop@example.com', required: false },
-                { label: 'Contact Phone', type: 'tel', value: contactPhone, setter: setContactPhone, placeholder: '0812345678', required: false },
-                { label: 'Address', type: 'text', value: address, setter: setAddress, placeholder: '123 Main St, Bangkok', required: false },
+                { label: 'ชื่อร้านค้า *', type: 'text', value: shopName, setter: setShopName, placeholder: 'ชื่อร้านค้าของคุณ', required: true },
+                { label: 'อีเมลติดต่อ', type: 'email', value: contactEmail, setter: setContactEmail, placeholder: 'shop@example.com', required: false },
+                { label: 'เบอร์โทรติดต่อ', type: 'tel', value: contactPhone, setter: setContactPhone, placeholder: '0812345678', required: false },
+                { label: 'ที่อยู่', type: 'text', value: address, setter: setAddress, placeholder: 'กรอกที่อยู่ร้านค้า', required: false },
               ].map(({ label, type, value, setter, placeholder, required }) => (
                 <div key={label}>
                   <label className={labelClass} style={{ color: 'var(--text-muted)' }}>{label}</label>
@@ -268,7 +268,7 @@ export default function OnboardingPage() {
               <button type="submit" disabled={isLoading}
                 className="w-full py-3 text-sm font-semibold flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-60"
                 style={{ background: 'var(--navy)', color: 'var(--gold-pale)' }}>
-                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Continue <span style={{ color: 'var(--gold)' }}>→</span></>}
+                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>ดำเนินการต่อ <span style={{ color: 'var(--gold)' }}>→</span></>}
               </button>
             </form>
           )}
@@ -282,8 +282,8 @@ export default function OnboardingPage() {
                   <ImageIcon className="w-5 h-5" style={{ color: 'var(--gold)' }} />
                 </div>
                 <div>
-                  <h2 className="font-display text-lg font-semibold" style={{ color: 'var(--ink)' }}>Shop Logo</h2>
-                  <p className="font-mono text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Optional — skip if you want</p>
+                  <h2 className="font-display text-lg font-semibold" style={{ color: 'var(--ink)' }}>โลโก้ร้านค้า</h2>
+                  <p className="font-mono text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>ไม่บังคับ สามารถข้ามได้</p>
                 </div>
               </div>
 
@@ -291,10 +291,10 @@ export default function OnboardingPage() {
 
               {logoPreview ? (
                 <div className="flex flex-col items-center gap-4">
-                  <img src={logoPreview} alt="Logo preview" className="w-24 h-24 object-cover" style={{ border: '1px solid var(--border)' }} />
+                  <img src={logoPreview} alt="ตัวอย่างโลโก้" className="w-24 h-24 object-cover" style={{ border: '1px solid var(--border)' }} />
                   <button type="button" onClick={() => { setLogoFile(null); setLogoPreview(null); }}
                     className="font-mono text-[10px] uppercase tracking-widest transition-colors"
-                    style={{ color: 'var(--text-muted)' }}>Remove</button>
+                    style={{ color: 'var(--text-muted)' }}>ลบรูป</button>
                 </div>
               ) : (
                 <button type="button" onClick={() => fileInputRef.current?.click()}
@@ -306,8 +306,8 @@ export default function OnboardingPage() {
                     <Upload className="w-5 h-5" style={{ color: 'var(--text-muted)' }} />
                   </div>
                   <div className="text-center">
-                    <p className="font-mono text-[11px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Click to upload</p>
-                    <p className="font-mono text-[10px] mt-1" style={{ color: 'var(--border-strong)' }}>PNG or JPG · Max 2MB</p>
+                    <p className="font-mono text-[11px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>คลิกเพื่ออัปโหลด</p>
+                    <p className="font-mono text-[10px] mt-1" style={{ color: 'var(--border-strong)' }}>PNG หรือ JPG · ไม่เกิน 2 MB</p>
                   </div>
                 </button>
               )}
@@ -318,12 +318,12 @@ export default function OnboardingPage() {
                 <button onClick={() => setStep(1)}
                   className="px-5 py-3 text-sm font-medium flex items-center gap-2 transition-colors"
                   style={{ border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
-                  <ArrowLeft className="w-4 h-4" /> Back
+                  <ArrowLeft className="w-4 h-4" /> ย้อนกลับ
                 </button>
                 <button onClick={handleStep2} disabled={isLoading}
                   className="flex-1 py-3 text-sm font-semibold flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-60"
                   style={{ background: 'var(--navy)', color: 'var(--gold-pale)' }}>
-                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>{logoFile ? 'Upload & Continue' : 'Skip for Now'} <span style={{ color: 'var(--gold)' }}>→</span></>}
+                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>{logoFile ? 'อัปโหลดและดำเนินการต่อ' : 'ข้ามขั้นตอนนี้'} <span style={{ color: 'var(--gold)' }}>→</span></>}
                 </button>
               </div>
             </div>
@@ -339,7 +339,7 @@ export default function OnboardingPage() {
                 </div>
                 <div>
                   <h2 className="font-display text-lg font-semibold" style={{ color: 'var(--ink)' }}>LINE Bot</h2>
-                  <p className="font-mono text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Connect your LINE OA</p>
+                  <p className="font-mono text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>เชื่อมต่อ LINE Official Account</p>
                 </div>
               </div>
 
@@ -365,7 +365,7 @@ export default function OnboardingPage() {
                     type="password"
                     value={lineChannelSecret}
                     onChange={(e) => setLineChannelSecret(e.target.value)}
-                    placeholder="Channel secret from LINE Developers"
+                    placeholder="กรอก Channel Secret จาก LINE Developers"
                     required
                     className={inputClass}
                     style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
@@ -380,7 +380,7 @@ export default function OnboardingPage() {
                     type="password"
                     value={lineAccessToken}
                     onChange={(e) => setLineAccessToken(e.target.value)}
-                    placeholder="Channel access token"
+                    placeholder="กรอก Channel Access Token"
                     required
                     className={inputClass}
                     style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
@@ -393,12 +393,12 @@ export default function OnboardingPage() {
               <div className="p-5 space-y-3" style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border)' }}>
                 <p className="font-mono text-[11px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>LINE Console</p>
                 <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-                  Use your Messaging API channel credentials. After saving, copy the webhook URL from the LINE settings page into LINE Developers Console.
+                  ใช้ข้อมูลช่อง Messaging API หลังบันทึกแล้ว ให้คัดลอก Webhook URL จากหน้าตั้งค่า LINE ไปใส่ใน LINE Developers Console
                 </p>
                 <a href="https://developers.line.biz/console/" target="_blank" rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest hover:underline"
                   style={{ color: 'var(--gold)' }}>
-                  Open LINE Console <ExternalLink className="w-3 h-3" />
+                  เปิด LINE Console <ExternalLink className="w-3 h-3" />
                 </a>
               </div>
 
@@ -409,12 +409,12 @@ export default function OnboardingPage() {
                   type="button"
                   className="px-5 py-3 text-sm font-medium flex items-center gap-2 transition-colors"
                   style={{ border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
-                  <ArrowLeft className="w-4 h-4" /> Back
+                  <ArrowLeft className="w-4 h-4" /> ย้อนกลับ
                 </button>
                 <button type="submit" disabled={isLoading}
                   className="flex-1 py-3 text-sm font-semibold flex items-center justify-center gap-2 transition-all hover:opacity-90"
                   style={{ background: 'var(--navy)', color: 'var(--gold-pale)' }}>
-                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Finish Setup <CheckCircle2 className="w-4 h-4" style={{ color: 'var(--gold)' }} /></>}
+                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>เสร็จสิ้นการตั้งค่า <CheckCircle2 className="w-4 h-4" style={{ color: 'var(--gold)' }} /></>}
                 </button>
               </div>
             </form>
