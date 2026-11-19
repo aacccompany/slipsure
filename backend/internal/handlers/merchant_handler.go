@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"slipsure-backend/internal/models"
@@ -190,6 +191,84 @@ func (h *MerchantHandler) CreateCheckout(c *gin.Context) {
 
 // Stripe webhook handler
 
+// ConfirmCheckout verifies a Stripe return and reconciles a paid session when its
+// webhook has not completed yet. The authenticated user must own the session.
+func (h *MerchantHandler) ConfirmCheckout(c *gin.Context) {
+	var req struct {
+		SessionID string `json:"session_id" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil || len(req.SessionID) > 255 || !strings.HasPrefix(req.SessionID, "cs_") {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "INVALID_SESSION"})
+		return
+	}
+	userIDValue, exists := c.Get("user_id")
+	userIDString, ok := userIDValue.(string)
+	if !exists || !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "UNAUTHORIZED"})
+		return
+	}
+	userID, err := uuid.Parse(userIDString)
+	if err != nil || h.stripeService == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "UNAUTHORIZED"})
+		return
+	}
+	checkout, err := h.stripeService.GetCheckoutConfirmation(req.SessionID)
+	if err != nil {
+		log.Printf("Checkout confirmation lookup failed for %s: %v", req.SessionID, err)
+		c.JSON(http.StatusBadGateway, gin.H{"success": false, "error": "CHECKOUT_LOOKUP_FAILED"})
+		return
+	}
+	if checkout.UserID != userID {
+		c.JSON(http.StatusForbidden, gin.H{"success": false, "error": "CHECKOUT_OWNER_MISMATCH"})
+		return
+	}
+	if checkout.PaymentStatus != "paid" || checkout.SessionStatus != "complete" {
+		state := "pending"
+		if checkout.SessionStatus == "expired" {
+			state = "expired"
+		}
+		c.JSON(http.StatusOK, gin.H{"success": true, "data": gin.H{"state": state}})
+		return
+	}
+
+	merchant, err := h.merchantRepo.FindByOwnerID(userID)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		log.Printf("Checkout confirmation merchant lookup failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "DATABASE_ERROR"})
+		return
+	}
+	if err == nil {
+		fulfilled, checkErr := h.merchantRepo.IsCheckoutFulfilled(merchant.ID, checkout.SessionID)
+		if checkErr != nil {
+			log.Printf("Checkout fulfillment lookup failed: %v", checkErr)
+			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "DATABASE_ERROR"})
+			return
+		}
+		if fulfilled {
+			c.JSON(http.StatusOK, gin.H{"success": true, "data": gin.H{"state": "confirmed"}})
+			return
+		}
+		current, currentErr := h.merchantRepo.FindByMerchantID(merchant.ID)
+		if currentErr != nil && !errors.Is(currentErr, sql.ErrNoRows) {
+			log.Printf("Checkout confirmation subscription lookup failed: %v", currentErr)
+			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "DATABASE_ERROR"})
+			return
+		}
+		if currentErr == nil && current.PlanID != "plan-free" &&
+			current.StripeSubscriptionID != nil && *current.StripeSubscriptionID != checkout.SessionID &&
+			current.StartedAt.After(checkout.SessionCreated) {
+			c.JSON(http.StatusConflict, gin.H{"success": false, "error": "OLDER_CHECKOUT"})
+			return
+		}
+	}
+	if err := h.activateSubscription(userID, checkout.SessionID, checkout.CustomerID, checkout.PlanID, checkout.BillingCycle); err != nil {
+		log.Printf("Checkout confirmation activation failed for %s: %v", checkout.SessionID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "CHECKOUT_ACTIVATION_FAILED"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true, "data": gin.H{"state": "confirmed"}})
+}
+
 // HandleStripeWebhook handles POST /checkout/webhook - receive Stripe webhook events
 func (h *MerchantHandler) HandleStripeWebhook(c *gin.Context) {
 	// Read raw payload
@@ -206,10 +285,7 @@ func (h *MerchantHandler) HandleStripeWebhook(c *gin.Context) {
 	// Get Stripe signature
 	signature := c.GetHeader("Stripe-Signature")
 
-	// Debug logging
-	fmt.Printf("Webhook received from %s\n", c.ClientIP())
-	fmt.Printf("Stripe-Signature header: %s\n", signature)
-	fmt.Printf("Payload length: %d bytes\n", len(payload))
+	log.Printf("Stripe webhook received from %s: signature_present=%t payload_bytes=%d", c.ClientIP(), signature != "", len(payload))
 
 	// Verify webhook signature
 	if err := h.stripeService.VerifyWebhookSignature(payload, signature); err != nil {
@@ -235,14 +311,18 @@ func (h *MerchantHandler) HandleStripeWebhook(c *gin.Context) {
 
 	// Handle different event types
 	switch event.Type {
-	case "checkout.session.completed":
-		userID, checkoutSessionID, customerID, planID, billingCycle, err := h.stripeService.HandleCheckoutSessionCompleted(event)
+	case "checkout.session.completed", "checkout.session.async_payment_succeeded":
+		userID, checkoutSessionID, customerID, planID, billingCycle, paid, err := h.stripeService.HandleCheckoutSessionCompleted(event)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"success": false,
 				"error":   "WEBHOOK_PROCESSING_ERROR",
 				"message": "Failed to process checkout completed event",
 			})
+			return
+		}
+		if !paid {
+			c.JSON(http.StatusOK, gin.H{"success": true, "message": "Payment pending"})
 			return
 		}
 
@@ -260,11 +340,7 @@ func (h *MerchantHandler) HandleStripeWebhook(c *gin.Context) {
 		userID, checkoutSessionID, customerID, planID, billingCycle, err := h.stripeService.HandlePaymentIntentSucceeded(event)
 		if err != nil {
 			fmt.Printf("Failed to resolve checkout from payment intent: %v\n", err)
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"success": false,
-				"error":   "WEBHOOK_PROCESSING_ERROR",
-				"message": "Failed to process successful payment",
-			})
+			c.JSON(http.StatusOK, gin.H{"success": true, "message": "Awaiting Checkout Session event"})
 			return
 		}
 
@@ -890,6 +966,10 @@ func (h *MerchantHandler) ExportMerchantAnalytics(c *gin.Context) {
 // Helper functions for webhook processing
 
 func (h *MerchantHandler) activateSubscription(userID uuid.UUID, checkoutSessionID, customerID, planID, billingCycle string) error {
+	amount, currency, err := h.stripeService.GetCheckoutSessionPayment(checkoutSessionID)
+	if err != nil {
+		return fmt.Errorf("failed to verify successful payment: %w", err)
+	}
 	// Calculate subscription expiration based on billing cycle
 	var expiresAt time.Time
 	if billingCycle == "yearly" {
@@ -956,10 +1036,6 @@ func (h *MerchantHandler) activateSubscription(userID uuid.UUID, checkoutSession
 		subscription = existingSubscription
 	}
 
-	amount, currency, err := h.stripeService.GetCheckoutSessionPayment(checkoutSessionID)
-	if err != nil {
-		return fmt.Errorf("failed to get successful payment details: %w", err)
-	}
 	paidAt := time.Now()
 	payment := &models.PaymentLog{
 		MerchantID:         merchant.ID,

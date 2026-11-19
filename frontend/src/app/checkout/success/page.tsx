@@ -4,18 +4,81 @@ import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { LayoutDashboard, Zap, Receipt, Shield, Loader2 } from 'lucide-react';
+import { api, tokenManager } from '@/lib/api-client';
 
 function SuccessContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const sessionId = searchParams.get('session_id') ?? '';
   const [countdown, setCountdown] = useState(8);
+  const [state, setState] = useState<'checking' | 'confirmed' | 'expired' | 'delayed' | 'login'>('checking');
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
+    if (!sessionId) { setState('delayed'); return; }
+    if (!tokenManager.isAuthenticated()) { setState('login'); return; }
+
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    let attempts = 0;
+    const check = async () => {
+      attempts++;
+      try {
+        const response = await api.confirmCheckout(sessionId);
+        if (cancelled) return;
+        if (response.data?.state === 'confirmed') { setState('confirmed'); return; }
+        if (response.data?.state === 'expired') { setState('expired'); return; }
+      } catch (error) {
+        if (cancelled) return;
+        if (error instanceof Error && error.message.includes('UNAUTHORIZED')) {
+          setState('login');
+          return;
+        }
+        if (error instanceof Error && (error.message.includes('CHECKOUT_OWNER_MISMATCH') || error.message.includes('OLDER_CHECKOUT'))) {
+          setState('delayed');
+          return;
+        }
+      }
+      if (attempts >= 20) { setState('delayed'); return; }
+      timer = setTimeout(check, 3000);
+    };
+    setState('checking');
+    void check();
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [sessionId, retryKey]);
+
+  useEffect(() => {
+    if (state !== 'confirmed') return;
     if (countdown <= 0) { router.push('/dashboard/subscription'); return; }
     const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
     return () => clearTimeout(timer);
-  }, [countdown, router]);
+  }, [countdown, router, state]);
+
+  if (state !== 'confirmed') {
+    const title = state === 'expired' ? 'เซสชันชำระเงินหมดอายุ'
+      : state === 'login' ? 'กรุณาเข้าสู่ระบบ'
+      : state === 'delayed' ? 'ยังยืนยันการชำระเงินไม่ได้'
+      : 'กำลังยืนยันการชำระเงิน';
+    const detail = state === 'checking'
+      ? 'ระบบกำลังตรวจสอบรายการกับ Stripe และบันทึกเครดิต กรุณารอสักครู่'
+      : state === 'expired' ? 'รายการนี้หมดอายุแล้ว กรุณากลับไปเลือกแพ็กเกจใหม่'
+      : state === 'login' ? 'เข้าสู่ระบบด้วยบัญชีที่ใช้ชำระเงินเพื่อตรวจสอบรายการนี้'
+      : 'ยังไม่มีเครดิตหรือประวัติชำระเงินในระบบ หาก Stripe แสดงว่าจ่ายแล้ว กรุณาลองตรวจอีกครั้งหรือติดต่อผู้ดูแล';
+    return (
+      <main className="flex min-h-screen items-center justify-center px-4" style={{ background: 'var(--bg)' }}>
+        <div className="w-full max-w-lg border p-6 sm:p-8" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+          {state === 'checking' && <Loader2 className="mb-5 h-7 w-7 animate-spin text-blue-600" />}
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--ink)' }}>{title}</h1>
+          <p className="mt-3 text-sm leading-6" style={{ color: 'var(--text-muted)' }}>{detail}</p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            {state === 'login' ? <Link href="/login" className="bg-blue-700 px-4 py-2 text-sm font-semibold text-white">เข้าสู่ระบบ</Link>
+              : state !== 'checking' && <button type="button" onClick={() => setRetryKey((value) => value + 1)} className="bg-blue-700 px-4 py-2 text-sm font-semibold text-white">ตรวจสอบอีกครั้ง</button>}
+            <Link href="/dashboard/subscription" className="border px-4 py-2 text-sm font-semibold" style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}>ดูแพ็กเกจ</Link>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   const shortRef = sessionId ? sessionId.slice(-8).toUpperCase() : '—';
 

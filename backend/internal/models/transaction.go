@@ -26,15 +26,15 @@ type Transaction struct {
 	FailReason             *string           `json:"fail_reason,omitempty" db:"fail_reason"`
 	RecheckCount           int               `json:"recheck_count" db:"recheck_count"`
 	LastRecheckedAt        *time.Time        `json:"last_rechecked_at,omitempty" db:"last_rechecked_at"`
-	Provider               string            `json:"provider,omitempty" db:"provider"`
-	ProviderVerificationID string            `json:"provider_verification_id,omitempty" db:"provider_verification_id"`
-	ProviderStatus         string            `json:"provider_status,omitempty" db:"provider_status"`
-	ProviderValid          bool              `json:"provider_valid" db:"provider_valid"`
-	ProviderCached         bool              `json:"provider_cached" db:"provider_cached"`
-	ProviderChargedCredits int               `json:"provider_charged_credits" db:"provider_charged_credits"`
+	Provider               string            `json:"-" db:"provider"`
+	ProviderVerificationID string            `json:"-" db:"provider_verification_id"`
+	ProviderStatus         string            `json:"-" db:"provider_status"`
+	ProviderValid          bool              `json:"-" db:"provider_valid"`
+	ProviderCached         bool              `json:"-" db:"provider_cached"`
+	ProviderChargedCredits int               `json:"-" db:"provider_charged_credits"`
 	SenderName             string            `json:"sender_name,omitempty" db:"sender_name"`
 	ReceiverName           string            `json:"receiver_name,omitempty" db:"receiver_name"`
-	ProviderResponse       json.RawMessage   `json:"provider_response,omitempty" db:"provider_response"`
+	ProviderResponse       json.RawMessage   `json:"-" db:"provider_response"`
 	CreatedAt              time.Time         `json:"created_at" db:"created_at"`
 	UpdatedAt              time.Time         `json:"updated_at" db:"updated_at"`
 

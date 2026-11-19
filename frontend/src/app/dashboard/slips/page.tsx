@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Code2, Download, Eye, ImageIcon, Loader2, MessageSquare, RefreshCw, Search, X } from 'lucide-react';
+import { Download, Eye, ImageIcon, Loader2, MessageSquare, RefreshCw, Search, X } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { TableSkeleton } from '@/components/ui/Skeleton';
 import { ReportExportDialog } from '@/components/dashboard/ReportExportDialog';
@@ -122,10 +122,6 @@ function TransactionDetailModal({
   transaction: Transaction;
   onClose: () => void;
 }) {
-  const rawResponse = transaction.provider_response
-    ? JSON.stringify(transaction.provider_response, null, 2)
-    : '';
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-lg bg-white shadow-xl">
@@ -150,13 +146,8 @@ function TransactionDetailModal({
         <div className="max-h-[calc(90vh-81px)] overflow-y-auto p-6">
           <div className="grid gap-6 lg:grid-cols-2">
             <section className="rounded-lg border border-zinc-200 p-4">
-              <h3 className="mb-3 text-sm font-bold" style={{ color: 'var(--ink)' }}>ผลตรวจจาก HaveSLIP</h3>
-              <DetailLine label="ผู้ให้บริการ" value={transaction.provider || 'haveslip'} />
-              <DetailLine label="รหัสการตรวจสอบ" value={transaction.provider_verification_id} />
-              <DetailLine label="สถานะผู้ให้บริการ" value={transaction.provider_status} />
-              <DetailLine label="ข้อมูลถูกต้อง" value={transaction.provider_valid} />
-              <DetailLine label="ใช้ผลตรวจเดิม" value={transaction.provider_cached} />
-              <DetailLine label="เครดิตที่เรียกเก็บ" value={transaction.provider_charged_credits ?? 1} />
+              <h3 className="mb-3 text-sm font-bold" style={{ color: 'var(--ink)' }}>ผลการตรวจสอบข้อมูลธนาคาร</h3>
+              <DetailLine label="ผลการตรวจสอบ" value={STATUS_LABEL[transaction.status]} />
               <DetailLine label="สลิปซ้ำ" value={transaction.is_duplicate} />
             </section>
 
@@ -183,18 +174,6 @@ function TransactionDetailModal({
               <DetailLine label="เลขบัญชี" value={transaction.receiver_account} />
             </section>
           </div>
-
-          {rawResponse && (
-            <section className="mt-6 rounded-lg border border-zinc-200 p-4">
-              <div className="mb-3 flex items-center gap-2">
-                <Code2 className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />
-                <h3 className="text-sm font-bold" style={{ color: 'var(--ink)' }}>ข้อมูลดิบจาก HaveSLIP</h3>
-              </div>
-              <pre className="max-h-80 overflow-auto rounded-md bg-zinc-950 p-4 text-xs text-zinc-100">
-                {rawResponse}
-              </pre>
-            </section>
-          )}
         </div>
       </div>
     </div>

@@ -277,6 +277,7 @@ func main() {
 		// checkout.Use(middleware.EmailVerificationMiddleware(userRepo)) // Temporarily disabled for testing
 		{
 			checkout.POST("", merchantHandler.CreateCheckout)
+			checkout.POST("/confirm", merchantHandler.ConfirmCheckout)
 		}
 
 		// Merchant routes (protected only - email verification disabled for testing)

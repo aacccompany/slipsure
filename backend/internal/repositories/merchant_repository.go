@@ -46,6 +46,7 @@ type MerchantRepository interface {
 	CancelSubscription(merchantID uuid.UUID, reason string) error
 	CreatePaymentLog(payment *models.PaymentLog) error
 	CreateCreditLot(lot *models.CreditLot) error
+	IsCheckoutFulfilled(merchantID uuid.UUID, checkoutSessionID string) (bool, error)
 	ConsumeCreditFIFO(merchantID, verificationID uuid.UUID) error
 	ListPaymentLogs(status string, startDate *time.Time, endDate *time.Time, limit, offset int) ([]models.PaymentLog, int, error)
 	FindPaymentLogByID(id uuid.UUID) (*models.PaymentLog, error)
@@ -81,6 +82,20 @@ type MerchantRepository interface {
 	DeleteLINEWebhookConfig(merchantID uuid.UUID) error
 	GetLINECredentials(merchantID uuid.UUID) (channelID, encryptedSecret, encryptedToken, webhookRefID string, err error)
 	FindByWebhookReferenceID(webhookRefID string) (*models.MerchantProfile, error)
+}
+
+// IsCheckoutFulfilled requires both a successful payment record and its credit lot.
+func (r *merchantRepository) IsCheckoutFulfilled(merchantID uuid.UUID, checkoutSessionID string) (bool, error) {
+	var fulfilled bool
+	err := r.db.QueryRow(`
+		SELECT EXISTS (
+			SELECT 1 FROM payment_logs p
+			JOIN credit_lots l ON l.payment_log_id = p.id
+			WHERE p.merchant_id = $1 AND p.gateway = 'stripe'
+			  AND p.gateway_reference_id = $2 AND p.status = 'success'
+		)
+	`, merchantID, checkoutSessionID).Scan(&fulfilled)
+	return fulfilled, err
 }
 
 type merchantRepository struct {

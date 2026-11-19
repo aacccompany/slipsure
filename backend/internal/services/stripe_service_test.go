@@ -85,3 +85,38 @@ func TestCheckoutSessionActivationData(t *testing.T) {
 		t.Fatalf("unexpected activation data: %s %s %s %s %s", gotUserID, sessionID, customerID, planID, billingCycle)
 	}
 }
+
+func TestCheckoutSessionCompletionRequiresPaidStatus(t *testing.T) {
+	userID := uuid.New()
+	service := &StripeService{}
+	for _, testCase := range []struct {
+		name   string
+		status string
+		paid   bool
+	}{
+		{name: "delayed payment", status: "unpaid", paid: false},
+		{name: "completed payment", status: "paid", paid: true},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			payload, err := json.Marshal(map[string]any{
+				"id": "cs_test_checkout", "customer": "cus_test",
+				"payment_status": testCase.status,
+				"metadata": map[string]string{
+					"user_id": userID.String(), "plan_id": "plan-mini", "billing_cycle": "monthly",
+				},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			gotUserID, sessionID, _, planID, _, paid, err := service.HandleCheckoutSessionCompleted(stripe.Event{
+				Data: &stripe.EventData{Raw: payload},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if gotUserID != userID || sessionID != "cs_test_checkout" || planID != "plan-mini" || paid != testCase.paid {
+				t.Fatalf("session=%s plan=%s paid=%v, want paid=%v", sessionID, planID, paid, testCase.paid)
+			}
+		})
+	}
+}

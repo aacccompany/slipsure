@@ -38,11 +38,8 @@ func NewStripeService() (*StripeService, error) {
 
 	webhookSecret := os.Getenv("STRIPE_WEBHOOK_SECRET")
 
-	// Debug logging
 	if webhookSecret == "" {
 		fmt.Printf("WARNING: STRIPE_WEBHOOK_SECRET is empty or not set!\n")
-	} else {
-		fmt.Printf("Loaded STRIPE_WEBHOOK_SECRET: %s... (first 10 chars)\n", webhookSecret[:10])
 	}
 
 	// Initialize Stripe
@@ -166,15 +163,17 @@ func (s *StripeService) ProcessWebhook(payload []byte, signature string) (stripe
 }
 
 // HandleCheckoutSessionCompleted handles checkout.session.completed event
-func (s *StripeService) HandleCheckoutSessionCompleted(event stripe.Event) (uuid.UUID, string, string, string, string, error) {
+func (s *StripeService) HandleCheckoutSessionCompleted(event stripe.Event) (uuid.UUID, string, string, string, string, bool, error) {
 	// Parse the checkout session from the event
 	var checkoutSession stripe.CheckoutSession
 	err := json.Unmarshal(event.Data.Raw, &checkoutSession)
 	if err != nil {
-		return uuid.Nil, "", "", "", "", err
+		return uuid.Nil, "", "", "", "", false, err
 	}
 
-	return checkoutSessionActivationData(&checkoutSession)
+	userID, sessionID, customerID, planID, billingCycle, err := checkoutSessionActivationData(&checkoutSession)
+	return userID, sessionID, customerID, planID, billingCycle,
+		checkoutSession.PaymentStatus == stripe.CheckoutSessionPaymentStatusPaid, err
 }
 
 // HandlePaymentIntentSucceeded resolves the originating Checkout Session and returns activation data.
@@ -203,6 +202,36 @@ func (s *StripeService) GetCheckoutSessionPayment(checkoutSessionID string) (flo
 	}
 
 	return float64(checkoutSession.AmountTotal) / 100, strings.ToUpper(string(checkoutSession.Currency)), nil
+}
+
+// CheckoutConfirmation contains only the Stripe fields needed to reconcile a return from Checkout.
+type CheckoutConfirmation struct {
+	UserID         uuid.UUID
+	SessionID      string
+	CustomerID     string
+	PlanID         string
+	BillingCycle   string
+	PaymentStatus  string
+	SessionStatus  string
+	SessionCreated time.Time
+}
+
+func (s *StripeService) GetCheckoutConfirmation(checkoutSessionID string) (*CheckoutConfirmation, error) {
+	checkoutSession, err := session.Get(checkoutSessionID, nil)
+	if err != nil {
+		return nil, err
+	}
+	userID, sessionID, customerID, planID, billingCycle, err := checkoutSessionActivationData(checkoutSession)
+	if err != nil {
+		return nil, err
+	}
+	return &CheckoutConfirmation{
+		UserID: userID, SessionID: sessionID, CustomerID: customerID,
+		PlanID: planID, BillingCycle: billingCycle,
+		PaymentStatus:  string(checkoutSession.PaymentStatus),
+		SessionStatus:  string(checkoutSession.Status),
+		SessionCreated: time.Unix(checkoutSession.Created, 0),
+	}, nil
 }
 
 // GetCheckoutSessionDetail retrieves a safe, normalized admin view of a Stripe Checkout Session.

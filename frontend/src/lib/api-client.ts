@@ -350,6 +350,13 @@ class ApiClient {
   }
 
   // Subscription
+  async confirmCheckout(sessionId: string): Promise<ApiResponse<{ state: 'pending' | 'expired' | 'confirmed' }>> {
+    return this.request('/v1/checkout/confirm', {
+      method: 'POST',
+      body: JSON.stringify({ session_id: sessionId }),
+    });
+  }
+
   async getSubscription(): Promise<ApiResponse<SubscriptionResponse>> {
     return this.request('/v1/merchants/me/subscription');
   }
