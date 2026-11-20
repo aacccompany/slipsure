@@ -1,7 +1,7 @@
 'use client';
 
 import React, { Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { ChevronLeft, Plus, Trash2, Loader2, Copy, MessageSquare, Key, Clock, CheckCircle, X, ExternalLink, ChevronRight } from 'lucide-react';
+import { ChevronLeft, Plus, Trash2, Loader2, Copy, MessageSquare, Key, Clock, CheckCircle, X, ExternalLink, ChevronRight, Download } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -313,6 +313,13 @@ function MerchantLineContent() {
           </p>
         </div>
 
+        {!isOnboarding && (
+          <a href="/install_webhook.pdf" download="FlowSlip-LINE-OA-setup.pdf" className="inline-flex items-center gap-2 text-sm font-semibold text-blue-700 hover:underline">
+            <Download className="h-4 w-4" aria-hidden="true" />
+            ดาวน์โหลดคู่มือการตั้งค่า LINE OA (PDF)
+          </a>
+        )}
+
         {freeCreditsAvailable && (
           <div className="flex flex-col gap-3 border border-emerald-200 bg-emerald-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm font-semibold text-emerald-900">ตั้งค่า LINE OA ให้เสร็จ รับเครดิตฟรี 20 สลิปสำหรับทดลองใช้งาน</p>
@@ -338,6 +345,11 @@ function MerchantLineContent() {
                 <button type="button" onClick={closeOnboarding} aria-label="ปิดขั้นตอนตั้งค่า" className="flex h-8 w-8 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-zinc-950"><X className="h-4 w-4" /></button>
               </div>
             </div>
+
+            <a href="/install_webhook.pdf" download="FlowSlip-LINE-OA-setup.pdf" className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-blue-700 hover:underline">
+              <Download className="h-4 w-4" aria-hidden="true" />
+              ดาวน์โหลดคู่มือการตั้งค่า LINE OA (PDF)
+            </a>
 
             <ol className="mb-8 grid grid-cols-4 gap-1 sm:gap-2" aria-label="ขั้นตอนการตั้งค่า LINE">
               {steps.map((label, index) => {
